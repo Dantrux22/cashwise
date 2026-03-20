@@ -393,7 +393,13 @@ function _initCanvas(id) {
 function drawDualCanvas(txs, period) {
   const cv = _initCanvas('chart-cv'); if(!cv) return;
   const { ctx, w, h } = cv;
-  const { incData, expData } = _buildPeriodData(txs, period);
+  let { incData, expData } = _buildPeriodData(txs, period);
+  let incCum = [], expCum = [], iSum = 0, eSum = 0;
+  for(let i = 0; i < incData.length; i++) {
+    iSum += incData[i]; incCum.push(iSum);
+    eSum += expData[i]; expCum.push(eSum);
+  }
+  incData = incCum; expData = expCum;
   if(!incData.length) return;
   const n = incData.length;
   const maxVal = Math.max(...incData, ...expData, 1);
