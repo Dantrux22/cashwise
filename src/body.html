@@ -522,6 +522,19 @@
       </div>
     </div>
     <div class="set-sec">
+      <div class="set-sec-ttl">GRÁFICO</div>
+      <div class="set-card">
+        <div class="set-row" onclick="setChartType('net')" style="cursor:pointer">
+          <div><div class="set-lbl">Neto acumulado</div><div class="set-sub">Una línea que sube cuando ahorrás y baja cuando gastás</div></div>
+          <div id="chart-type-net" style="color:var(--gr);font-size:18px"></div>
+        </div>
+        <div class="set-row" onclick="setChartType('dual')" style="cursor:pointer">
+          <div><div class="set-lbl">Ingresos y gastos</div><div class="set-sub">Dos líneas separadas — verde ingresos, rojo gastos</div></div>
+          <div id="chart-type-dual" style="color:var(--gr);font-size:18px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="set-sec">
       <div class="set-sec-ttl" data-i18n="secAppearance">Apariencia</div>
       <div class="set-card">
         <div class="set-row" onclick="toggleDarkMode(this)"><div><div class="set-lbl" data-i18n="rDarkMode">Modo oscuro</div></div><div class="toggle on" id="tog-dark"></div></div>

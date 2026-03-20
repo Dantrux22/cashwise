@@ -1121,6 +1121,19 @@ canvas.cv{width:100%;height:100%}
       </div>
     </div>
     <div class="set-sec">
+      <div class="set-sec-ttl">GRÁFICO</div>
+      <div class="set-card">
+        <div class="set-row" onclick="setChartType('net')" style="cursor:pointer">
+          <div><div class="set-lbl">Neto acumulado</div><div class="set-sub">Una línea que sube cuando ahorrás y baja cuando gastás</div></div>
+          <div id="chart-type-net" style="color:var(--gr);font-size:18px"></div>
+        </div>
+        <div class="set-row" onclick="setChartType('dual')" style="cursor:pointer">
+          <div><div class="set-lbl">Ingresos y gastos</div><div class="set-sub">Dos líneas separadas — verde ingresos, rojo gastos</div></div>
+          <div id="chart-type-dual" style="color:var(--gr);font-size:18px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="set-sec">
       <div class="set-sec-ttl" data-i18n="secAppearance">Apariencia</div>
       <div class="set-card">
         <div class="set-row" onclick="toggleDarkMode(this)"><div><div class="set-lbl" data-i18n="rDarkMode">Modo oscuro</div></div><div class="toggle on" id="tog-dark"></div></div>
@@ -2102,6 +2115,7 @@ function goTo(id){
     's-goals':renderGoals,
     's-recurring':renderRecurring,
     's-profile':renderProfile,
+    's-settings':renderChartTypeUI,
     's-allTx':renderAllTx,
     's-monthly':()=>{monthlyYear=new Date().getFullYear();monthlyMonth=new Date().getMonth();renderMonthly();},
     's-split':()=>initSplit(),
@@ -2268,18 +2282,14 @@ function setFilter(p,el){
 // CHARTS
 // ═══════════════════════════════════════════
 function drawCanvas(txs, period) {
-  const canvas = document.getElementById('chart-cv');
-  if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  canvas.width = canvas.offsetWidth * devicePixelRatio;
-  canvas.height = canvas.offsetHeight * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  const w = canvas.offsetWidth, h = canvas.offsetHeight;
-  ctx.clearRect(0, 0, w, h);
+  const chartType = S.chartType || 'net';
+  if(chartType === 'net') drawNetCanvas(txs, period);
+  else drawDualCanvas(txs, period);
+}
 
+function _buildPeriodData(txs, period) {
   const now = new Date();
   let incData = [], expData = [];
-
   if(period === 'semana') {
     const start = new Date(now);
     start.setDate(now.getDate() - ((now.getDay()+6)%7));
@@ -2306,7 +2316,7 @@ function drawCanvas(txs, period) {
       expData.push(mTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
     }
   } else {
-    if(!txs.length) return;
+    if(!txs.length) return { incData, expData };
     const sorted = [...txs].sort((a,b)=>new Date(a.date)-new Date(b.date));
     const first = new Date(sorted[0].date);
     let cur = new Date(first.getFullYear(), first.getMonth(), 1);
@@ -2318,19 +2328,35 @@ function drawCanvas(txs, period) {
       cur.setMonth(cur.getMonth()+1);
     }
   }
+  return { incData, expData };
+}
 
+function _initCanvas(id) {
+  const canvas = document.getElementById(id);
+  if(!canvas) return null;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  ctx.clearRect(0, 0, w, h);
+  return { canvas, ctx, w, h };
+}
+
+function drawDualCanvas(txs, period) {
+  const cv = _initCanvas('chart-cv'); if(!cv) return;
+  const { ctx, w, h } = cv;
+  const { incData, expData } = _buildPeriodData(txs, period);
   if(!incData.length && !expData.length) return;
   const n = Math.max(incData.length, expData.length);
   const maxVal = Math.max(...incData, ...expData, 1);
   const PAD = {l:8, r:16, t:16, b:8};
-  const cw = w - PAD.l - PAD.r;
-  const ch = h - PAD.t - PAD.b;
+  const cw = w - PAD.l - PAD.r, ch = h - PAD.t - PAD.b;
   const xp = i => PAD.l + (i/(n-1||1))*cw;
   const yp = v => PAD.t + ch - (v/maxVal)*ch;
 
   function drawLine(data, color, fillColor) {
     if(data.every(v=>v===0)) return;
-    // Área rellena
     ctx.beginPath();
     ctx.moveTo(xp(0), yp(0));
     ctx.lineTo(xp(0), yp(data[0]));
@@ -2340,27 +2366,81 @@ function drawCanvas(txs, period) {
     }
     ctx.lineTo(xp(data.length-1), yp(0));
     ctx.closePath();
-    ctx.fillStyle = fillColor;
-    ctx.fill();
-    // Línea
+    ctx.fillStyle = fillColor; ctx.fill();
     ctx.beginPath();
     ctx.moveTo(xp(0), yp(data[0]));
     for(let i=1; i<data.length; i++) {
       const cpx = (xp(i-1)+xp(i))/2;
       ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
     }
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-    // Punto final
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.beginPath();
     ctx.arc(xp(data.length-1), yp(data[data.length-1]), 4, 0, Math.PI*2);
-    ctx.fillStyle = color;
-    ctx.fill();
+    ctx.fillStyle = color; ctx.fill();
   }
 
   drawLine(incData, '#34D48A', 'rgba(52,212,138,0.15)');
   drawLine(expData, '#f0566a', 'rgba(240,86,106,0.15)');
+}
+
+function drawNetCanvas(txs, period) {
+  const cv = _initCanvas('chart-cv'); if(!cv) return;
+  const { ctx, w, h } = cv;
+  const { incData, expData } = _buildPeriodData(txs, period);
+  if(!incData.length && !expData.length) return;
+  let cum = 0;
+  const netData = incData.map((inc, i) => { cum += inc - (expData[i]||0); return cum; });
+  const n = netData.length;
+  const minVal = Math.min(...netData, 0);
+  const maxVal = Math.max(...netData, 0);
+  const range = maxVal - minVal || 1;
+  const PAD = {l:8, r:16, t:16, b:8};
+  const cw = w - PAD.l - PAD.r, ch = h - PAD.t - PAD.b;
+  const xp = i => PAD.l + (i/(n-1||1))*cw;
+  const yp = v => PAD.t + ch - ((v - minVal)/range)*ch;
+  const zero = yp(0);
+  const lastVal = netData[n-1];
+  const color = lastVal >= 0 ? '#34D48A' : '#f0566a';
+  const fillColor = lastVal >= 0 ? 'rgba(52,212,138,0.15)' : 'rgba(240,86,106,0.15)';
+
+  ctx.beginPath();
+  ctx.moveTo(xp(0), zero);
+  ctx.lineTo(xp(0), yp(netData[0]));
+  for(let i=1; i<n; i++) {
+    const cpx = (xp(i-1)+xp(i))/2;
+    ctx.bezierCurveTo(cpx, yp(netData[i-1]), cpx, yp(netData[i]), xp(i), yp(netData[i]));
+  }
+  ctx.lineTo(xp(n-1), zero);
+  ctx.closePath();
+  ctx.fillStyle = fillColor; ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(xp(0), yp(netData[0]));
+  for(let i=1; i<n; i++) {
+    const cpx = (xp(i-1)+xp(i))/2;
+    ctx.bezierCurveTo(cpx, yp(netData[i-1]), cpx, yp(netData[i]), xp(i), yp(netData[i]));
+  }
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(xp(n-1), yp(netData[n-1]), 4, 0, Math.PI*2);
+  ctx.fillStyle = color; ctx.fill();
+}
+
+function setChartType(type) {
+  S.chartType = type;
+  saveState();
+  renderChartTypeUI();
+  refreshHome();
+  showToast(type === 'net' ? '📈 Neto acumulado' : '📊 Ingresos y gastos');
+}
+
+function renderChartTypeUI() {
+  const type = S.chartType || 'net';
+  const netEl = document.getElementById('chart-type-net');
+  const dualEl = document.getElementById('chart-type-dual');
+  if(netEl) netEl.textContent = type === 'net' ? '✓' : '';
+  if(dualEl) dualEl.textContent = type === 'dual' ? '✓' : '';
 }
 
 function drawChart(txs){
@@ -4827,6 +4907,7 @@ window.addEventListener('load',()=>{
   const togDk=document.getElementById('tog-dark'); if(togDk&&!S.darkMode) togDk.classList.remove('on');
   applyDarkMode(S.darkMode);
   updateLangUI();
+  renderChartTypeUI();
   applyRecurring();
   refreshHome();
   if(S.hidden) applyHide(true);
