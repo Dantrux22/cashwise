@@ -2393,19 +2393,8 @@ function drawDualCanvas(txs, period) {
   const xp = i => PAD.l + (i/(n-1||1))*cw;
   const yp = v => PAD.t + ch - (v/maxVal)*ch;
 
-  function drawLine(data, color, fillColor) {
+  function drawLine(data, color) {
     if(!data.length || data.every(v=>v===0)) return;
-    const bottom = PAD.t + ch;
-    ctx.beginPath();
-    ctx.moveTo(xp(0), bottom);
-    ctx.lineTo(xp(0), yp(data[0]));
-    for(let i=1; i<data.length; i++) {
-      const cpx = (xp(i-1)+xp(i))/2;
-      ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
-    }
-    ctx.lineTo(xp(data.length-1), bottom);
-    ctx.closePath();
-    ctx.fillStyle = fillColor; ctx.fill();
     ctx.beginPath();
     ctx.moveTo(xp(0), yp(data[0]));
     for(let i=1; i<data.length; i++) {
@@ -2421,8 +2410,8 @@ function drawDualCanvas(txs, period) {
     ctx.fillStyle = 'rgba(15,15,19,0.8)'; ctx.fill();
   }
 
-  drawLine(expData, '#f0566a', 'rgba(240,86,106,0.08)');
-  drawLine(incData, '#34D48A', 'rgba(52,212,138,0.10)');
+  drawLine(expData, '#f0566a');
+  drawLine(incData, '#34D48A');
 }
 
 function drawNetCanvas(txs, period) {
