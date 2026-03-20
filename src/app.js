@@ -4336,12 +4336,15 @@ async function authForgotPassword(){
 
 // ── Usar sin cuenta ──
 function showEmailAuth() {
+  console.log('showEmailAuth llamada');
+  console.log('auth-overlay:', document.getElementById('auth-overlay'));
   const overlay = document.getElementById('auth-overlay');
-  if(!overlay) { showToast('Error: overlay no encontrado'); return; }
+  if(!overlay) { alert('Error: auth-overlay no encontrado'); return; }
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex';
-  overlay.style.zIndex = '500';
+  overlay.style.cssText = 'display:flex!important;position:fixed!important;inset:0!important;z-index:999!important;flex-direction:column!important;background:var(--bg)!important;align-items:center!important;justify-content:center!important;padding:32px 28px!important;overflow-y:auto!important;';
   switchAuthTab('login');
+  console.log('overlay clases después:', overlay.className);
+  console.log('overlay style:', overlay.style.cssText);
 }
 
 function skipAuth(){
