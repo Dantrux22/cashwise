@@ -4563,15 +4563,17 @@ function parseMoneeExcel(arrayBuffer) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
 
-  const MONEE_CAT_MAP = {
-    'Salario':'Sueldo','Otros Ingresos':'Otro',
-    'Comida y Supermercado':'Mercado','General':'Otro',
-    'Transporte':'Transporte','Alojamiento':'Vivienda',
-    'Ropa':'Ropa','Salud':'Salud','Entretenimiento':'Ocio',
-    'Compras y Regalos':'Ropa','Teléfono':'Suscripc.',
-    'Caravana':'Vivienda','Vuelo':'Transporte',
-    'Documentación':'Otro','Unknown':'Otro'
-  };
+  function findCatName(moneecat) {
+    const allCats = [...(S.cats.expense||[]),...(S.cats.income||[]),...(S.cats.invest||[])];
+    const exact = allCats.find(c => c.n.toLowerCase() === moneecat.toLowerCase());
+    if(exact) return exact.n;
+    const partial = allCats.find(c =>
+      c.n.toLowerCase().includes(moneecat.toLowerCase()) ||
+      moneecat.toLowerCase().includes(c.n.toLowerCase())
+    );
+    if(partial) return partial.n;
+    return 'Otro';
+  }
 
   const MONTH_MAP = {
     'January':0,'February':1,'March':2,'April':3,'May':4,'June':5,
@@ -4621,7 +4623,7 @@ function parseMoneeExcel(arrayBuffer) {
     if(isDup) { duplicates++; continue; }
 
     const type = amount > 0 ? 'income' : 'expense';
-    const cat = MONEE_CAT_MAP[String(category || '').trim()] || 'Otro';
+    const cat = findCatName(String(category || '').trim());
 
     newTxs.push({
       id: uid(),
