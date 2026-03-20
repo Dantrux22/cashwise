@@ -285,6 +285,9 @@ let curPeriod='todo';
 
 function refreshHome(){
   const txs=curPeriod==='todo'?S.txs:filterTxs(curPeriod);
+  const periodLabels={semana:'Semana',mes:'Mes',año:'Año',todo:'Todo'};
+  const periodEl=document.getElementById('c-period');
+  if(periodEl) periodEl.textContent=periodLabels[curPeriod]||'Todo';
   const income=txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const expense=txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
   const invest=S.txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
