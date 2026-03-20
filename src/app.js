@@ -4337,10 +4337,11 @@ async function authForgotPassword(){
 // ── Usar sin cuenta ──
 function showEmailAuth() {
   const overlay = document.getElementById('auth-overlay');
-  if(overlay) {
-    overlay.classList.remove('hidden');
-    switchAuthTab('register');
-  }
+  if(!overlay) { showToast('Error: overlay no encontrado'); return; }
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+  overlay.style.zIndex = '500';
+  switchAuthTab('login');
 }
 
 function skipAuth(){
@@ -4528,7 +4529,7 @@ function closeNFC(){ /* NFC removido */ }
 
 // ── Stubs de funciones legacy ──
 function simulateNFCPayment(){ showToast('📱 NFC no disponible en esta versión'); }
-function linkAccount(){ showAuthOverlay(); }
+function linkAccount(){ showEmailAuth(); }
 function unlinkAccount(){ authLogout(); }
 function logout(){ authLogout(); }
 

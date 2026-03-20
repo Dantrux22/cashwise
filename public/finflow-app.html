@@ -542,8 +542,9 @@ canvas.cv{width:100%;height:100%}
 .dash-alert.info{background:var(--bld);border:1px solid rgba(107,140,255,.25)}
 
 /* ══ AUTH ══ */
-.auth-overlay{position:absolute;inset:0;background:var(--bg);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;transition:opacity .3s}
-.auth-overlay.hidden{opacity:0;pointer-events:none}
+.auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;overflow-y:auto}
+.auth-overlay:not(.hidden){display:flex}
+.auth-overlay.hidden{display:none}
 .auth-logo{font-size:32px;font-weight:600;letter-spacing:-.8px;margin-bottom:6px}
 .auth-logo span{color:var(--gr)}
 .auth-tagline{font-size:13px;color:var(--mu);margin-bottom:40px;text-align:center;line-height:1.5}
@@ -6254,10 +6255,11 @@ async function authForgotPassword(){
 // ── Usar sin cuenta ──
 function showEmailAuth() {
   const overlay = document.getElementById('auth-overlay');
-  if(overlay) {
-    overlay.classList.remove('hidden');
-    switchAuthTab('register');
-  }
+  if(!overlay) { showToast('Error: overlay no encontrado'); return; }
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+  overlay.style.zIndex = '500';
+  switchAuthTab('login');
 }
 
 function skipAuth(){
@@ -6445,7 +6447,7 @@ function closeNFC(){ /* NFC removido */ }
 
 // ── Stubs de funciones legacy ──
 function simulateNFCPayment(){ showToast('📱 NFC no disponible en esta versión'); }
-function linkAccount(){ showAuthOverlay(); }
+function linkAccount(){ showEmailAuth(); }
 function unlinkAccount(){ authLogout(); }
 function logout(){ authLogout(); }
 
