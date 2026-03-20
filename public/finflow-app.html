@@ -2388,42 +2388,49 @@ function drawNetCanvas(txs, period) {
   const { ctx, w, h } = cv;
   const { incData, expData } = _buildPeriodData(txs, period);
   if(!incData.length && !expData.length) return;
-  let cum = 0;
-  const netData = incData.map((inc, i) => { cum += inc - (expData[i]||0); return cum; });
-  const n = netData.length;
-  const minVal = Math.min(...netData, 0);
-  const maxVal = Math.max(...netData, 0);
+
+  // Acumulados
+  let incCum = 0, netCum = 0;
+  const incAccum = incData.map(inc => { incCum += inc; return incCum; });
+  const netAccum = incData.map((inc, i) => { netCum += inc - (expData[i]||0); return netCum; });
+
+  const n = incAccum.length;
+  const minVal = Math.min(...netAccum, 0);
+  const maxVal = Math.max(...incAccum, ...netAccum, 1);
   const range = maxVal - minVal || 1;
   const PAD = {l:8, r:16, t:16, b:8};
   const cw = w - PAD.l - PAD.r, ch = h - PAD.t - PAD.b;
   const xp = i => PAD.l + (i/(n-1||1))*cw;
   const yp = v => PAD.t + ch - ((v - minVal)/range)*ch;
   const zero = yp(0);
-  const color = '#34D48A';
-  const fillColor = 'rgba(52,212,138,0.15)';
 
-  ctx.beginPath();
-  ctx.moveTo(xp(0), zero);
-  ctx.lineTo(xp(0), yp(netData[0]));
-  for(let i=1; i<n; i++) {
-    const cpx = (xp(i-1)+xp(i))/2;
-    ctx.bezierCurveTo(cpx, yp(netData[i-1]), cpx, yp(netData[i]), xp(i), yp(netData[i]));
+  function drawNetLine(data, color, fillColor) {
+    if(data.every(v=>v===0)) return;
+    ctx.beginPath();
+    ctx.moveTo(xp(0), zero);
+    ctx.lineTo(xp(0), yp(data[0]));
+    for(let i=1; i<n; i++) {
+      const cpx = (xp(i-1)+xp(i))/2;
+      ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
+    }
+    ctx.lineTo(xp(n-1), zero);
+    ctx.closePath();
+    ctx.fillStyle = fillColor; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(xp(0), yp(data[0]));
+    for(let i=1; i<n; i++) {
+      const cpx = (xp(i-1)+xp(i))/2;
+      ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(xp(n-1), yp(data[n-1]), 4, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
   }
-  ctx.lineTo(xp(n-1), zero);
-  ctx.closePath();
-  ctx.fillStyle = fillColor; ctx.fill();
 
-  ctx.beginPath();
-  ctx.moveTo(xp(0), yp(netData[0]));
-  for(let i=1; i<n; i++) {
-    const cpx = (xp(i-1)+xp(i))/2;
-    ctx.bezierCurveTo(cpx, yp(netData[i-1]), cpx, yp(netData[i]), xp(i), yp(netData[i]));
-  }
-  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(xp(n-1), yp(netData[n-1]), 4, 0, Math.PI*2);
-  ctx.fillStyle = color; ctx.fill();
+  // Ingresos acumulados (verde claro, debajo) → neto acumulado (verde vivo, encima)
+  drawNetLine(incAccum, 'rgba(52,212,138,0.5)', 'rgba(52,212,138,0.08)');
+  drawNetLine(netAccum, '#34D48A', 'rgba(52,212,138,0.15)');
 }
 
 function setChartType(type) {
