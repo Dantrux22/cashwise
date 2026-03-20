@@ -476,17 +476,20 @@ function drawNetCanvas(txs, period) {
       const cpx = (xp(i-1)+xp(i))/2;
       ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
     }
-    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
     ctx.beginPath();
-    ctx.arc(xp(n-1), yp(data[n-1]), 4, 0, Math.PI*2);
+    ctx.arc(xp(n-1), yp(data[n-1]), 5, 0, Math.PI*2);
     ctx.fillStyle = color; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(xp(n-1), yp(data[n-1]), 2.5, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(15,15,19,0.8)'; ctx.fill();
   }
 
   // Ingresos acumulados: siempre verde (siempre positivo)
   drawNetLine(incAccum, 'rgba(52,212,138,0.5)', 'rgba(52,212,138,0.08)');
   // Neto acumulado: verde si positivo, rojo si negativo
   const netColor = netAccum[n-1] >= 0 ? '#34D48A' : '#f0566a';
-  const netFill  = netAccum[n-1] >= 0 ? 'rgba(52,212,138,0.15)' : 'rgba(240,86,106,0.15)';
+  const netFill  = netAccum[n-1] >= 0 ? 'rgba(52,212,138,0.08)' : 'rgba(240,86,106,0.08)';
   drawNetLine(netAccum, netColor, netFill);
 }
 
