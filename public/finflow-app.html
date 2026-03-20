@@ -2244,7 +2244,7 @@ function refreshHome(){
   const income=txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const expense=txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
   const invest=S.txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
-  const net=income-expense;
+  const net=income-expense-invest;
   const s=sym();
 
   const hBalEl=document.getElementById('h-bal');
@@ -4686,10 +4686,13 @@ function parseMoneeExcel(arrayBuffer) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
 
-  function findCatName(moneecat) {
+  function findCatName(moneecat, type) {
+    const catList = S.cats[type] || [];
     const allCats = [...(S.cats.expense||[]),...(S.cats.income||[]),...(S.cats.invest||[])];
-    const exact = allCats.find(c => c.n.toLowerCase() === moneecat.toLowerCase());
+    const exact = catList.find(c => c.n.toLowerCase() === moneecat.toLowerCase());
     if(exact) return exact.n;
+    const exactAny = allCats.find(c => c.n.toLowerCase() === moneecat.toLowerCase());
+    if(exactAny) return exactAny.n;
     const partial = allCats.find(c =>
       c.n.toLowerCase().includes(moneecat.toLowerCase()) ||
       moneecat.toLowerCase().includes(c.n.toLowerCase())
@@ -4746,7 +4749,7 @@ function parseMoneeExcel(arrayBuffer) {
     if(isDup) { duplicates++; continue; }
 
     const type = amount > 0 ? 'income' : 'expense';
-    const cat = findCatName(String(category || '').trim());
+    const cat = findCatName(String(category || '').trim(), type);
 
     newTxs.push({
       id: uid(),
@@ -6581,18 +6584,19 @@ async function authEmailRegister(){
 
 // ── Google ──
 async function authGoogle(){
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  if(isSafari){
-    showToast('⚠️ Usá email y contraseña en Safari');
-    return;
-  }
   if(!_fbAuth) return;
-  try{
+  try {
     const provider = new firebase.auth.GoogleAuthProvider();
-    const result = await _fbAuth.signInWithPopup(provider);
-    await onUserLoggedIn(result.user);
-  }catch(e){
-    showAuthError('Error: ' + e.message);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if(isSafari || isIOS) {
+      await _fbAuth.signInWithRedirect(provider);
+    } else {
+      const result = await _fbAuth.signInWithPopup(provider);
+      if(result.user) await onUserLoggedIn(result.user);
+    }
+  } catch(e) {
+    showAuthError('Error Google: ' + e.message);
   }
 }
 
@@ -6627,6 +6631,40 @@ function skipAuth(){
   S.skipAuth=true; saveState();
   hideAuthOverlay();
   showToast('💾 Usando sin cuenta — datos guardados en el dispositivo');
+}
+
+// ── Sync manual con Firestore ──
+async function syncWithFirestore(user) {
+  if(!_db || !user) return;
+  try {
+    const doc = await _db.collection('users').doc(user.uid).get();
+    if(doc.exists) {
+      const data = doc.data();
+      if(data.txs && data.txs.length > S.txs.length) {
+        if(confirm(`Encontramos ${data.txs.length} movimientos en la nube. ¿Cargarlos?`)) {
+          S.txs = data.txs;
+          S.cats = data.cats || S.cats;
+          S.budgets = data.budgets || S.budgets;
+          S.goals = data.goals || S.goals;
+          saveState(); refreshHome();
+          showToast('✅ Datos sincronizados desde la nube');
+        }
+      } else if(S.txs.length > 0) {
+        await _db.collection('users').doc(user.uid).set({
+          txs: S.txs, cats: S.cats, budgets: S.budgets,
+          goals: S.goals, updatedAt: new Date().toISOString()
+        });
+        showToast('✅ Datos subidos a la nube');
+      }
+    } else {
+      await _db.collection('users').doc(user.uid).set({
+        txs: S.txs, cats: S.cats, budgets: S.budgets,
+        goals: S.goals, updatedAt: new Date().toISOString()
+      });
+    }
+  } catch(e) {
+    console.error('Sync error:', e);
+  }
 }
 
 // ── Cuando se loguea ──
