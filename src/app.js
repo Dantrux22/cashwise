@@ -295,20 +295,18 @@ function refreshHome(){
   const s=sym();
 
   const hBalEl=document.getElementById('h-bal');
-  hBalEl.textContent=(net<0?'-':'')+fmt(net);
-  hBalEl.style.color=net<0?'var(--rd)':net===0?'var(--mu)':'var(--tx)';
-  document.getElementById('h-sym').textContent=s;
-  document.getElementById('h-inc').textContent=s+fmtCompact(income);
-  document.getElementById('h-exp').textContent=s+fmtCompact(expense);
-  document.getElementById('h-net').textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
-  document.getElementById('h-invest').textContent=s+fmt(invest);
+  if(hBalEl){ hBalEl.textContent=(net<0?'-':'')+fmt(net); hBalEl.style.color=net<0?'var(--rd)':net===0?'var(--mu)':'var(--tx)'; }
+  const hSymEl=document.getElementById('h-sym'); if(hSymEl) hSymEl.textContent=s;
+  const hIncEl=document.getElementById('h-inc'); if(hIncEl) hIncEl.textContent=s+fmtCompact(income);
+  const hExpEl=document.getElementById('h-exp'); if(hExpEl) hExpEl.textContent=s+fmtCompact(expense);
+  const hNetEl=document.getElementById('h-net'); if(hNetEl) hNetEl.textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
+  const hInvEl=document.getElementById('h-invest'); if(hInvEl) hInvEl.textContent=s+fmt(invest);
 
   const cn=document.getElementById('c-net');
-  cn.textContent=(net>=0?'+':'-')+s+fmt(net);
-  cn.className='chart-net'+(net<0?' neg':'');
-  document.getElementById('cs-inc').textContent='+'+s+fmtCompact(income);
-  document.getElementById('cs-exp').textContent='-'+s+fmtCompact(expense);
-  document.getElementById('cs-net').textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
+  if(cn){ cn.textContent=(net>=0?'+':'-')+s+fmt(net); cn.className='chart-net'+(net<0?' neg':''); }
+  const csIncEl=document.getElementById('cs-inc'); if(csIncEl) csIncEl.textContent='+'+s+fmtCompact(income);
+  const csExpEl=document.getElementById('cs-exp'); if(csExpEl) csExpEl.textContent='-'+s+fmtCompact(expense);
+  const csNetEl=document.getElementById('cs-net'); if(csNetEl) csNetEl.textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
 
   drawChart(txs);
   renderTxList(txs,'tx-list',5);
@@ -544,6 +542,11 @@ function drawTrendChart(){
   drawCanvas(S.txs, 'todo');
 }
 
+// ── Helper: estado vacío ──
+function renderEmptyState(container, emoji, msg){
+  container.innerHTML=`<div class="empty-state"><span class="big">${emoji}</span>${msg}</div>`;
+}
+
 // ═══════════════════════════════════════════
 // TX LIST
 // ═══════════════════════════════════════════
@@ -553,10 +556,7 @@ function renderTxList(txs, containerId, limit){
   list.innerHTML='';
   const sorted=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const show=limit?sorted.slice(0,limit):sorted;
-  if(show.length===0){
-    list.innerHTML='<div class="empty-state"><span class="big">💸</span>Sin movimientos todavía.<br>Tocá + para agregar el primero.</div>';
-    return;
-  }
+  if(show.length===0){ renderEmptyState(list,'💸','Sin movimientos todavía.<br>Tocá + para agregar el primero.'); return; }
   const groups={};
   show.forEach(tx=>{ const dk=tx.date.slice(0,10); if(!groups[dk])groups[dk]=[]; groups[dk].push(tx); });
   Object.entries(groups).forEach(([dk,items])=>{
@@ -595,6 +595,7 @@ function buildTxItem(tx){
 // ADD TRANSACTION
 // ═══════════════════════════════════════════
 let txType='expense', amtStr='0', selCat=null, editingId=null;
+let txDate=new Date();
 
 function openAdd(forceType){
   editingId=null; editingTxId=null; amtStr='0'; selCat=null;
@@ -648,8 +649,8 @@ function buildCatGrid(containerId, type, selected, onSel){
     if(selected===c.n){ b.style.borderColor=c.c; b.style.background=c.c+'20'; b.querySelector&&setTimeout(()=>{const cn=b.querySelector('.cn');if(cn)cn.style.color=c.c;},0); }
     b.innerHTML=`<div class="ce">${c.e}</div><div class="cn">${c.n}</div>`;
     b.onclick=()=>{
-      g.querySelectorAll('.cat-btn').forEach(x=>{x.style.borderColor='var(--br)';x.style.background='var(--s1)';const cn=x.querySelector('.cn');if(cn)cn.style.color='var(--mu)';});
-      b.style.borderColor=c.c; b.style.background=c.c+'20'; b.querySelector('.cn').style.color=c.c;
+      g.children&&Array.from(g.children).forEach(x=>{x.style.borderColor='var(--br)';x.style.background='var(--s1)';const cn=x.querySelector('.cn');if(cn)cn.style.color='var(--mu)';});
+      b.style.borderColor=c.c; b.style.background=c.c+'20'; const bcn=b.querySelector('.cn'); if(bcn) bcn.style.color=c.c;
       onSel(c.n);
     };
     g.appendChild(b);
@@ -778,7 +779,7 @@ function renderInvest(){
   document.getElementById('inv-total2').textContent=s+fmt(total);
   document.getElementById('inv-count').textContent=invTxs.length;
   const list=document.getElementById('inv-list'); list.innerHTML='';
-  if(invTxs.length===0){ list.innerHTML='<div class="empty-state"><span class="big">📊</span>Sin inversiones registradas.</div>'; return; }
+  if(invTxs.length===0){ renderEmptyState(list,'📊','Sin inversiones registradas.'); return; }
   invTxs.forEach(tx=>{
     const cat=findCat('invest',tx.cat);
     const el=document.createElement('div'); el.className='inv-item';
@@ -806,9 +807,7 @@ let editingBudgetId=null, budgetSelCat=null;
 function renderBudgets(){
   const list=document.getElementById('budget-list'); if(!list) return; list.innerHTML='';
   const now=new Date();
-  if(S.budgets.length===0){
-    list.innerHTML='<div class="empty-state"><span class="big">🎯</span>Sin presupuestos.<br>Creá uno para controlar tus gastos.</div>'; return;
-  }
+  if(S.budgets.length===0){ renderEmptyState(list,'🎯','Sin presupuestos.<br>Creá uno para controlar tus gastos.'); return; }
   S.budgets.forEach(b=>{
     const spent=spentInCat(b.cat,now.getMonth(),now.getFullYear());
     const pct=Math.min(spent/b.limit,1);
@@ -881,10 +880,7 @@ let editingGoalId=null, goalEmoji='🎯';
 
 function renderGoals(){
   const list=document.getElementById('goal-list'); if(!list) return; list.innerHTML='';
-  if(S.goals.length===0){
-    list.innerHTML='<div class="empty-state"><span class="big">🎯</span>Sin metas todavía.<br>Tocá + para crear tu primera meta.</div>';
-    return;
-  }
+  if(S.goals.length===0){ renderEmptyState(list,'🎯','Sin metas todavía.<br>Tocá + para crear tu primera meta.'); return; }
   S.goals.forEach(g=>{
     const pct=Math.min(g.saved/g.target,1);
     const done=pct>=1;
@@ -1033,9 +1029,7 @@ let editingRecId=null, recType='expense', recSelCat=null;
 
 function renderRecurring(){
   const list=document.getElementById('rec-list'); if(!list) return; list.innerHTML='';
-  if(S.recurring.length===0){
-    list.innerHTML='<div class="empty-state"><span class="big">↺</span>Sin recurrentes.<br>Agregá tus gastos fijos.</div>'; return;
-  }
+  if(S.recurring.length===0){ renderEmptyState(list,'↺','Sin recurrentes.<br>Agregá tus gastos fijos.'); return; }
   S.recurring.forEach(r=>{
     const isIn=r.type==='income';
     const cat=findCat(r.type,r.cat);
@@ -5067,20 +5061,19 @@ function buildCatCircle(cat, type, isFreq){
 }
 
 // ── Selector de fecha simple ──
-let txDate=new Date();
 function pickDate(){
+  // Limpiar cualquier picker anterior que quedó en el DOM
+  document.querySelectorAll('input[data-date-picker]').forEach(el=>el.remove());
   const input=document.createElement('input');
   input.type='date';
+  input.dataset.datePicker='1';
   input.value=txDate.toISOString().slice(0,10);
   input.style.cssText='position:fixed;opacity:0;top:50%;left:50%;transform:translate(-50%,-50%)';
   document.body.appendChild(input);
   input.showPicker?.();
-  input.addEventListener('change',()=>{
-    txDate=new Date(input.value+'T12:00:00');
-    updateDateLbl();
-    input.remove();
-  });
-  input.addEventListener('blur',()=>setTimeout(()=>input.remove(),200));
+  const cleanup=()=>{ if(input.isConnected) input.remove(); };
+  input.addEventListener('change',()=>{ txDate=new Date(input.value+'T12:00:00'); updateDateLbl(); cleanup(); });
+  input.addEventListener('blur',()=>setTimeout(cleanup,200));
 }
 function updateDateLbl(){
   const el=document.getElementById('date-lbl');
@@ -5094,7 +5087,7 @@ function updateDateLbl(){
 }
 
 function setupKeyboardHandlers(){
-  const textInputs=['note-inp','split-desc-inp','split-note-inp','new-member-inp'];
+  const textInputs=['note-inp','split-desc-inp','split-note-inp','member-name-inp','member-email-inp'];
   textInputs.forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;

@@ -2,7 +2,7 @@
 :root{
   --bg:#0f0f13;--s1:#1a1a22;--s2:#22222e;--s3:#2c2c3a;
   --br:#2e2e40;--tx:#f0f0f8;--mu:#7878a0;--su:#3a3a52;
-  --gr:#34d48a;--rd:#f0566a;--bl:#6b8cff;--am:#f5a623;--pu:#b57bee;
+  --gr:#34d48a;--rd:#f0566a;--bl:#6b8cff;--am:#f5a623;
   --gd:rgba(52,212,138,.12);--rdd:rgba(240,86,106,.12);
   --bld:rgba(107,140,255,.12);--amd:rgba(245,166,35,.12);
   font-family:'DM Sans',sans-serif;
@@ -554,11 +554,6 @@ canvas.cv{width:100%;height:100%}
 .auth-tab-row{display:flex;background:var(--s2);border-radius:12px;padding:3px;margin-bottom:18px}
 .auth-tab{flex:1;padding:8px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;text-align:center;color:var(--mu);transition:all .18s}
 .auth-tab.active{background:var(--s1);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.3)}
-/* Sync modal */
-.sync-card{background:var(--s1);border:1px solid var(--br);border-radius:20px;padding:24px;margin:20px;position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);z-index:310}
-.sync-card.hidden{display:none}
-.sync-overlay-bg{position:absolute;inset:0;background:rgba(0,0,0,.7);z-index:309}
-.sync-overlay-bg.hidden{display:none}
 /* Profile mejorado */
 .profile-avatar-ring{width:84px;height:84px;border-radius:50%;border:3px solid var(--gr);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:12px;flex-shrink:0}
 .profile-avatar-img{width:100%;height:100%;object-fit:cover}
