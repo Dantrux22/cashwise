@@ -446,9 +446,8 @@ function drawNetCanvas(txs, period) {
   const xp = i => PAD.l + (i/(n-1||1))*cw;
   const yp = v => PAD.t + ch - ((v - minVal)/range)*ch;
   const zero = yp(0);
-  const lastVal = netData[n-1];
-  const color = lastVal >= 0 ? '#34D48A' : '#f0566a';
-  const fillColor = lastVal >= 0 ? 'rgba(52,212,138,0.15)' : 'rgba(240,86,106,0.15)';
+  const color = '#34D48A';
+  const fillColor = 'rgba(52,212,138,0.15)';
 
   ctx.beginPath();
   ctx.moveTo(xp(0), zero);
