@@ -4303,19 +4303,18 @@ async function authEmailRegister(){
 
 // ── Google ──
 async function authGoogle(){
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if(isSafari){
+    showToast('⚠️ Usá email y contraseña en Safari');
+    return;
+  }
   if(!_fbAuth) return;
   try{
     const provider = new firebase.auth.GoogleAuthProvider();
-    // En móvil usar redirect, en desktop usar popup
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if(isMobile){
-      await _fbAuth.signInWithRedirect(provider);
-    } else {
-      const result = await _fbAuth.signInWithPopup(provider);
-      await onUserLoggedIn(result.user);
-    }
+    const result = await _fbAuth.signInWithPopup(provider);
+    await onUserLoggedIn(result.user);
   }catch(e){
-    showAuthError('Error al iniciar sesión con Google: ' + e.message);
+    showAuthError('Error: ' + e.message);
   }
 }
 

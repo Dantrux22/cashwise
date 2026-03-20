@@ -38,42 +38,53 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
 }
 
 @media (max-width:430px){
-  body{
-    background:var(--bg);
-    display:block;
-    padding:0;
-    margin:0;
+  html { font-size: 17px; }
+  body {
+    background: var(--bg);
+    display: block;
+    padding: 0;
+    margin: 0;
+    min-height: 100dvh;
   }
-  .phone{
-    width:100vw;
-    min-height:100dvh;
-    border-radius:0;
-    box-shadow:none;
+  .phone {
+    width: 100vw;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
   }
-  :root{
-    font-size: clamp(14px, 4vw, 18px);
+  /* Nav más alto */
+  .nav { padding: 18px 20px !important; min-height: 64px; }
+  /* Cards más grandes */
+  .set-card, .tx-item, .sp-group-card { border-radius: 18px !important; }
+  /* Textos más grandes */
+  .tx-name { font-size: 16px !important; }
+  .tx-cat { font-size: 13px !important; }
+  .tx-amt { font-size: 16px !important; }
+  .tx-dt { font-size: 12px !important; }
+  .tx-item { padding: 16px 18px !important; }
+  /* Balance principal más grande */
+  .h-bal-num { font-size: clamp(42px, 12vw, 58px) !important; }
+  /* Botones más grandes */
+  .fab { width: 64px !important; height: 64px !important; border-radius: 22px !important; }
+  /* Secciones con más padding */
+  .scroll { padding-bottom: 100px !important; }
+  /* Items de lista más grandes */
+  .set-row { padding: 18px 20px !important; min-height: 60px; }
+  .set-lbl { font-size: 16px !important; }
+  .set-sub { font-size: 13px !important; }
+  /* Perfil */
+  .profile-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
   }
-  .h-bal-num{
-    font-size: clamp(36px, 10vw, 52px) !important;
-  }
-  .tx-item{
-    padding: 14px 16px !important;
-  }
-  .nav{
-    padding: 16px 20px !important;
-  }
-  .profile-stats-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-    margin-top:16px;
-  }
-  .stat-card{
-    background:var(--s2);
-    border:1px solid var(--br);
-    border-radius:16px;
-    padding:16px;
-    text-align:center;
+  .stat-card {
+    background: var(--s2);
+    border: 1px solid var(--br);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
   }
 }
 
@@ -1763,7 +1774,7 @@ canvas.cv{width:100%;height:100%}
       </div>
       <!-- Google -->
       <div class="auth-divider">o continuá con</div>
-      <button class="auth-btn google" onclick="authGoogle()">
+      <button class="auth-btn google" onclick="authGoogle()" style="opacity:.6;position:relative">
         <svg width="18" height="18" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -1771,6 +1782,7 @@ canvas.cv{width:100%;height:100%}
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
         </svg>
         Continuar con Google
+        <span style="display:block;font-size:10px;color:var(--mu);margin-top:2px">No disponible en Safari — usá email</span>
       </button>
     </div>
   </div>
@@ -6195,19 +6207,18 @@ async function authEmailRegister(){
 
 // ── Google ──
 async function authGoogle(){
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if(isSafari){
+    showToast('⚠️ Usá email y contraseña en Safari');
+    return;
+  }
   if(!_fbAuth) return;
   try{
     const provider = new firebase.auth.GoogleAuthProvider();
-    // En móvil usar redirect, en desktop usar popup
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if(isMobile){
-      await _fbAuth.signInWithRedirect(provider);
-    } else {
-      const result = await _fbAuth.signInWithPopup(provider);
-      await onUserLoggedIn(result.user);
-    }
+    const result = await _fbAuth.signInWithPopup(provider);
+    await onUserLoggedIn(result.user);
   }catch(e){
-    showAuthError('Error al iniciar sesión con Google: ' + e.message);
+    showAuthError('Error: ' + e.message);
   }
 }
 

@@ -22,42 +22,53 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
 }
 
 @media (max-width:430px){
-  body{
-    background:var(--bg);
-    display:block;
-    padding:0;
-    margin:0;
+  html { font-size: 17px; }
+  body {
+    background: var(--bg);
+    display: block;
+    padding: 0;
+    margin: 0;
+    min-height: 100dvh;
   }
-  .phone{
-    width:100vw;
-    min-height:100dvh;
-    border-radius:0;
-    box-shadow:none;
+  .phone {
+    width: 100vw;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
   }
-  :root{
-    font-size: clamp(14px, 4vw, 18px);
+  /* Nav más alto */
+  .nav { padding: 18px 20px !important; min-height: 64px; }
+  /* Cards más grandes */
+  .set-card, .tx-item, .sp-group-card { border-radius: 18px !important; }
+  /* Textos más grandes */
+  .tx-name { font-size: 16px !important; }
+  .tx-cat { font-size: 13px !important; }
+  .tx-amt { font-size: 16px !important; }
+  .tx-dt { font-size: 12px !important; }
+  .tx-item { padding: 16px 18px !important; }
+  /* Balance principal más grande */
+  .h-bal-num { font-size: clamp(42px, 12vw, 58px) !important; }
+  /* Botones más grandes */
+  .fab { width: 64px !important; height: 64px !important; border-radius: 22px !important; }
+  /* Secciones con más padding */
+  .scroll { padding-bottom: 100px !important; }
+  /* Items de lista más grandes */
+  .set-row { padding: 18px 20px !important; min-height: 60px; }
+  .set-lbl { font-size: 16px !important; }
+  .set-sub { font-size: 13px !important; }
+  /* Perfil */
+  .profile-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
   }
-  .h-bal-num{
-    font-size: clamp(36px, 10vw, 52px) !important;
-  }
-  .tx-item{
-    padding: 14px 16px !important;
-  }
-  .nav{
-    padding: 16px 20px !important;
-  }
-  .profile-stats-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-    margin-top:16px;
-  }
-  .stat-card{
-    background:var(--s2);
-    border:1px solid var(--br);
-    border-radius:16px;
-    padding:16px;
-    text-align:center;
+  .stat-card {
+    background: var(--s2);
+    border: 1px solid var(--br);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
   }
 }
 
