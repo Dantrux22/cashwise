@@ -41,7 +41,13 @@ function showSuccess() {
     <div class="emoji">✅</div>
     <h2>¡Email verificado!</h2>
     <p>Tu cuenta de CashWise está activa.<br>Ya podés sincronizar tus datos en la nube.</p>
-    <a href="${APP_URL}" class="btn">Abrir CashWise</a>
+    <a href="${APP_URL}"
+       onclick="window.location.href='${APP_URL}'"
+       class="btn">Abrir CashWise →</a>
+    <p style="font-size:12px;color:#7878a0;margin-top:16px">
+      Si tenés la app instalada, cerrá esta página y abrila desde tu pantalla de inicio.<br>
+      Luego tocá "Ya verifiqué mi email ✓"
+    </p>
   `;
 }
 

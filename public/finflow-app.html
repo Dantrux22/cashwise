@@ -6194,6 +6194,17 @@ function initAuth(){
     if(!S.skipAuth) showAuthOverlay();
     return;
   }
+  // Auto-chequear verificación al abrir la app
+  if(_fbAuth.currentUser && !_fbAuth.currentUser.emailVerified) {
+    _fbAuth.currentUser.reload().then(() => {
+      if(_fbAuth.currentUser.emailVerified) {
+        document.getElementById('verify-overlay')?.remove();
+        showToast('✅ Email verificado');
+        onUserLoggedIn(_fbAuth.currentUser);
+      }
+    });
+  }
+
   // Detectar si venimos de un link de verificación de email
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
