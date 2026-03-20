@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="ibg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0D1A12"/>
+      <stop offset="100%" stop-color="#091410"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo iOS (rx=230 = 22.5% de 1024) -->
+  <rect width="1024" height="1024" rx="230" fill="url(#ibg)"/>
+
+  <!-- Anillo exterior centrado -->
+  <circle cx="512" cy="512" r="410" fill="none" stroke="#34D48A" stroke-width="8" opacity="0.45"/>
+
+  <!-- C centrada con el círculo — centro 490,512 radio 252 -->
+  <path d="M 736 322 A 252 252 0 1 0 736 702"
+        fill="none" stroke="#34D48A" stroke-width="72" stroke-linecap="round"/>
+
+  <!-- W en el centro del hueco — centrada en x=782, y=512 -->
+  <polyline points="726,420  758,548  782,464  806,548  838,420"
+            fill="none" stroke="#34D48A" stroke-width="42"
+            stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

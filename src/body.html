@@ -1,0 +1,1305 @@
+<div class="phone">
+
+<!-- ══ HOME ══ -->
+<div class="screen" id="s-home">
+  <div class="nav">
+    <div class="logo logo-cw">
+      <svg width="110" height="28" viewBox="0 0 110 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Icono: moneda con flecha -->
+        <circle cx="14" cy="14" r="12" fill="var(--bl)" opacity="0.15"/>
+        <circle cx="14" cy="14" r="8.5" fill="var(--bl)" opacity="0.25"/>
+        <text x="14" y="19" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="11" font-weight="700" fill="var(--bl)">$</text>
+        <!-- Wordmark -->
+        <text x="31" y="19" font-family="DM Sans,sans-serif" font-size="16" font-weight="600" fill="var(--tx)">Cash</text>
+        <text x="66" y="19" font-family="DM Sans,sans-serif" font-size="16" font-weight="300" fill="var(--bl)">Wise</text>
+      </svg>
+    </div>
+    <div class="nav-acts">
+      <div class="icon-btn" onclick="goTo('s-split')" title="Split" style="background:var(--bld);border-color:rgba(107,140,255,.3)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--bl)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="icon-btn" onclick="toggleHide()" id="hide-btn">
+        <svg id="hide-ico" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div class="icon-btn" onclick="goTo('s-settings')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="scroll">
+    <!-- Balance -->
+    <div class="bal-card au">
+      <div class="bal-lbl" id="h-bal-lbl" data-i18n="balLbl">Balance disponible</div>
+      <div class="bal-num"><span class="bal-sym" id="h-sym">$</span><span id="h-bal" style="transition:color .3s">0</span></div>
+      <div class="bal-row">
+        <div class="bal-stat"><div class="bal-stat-lbl"><span class="dot g"></span><span data-i18n="incomeLabel">Ingresos</span></div><div class="bal-stat-val g" id="h-inc">$0</div></div>
+        <div class="bal-stat"><div class="bal-stat-lbl"><span class="dot r"></span><span data-i18n="expenseLabel">Gastos</span></div><div class="bal-stat-val r" id="h-exp">$0</div></div>
+        <div class="bal-stat"><div class="bal-stat-lbl"><span class="dot b"></span><span data-i18n="netLabel">Neto</span></div><div class="bal-stat-val b" id="h-net">$0</div></div>
+      </div>
+      <div class="invest-row" onclick="goTo('s-invest')">
+        <div class="invest-row-l">
+          <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          <span class="invest-row-lbl" data-i18n="investedLabel">Invertido</span>
+        </div>
+        <div class="invest-row-r">
+          <span class="invest-row-val" id="h-invest">$0</span>
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+    <!-- Filtros -->
+    <div class="filter-row">
+      <div class="pill active" onclick="setFilter('semana',this)" data-i18n="thisWeek">Semana</div>
+      <div class="pill" onclick="setFilter('mes',this)" data-i18n="thisMonth">Mes</div>
+      <div class="pill" onclick="setFilter('año',this)" data-i18n="thisYear">Año</div>
+      <div class="pill" onclick="setFilter('todo',this)" data-i18n="all">Todo</div>
+    </div>
+    <!-- Gráfico período -->
+    <div class="chart-wrap au">
+      <div class="chart-top">
+        <div><div class="chart-period" id="c-period">Semana</div><div class="chart-net" id="c-net">$0</div></div>
+        <div class="chart-legend">
+          <div class="leg-item"><div class="leg-bar" style="background:var(--gr)"></div><span data-i18n="incomeLabel">Ingresos</span></div>
+          <div class="leg-item"><div class="leg-bar" style="background:var(--rd)"></div><span data-i18n="expenseLabel">Gastos</span></div>
+        </div>
+      </div>
+      <div class="chart-cv-wrap"><canvas id="chart-cv" class="cv"></canvas></div>
+      <div class="chart-xlbls" id="c-xlbls"></div>
+      <div class="chart-stats">
+        <div class="cs-item"><div class="cs-lbl" data-i18n="incomeLabel">INGRESOS</div><div class="cs-val g" id="cs-inc">$0</div></div>
+        <div class="cs-item"><div class="cs-lbl" data-i18n="expenseLabel">GASTOS</div><div class="cs-val r" id="cs-exp">$0</div></div>
+        <div class="cs-item"><div class="cs-lbl" data-i18n="netLabel">NETO</div><div class="cs-val b" id="cs-net">$0</div></div>
+      </div>
+    </div>
+    <!-- Movimientos -->
+    <div id="home-alerts" style="padding:0"></div>
+    <div class="sec-hdr"><span class="sec-ttl" data-i18n="lastMov">Últimos movimientos</span><span class="sec-act" onclick="goTo('s-allTx')" data-i18n="seeAll">Ver todos →</span></div>
+    <div class="tx-list" id="tx-list"></div>
+  </div>
+  <div class="fab-wrap">
+    <button class="fab" onclick="openAdd(null)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+
+<!-- ══ AUTH SCREEN ══ -->
+
+
+<!-- ══ NFC OVERLAY ══ -->
+<div class="nfc-overlay hidden" id="nfc-overlay">
+  <div class="nfc-ring"><div class="nfc-icon">📱</div></div>
+  <div class="nfc-title" id="nfc-title">Pago detectado</div>
+  <div class="nfc-amt" id="nfc-amt">$0</div>
+  <div class="nfc-sub" id="nfc-sub">Acercá el teléfono al terminal para pagar</div>
+  <div style="display:flex;flex-direction:column;gap:10px;width:100%;padding:0 24px;margin-top:8px" id="nfc-actions"></div>
+  <button class="nfc-cancel" onclick="closeNFC()">Cancelar</button>
+</div>
+
+<!-- ══ ADD / EDIT TX ══ -->
+<div class="screen hidden" id="s-add">
+
+  <!-- NAV -->
+  <div class="tx-screen-nav">
+    <button class="tx-nav-pill" onclick="goBack()" data-i18n="cancelBtn">Cancelar</button>
+    <div id="add-title" style="font-size:15px;font-weight:600;color:var(--mu)" data-i18n="newTx">Nueva transacción</div>
+    <button class="tx-nav-pill save" id="save-btn" onclick="saveTx()" data-i18n="saveBtn">Guardar</button>
+  </div>
+
+  <!-- MONTO — toca para abrir teclado -->
+  <div class="tx-amt-block" id="amt-tap-area" onclick="showNumpad()" style="cursor:pointer">
+    <div style="font-size:13px;color:var(--mu);margin-bottom:4px" id="add-curr-lbl">ARS</div>
+    <div class="amt-num ec" id="amt-display" style="font-size:52px">0<span class="amt-cur"></span></div>
+    <div style="font-size:11px;color:var(--mu);margin-top:6px" id="amt-tap-hint" data-i18n="tapAmount">Tocá para ingresar el monto</div>
+  </div>
+
+  <!-- TIPO -->
+  <div class="tx-type-toggle">
+    <div class="tx-type-btn active-e" id="btn-e" onclick="setType('expense')" data-i18n="typeExpense">Gasto</div>
+    <div class="tx-type-btn" id="btn-i" onclick="setType('income')" data-i18n="typeIncome">Ingreso</div>
+    <div class="tx-type-btn" id="btn-v" onclick="setType('invest')" data-i18n="typeInvest">Inversión</div>
+  </div>
+
+  <!-- DESCRIPCIÓN -->
+  <div class="tx-row">
+    <div class="tx-row-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+    </div>
+    <input class="tx-desc-inp" type="text" placeholder="Descripción (opcional)" id="note-inp" maxlength="80" data-i18n-ph="descPlaceholder">
+  </div>
+
+  <!-- FECHA -->
+  <div class="tx-row" onclick="pickDate()" style="cursor:pointer">
+    <div class="tx-row-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
+    <div class="tx-row-value" id="date-lbl" data-i18n="today">Hoy</div>
+    <div class="tx-row-arrow">›</div>
+  </div>
+
+  <!-- CATEGORÍAS FRECUENTES -->
+  <div class="tx-cats-section" id="tx-freq-section" style="display:none">
+    <div class="tx-cats-label" id="tx-freq-label" data-i18n="freqCats">Categorías frecuentes</div>
+    <div class="tx-cats-grid" id="tx-freq-grid"></div>
+  </div>
+
+  <!-- TODAS LAS CATEGORÍAS -->
+  <div class="tx-cats-section">
+    <div class="tx-cats-label" id="tx-all-cats-label" data-i18n="allCatsExpense">Categorías de gasto</div>
+    <div class="tx-cats-grid" id="cat-grid"></div>
+  </div>
+
+  <!-- Spacer para el numpad cuando está visible -->
+  <div id="numpad-spacer" style="height:0;transition:height .25s"></div>
+
+  <!-- TECLADO — oculto por defecto, aparece al tocar el monto -->
+  <div id="main-numpad" style="position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--bg);border-top:1px solid var(--br);z-index:100;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)">
+    <!-- Header del teclado: monto + cerrar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px">
+      <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace" id="numpad-amt-preview">0</div>
+      <button onclick="hideNumpad()" style="background:var(--s2);border:none;color:var(--mu);font-size:13px;font-weight:500;padding:6px 14px;border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif" data-i18n="done">Listo</button>
+    </div>
+    <div class="numpad" style="border:none;border-top:1px solid var(--br)">
+      <div class="nk" onclick="np('1')">1</div><div class="nk" onclick="np('2')">2</div><div class="nk" onclick="np('3')">3</div>
+      <div class="nk" onclick="np('4')">4</div><div class="nk" onclick="np('5')">5</div><div class="nk" onclick="np('6')">6</div>
+      <div class="nk" onclick="np('7')">7</div><div class="nk" onclick="np('8')">8</div><div class="nk" onclick="np('9')">9</div>
+      <div class="nk sm" id="dec-key" onclick="np('dec')">,</div>
+      <div class="nk" onclick="np('0')">0</div>
+      <div class="nk" onclick="np('del')">⌫</div>
+    </div>
+  </div>
+
+
+
+  <div style="display:none"><div id="extras-body"></div><div id="extras-toggle"></div></div>
+</div>
+
+<!-- ══ EDIT SCREEN ══ -->
+<div class="screen hidden" id="s-edit">
+  <div class="nav" style="padding:14px 20px 8px">
+    <div class="back-btn" onclick="closeEdit()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="editTx">Editar movimiento</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="type-toggle" style="pointer-events:none;opacity:.6">
+    <div class="type-btn" id="edit-btn-e">🔴 <span data-i18n="typeExpense">Gasto</span></div>
+    <div class="type-btn" id="edit-btn-i">🟢 <span data-i18n="typeIncome">Ingreso</span></div>
+    <div class="type-btn" id="edit-btn-v">🟡 <span data-i18n="typeInvest">Inversión</span></div>
+  </div>
+  <div class="amt-area">
+    <div class="amt-curr-lbl" id="edit-curr-lbl">ARS</div>
+    <div class="amt-num ec" id="edit-amt-display">0<span class="amt-cur"></span></div>
+  </div>
+  <div class="cat-gw">
+    <div class="cat-glbl" data-i18n="category">Categoría</div>
+    <div class="cat-grid" id="edit-cat-grid"></div>
+  </div>
+  <div class="quick-extras">
+    <div style="margin-bottom:8px">
+      <input class="note-inp" type="text" placeholder="Nota (opcional)" id="edit-note-inp" maxlength="80" data-i18n-ph="notePlaceholder">
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;padding:0 20px 8px;flex-shrink:0">
+    <button class="save-btn eb" id="edit-save-btn" onclick="saveEdit()" style="margin:0;flex:1" data-i18n="saveChanges">Guardar cambios</button>
+    <button onclick="deleteTx()" style="width:50px;border-radius:16px;background:var(--rdd);border:1px solid rgba(240,86,106,.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🗑️</button>
+  </div>
+  <div class="numpad">
+    <div class="nk" onclick="enp('1')">1</div><div class="nk" onclick="enp('2')">2</div><div class="nk" onclick="enp('3')">3</div>
+    <div class="nk" onclick="enp('4')">4</div><div class="nk" onclick="enp('5')">5</div><div class="nk" onclick="enp('6')">6</div>
+    <div class="nk" onclick="enp('7')">7</div><div class="nk" onclick="enp('8')">8</div><div class="nk" onclick="enp('9')">9</div>
+    <div class="nk sm" id="edit-dec-key" onclick="enp('dec')">,</div>
+    <div class="nk" onclick="enp('0')">0</div>
+    <div class="nk" onclick="enp('del')">⌫</div>
+  </div>
+</div>
+
+<!-- ══ ALL TRANSACTIONS ══ -->
+<div class="screen hidden" id="s-allTx">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="allTx">Todos los movimientos</div>
+    <div style="width:38px"></div>
+  </div>
+  <!-- Búsqueda -->
+  <div style="padding:0 16px 10px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--br);border-radius:13px;padding:10px 14px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="alltx-search" placeholder="Buscar por descripción..." oninput="filterAllTx()" data-i18n-ph="allTxSearch"
+        style="background:none;border:none;outline:none;font-size:14px;color:var(--tx);font-family:'DM Sans',sans-serif;flex:1">
+      <div id="alltx-clear" onclick="clearAllTxSearch()" style="display:none;color:var(--mu);cursor:pointer;font-size:16px">✕</div>
+    </div>
+  </div>
+  <!-- Filtros -->
+  <div style="display:flex;gap:7px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
+    <div class="alltx-chip active" id="chip-all" onclick="setAllTxType('all')" data-i18n="chipAll">Todos</div>
+    <div class="alltx-chip" id="chip-expense" onclick="setAllTxType('expense')">🔴 <span data-i18n="chipExpense">Gastos</span></div>
+    <div class="alltx-chip" id="chip-income" onclick="setAllTxType('income')">🟢 <span data-i18n="chipIncome">Ingresos</span></div>
+    <div class="alltx-chip" id="chip-invest" onclick="setAllTxType('invest')">🟡 <span data-i18n="chipInvest">Inversiones</span></div>
+    <div class="alltx-chip" id="chip-cat" onclick="openAllTxCatFilter()">📂 Categoría</div>
+    <div class="alltx-chip" id="chip-date" onclick="openAllTxDateFilter()">📅 Fecha</div>
+  </div>
+  <!-- Info de resultados -->
+  <div id="alltx-info" style="padding:0 16px 8px;font-size:12px;color:var(--mu);flex-shrink:0"></div>
+  <div class="scroll" style="padding-top:0">
+    <div class="tx-list" id="all-tx-list"></div>
+  </div>
+</div>
+
+<!-- ══ INVESTMENTS ══ -->
+<div class="screen hidden" id="s-invest">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="invest">Inversiones</div>
+    <div class="icon-btn" onclick="openAdd('invest')">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+  <div class="scroll">
+    <div class="invest-hdr-card au">
+      <div class="bal-lbl" data-i18n="totalInvested">Total invertido</div>
+      <div class="bal-num"><span class="bal-sym" style="color:var(--mu)" id="inv-sym">$</span><span id="inv-total" style="font-size:38px;font-weight:300;font-family:'DM Mono',monospace;letter-spacing:-2px">0</span></div>
+      <div class="bal-row">
+        <div class="bal-stat"><div class="bal-stat-lbl"><span class="dot a"></span><span data-i18n="capital">Capital</span></div><div class="bal-stat-val a" id="inv-total2">$0</div></div>
+        <div class="bal-stat"><div class="bal-stat-lbl"><span class="dot" style="background:var(--mu)"></span><span data-i18n="records">Registros</span></div><div class="bal-stat-val" id="inv-count" style="color:var(--mu)">0</div></div>
+      </div>
+    </div>
+    <div style="background:var(--amd);border:1px solid rgba(245,166,35,.2);border-radius:13px;padding:10px 13px;margin-bottom:16px;font-size:12px;color:var(--am);line-height:1.6">
+      💡 Las inversiones se descuentan del balance disponible. Solo registro.
+    </div>
+    <div class="sec-hdr"><span class="sec-ttl" data-i18n="myRecords">Mis registros</span><span class="sec-act" onclick="openAdd('invest')" data-i18n="addRecord">+ Agregar →</span></div>
+    <div class="tx-list" id="inv-list"></div>
+  </div>
+</div>
+
+<!-- ══ BUDGETS ══ -->
+<div class="screen hidden" id="s-budgets">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="budgets">Presupuestos</div>
+    <div class="icon-btn" onclick="openBudgetModal(null)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+  <div class="scroll">
+    <div style="font-size:12px;color:var(--mu);margin-bottom:14px;line-height:1.6" data-i18n="budgetsDesc">Establecé límites de gasto por categoría. Te avisamos al llegar al 80%.</div>
+    <div class="budget-list" id="budget-list"></div>
+  </div>
+</div>
+
+<!-- ══ GOALS ══ -->
+<div class="screen hidden" id="s-goals">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="goals">Metas de ahorro</div>
+    <div class="icon-btn" onclick="openGoalModal(null)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+  <div class="scroll">
+    <div style="font-size:12px;color:var(--mu);margin-bottom:14px;line-height:1.6" data-i18n="goalsDesc">Fijate cuánto falta para cada objetivo. Aboná manualmente tu progreso.</div>
+    <div class="goal-list" id="goal-list"></div>
+  </div>
+</div>
+
+<!-- ══ RECURRING ══ -->
+<div class="screen hidden" id="s-recurring">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="recurring">Recurrentes</div>
+    <div class="icon-btn" onclick="openRecModal(null)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+  <div class="scroll">
+    <div style="font-size:12px;color:var(--mu);margin-bottom:14px;line-height:1.6" data-i18n="recurringDesc">Alquiler, suscripciones, sueldos. Se registran automáticamente el día que corresponde.</div>
+    <div class="tx-list" id="rec-list"></div>
+  </div>
+</div>
+
+<!-- ══ CATEGORIES ══ -->
+<div class="screen hidden" id="s-cats">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="cats">Categorías</div>
+    <div class="icon-btn" onclick="openNewCat('expense')">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+  <div class="scroll">
+    <div style="font-size:12px;color:var(--mu);margin-bottom:14px;line-height:1.6" data-i18n="catsDesc">Tocá para editar. + para crear nueva.</div>
+    <div class="cat-sec-ttl" data-i18n="catsExpense">GASTOS</div>
+    <div class="cat-mgr-list" id="cats-expense"></div>
+    <div class="cat-sec-ttl" data-i18n="catsIncome">INGRESOS</div>
+    <div class="cat-mgr-list" id="cats-income"></div>
+    <div class="cat-sec-ttl" data-i18n="catsInvest">INVERSIONES</div>
+    <div class="cat-mgr-list" id="cats-invest"></div>
+  </div>
+</div>
+
+<!-- ══ MONTHLY ══ -->
+<div class="screen hidden" id="s-monthly">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" id="monthly-title" data-i18n="monthly">Resumen mensual</div>
+    <div style="display:flex;gap:6px">
+      <div class="icon-btn" onclick="changeMonth(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+      <div class="icon-btn" onclick="changeMonth(1)"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+  </div>
+  <div class="scroll" id="monthly-scroll"></div>
+</div>
+
+<!-- ══ CAT HISTORY ══ -->
+<div class="screen hidden" id="s-cat-history">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" id="cat-history-title" data-i18n="category">Categoría</div>
+    <div style="width:38px"></div>
+  </div>
+  <div class="scroll">
+    <div id="cat-history-stats" style="margin-bottom:14px"></div>
+    <div class="tx-list" id="cat-history-list"></div>
+  </div>
+</div>
+
+<!-- ══ PROFILE ══ -->
+<div class="screen hidden" id="s-profile">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="profile">Perfil</div>
+    <div style="width:38px"></div>
+  </div>
+  <div class="scroll">
+    <div style="display:flex;flex-direction:column;align-items:center;padding:24px 0 20px">
+      <div id="profile-avatar" style="width:80px;height:80px;border-radius:50%;background:var(--gd);border:3px solid var(--gr);display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:12px">👤</div>
+      <div id="profile-name" style="font-size:18px;font-weight:600;margin-bottom:4px">Sin cuenta vinculada</div>
+      <div id="profile-email" style="font-size:13px;color:var(--mu)">Vinculá para sincronizar</div>
+    </div>
+    <!-- Cuenta vinculada -->
+    <div class="set-sec" id="profile-linked-sec" style="display:none">
+      <div class="set-sec-ttl">Cuenta vinculada</div>
+      <div class="set-card">
+        <div class="set-row" style="cursor:default">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="profile-provider-icon" style="width:32px;height:32px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#4285F4">G</div>
+            <div><div class="set-lbl" id="profile-linked-name">Usuario</div><div class="set-sub" id="profile-linked-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="791c14181015391e14181015571a1614">[email&#160;protected]</a></div></div>
+          </div>
+          <div style="color:var(--gr);font-size:18px">✓</div>
+        </div>
+      </div>
+    </div>
+    <div class="set-sec" id="profile-unlinked-sec">
+      <div class="set-sec-ttl">Vincular cuenta</div>
+      <div style="font-size:12px;color:var(--mu);margin-bottom:10px;line-height:1.6">Vinculá para sincronizar tus datos en la nube y en Split.</div>
+      <div class="set-card">
+        <div class="set-row" onclick="linkAccount('google')" id="google-row">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#4285F4">G</div>
+            <div><div class="set-lbl">Google / Gmail</div><div class="set-sub" id="google-sub">Sincronizá con tu cuenta Google</div></div>
+          </div>
+          <div class="set-arr" id="google-arr">›</div>
+        </div>
+        <div class="set-row" onclick="linkAccount('facebook')" id="facebook-row">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:8px;background:#1877f2;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:700">f</div>
+            <div><div class="set-lbl">Facebook</div><div class="set-sub" id="fb-sub">Sincronizá con Facebook</div></div>
+          </div>
+          <div class="set-arr" id="fb-arr">›</div>
+        </div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl">Mis estadísticas</div>
+      <div class="profile-stats-grid">
+        <div class="profile-stat-card">
+          <div class="profile-stat-val" id="profile-tx-count">0</div>
+          <div class="profile-stat-lbl">Movimientos</div>
+        </div>
+        <div class="profile-stat-card">
+          <div class="profile-stat-val" id="profile-spent-total">$0</div>
+          <div class="profile-stat-lbl">Total gastado</div>
+        </div>
+        <div class="profile-stat-card">
+          <div class="profile-stat-val" id="profile-cats">0</div>
+          <div class="profile-stat-lbl">Categorías</div>
+        </div>
+        <div class="profile-stat-card">
+          <div class="profile-stat-val" id="profile-since">—</div>
+          <div class="profile-stat-lbl">Usando desde</div>
+        </div>
+      </div>
+    </div>
+    <div class="set-sec" id="profile-account-sec" style="display:none">
+      <div class="set-card">
+        <div class="set-row" onclick="unlinkAccount()"><div><div class="set-lbl" style="color:var(--rd)">Desvincular cuenta</div></div><div class="set-arr" style="color:var(--rd)">›</div></div>
+        <div class="set-row" onclick="logout()"><div><div class="set-lbl" style="color:var(--rd)">Cerrar sesión</div></div><div class="set-arr" style="color:var(--rd)">›</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="screen hidden" id="s-settings">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="settings">Ajustes</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="scroll">
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secAccess">Accesos</div>
+      <div class="nav-shortcut">
+        <div class="nav-sc-btn" onclick="goTo('s-invest')"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span data-i18n="invest">Inversiones</span></div>
+        <div class="nav-sc-btn" onclick="goTo('s-cats')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span data-i18n="cats">Categorías</span></div>
+        <div class="nav-sc-btn" onclick="goTo('s-profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg><span data-i18n="profile">Perfil</span></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secFinance">Finanzas</div>
+      <div class="set-card">
+        <div class="set-row" onclick="goTo('s-budgets')"><div><div class="set-lbl" data-i18n="rBudgets">Presupuestos</div><div class="set-sub" data-i18n="rBudgetsSub">Límites por categoría</div></div><div class="set-arr">›</div></div>
+        <div class="set-row" onclick="goTo('s-goals')"><div><div class="set-lbl" data-i18n="rGoals">Metas de ahorro</div><div class="set-sub" data-i18n="rGoalsSub">Objetivos y progreso</div></div><div class="set-arr">›</div></div>
+        <div class="set-row" onclick="goTo('s-recurring')"><div><div class="set-lbl" data-i18n="rRecurring">Recurrentes</div><div class="set-sub" data-i18n="rRecurringSub">Gastos e ingresos automáticos</div></div><div class="set-arr">›</div></div>
+        <div class="set-row" onclick="goTo('s-monthly')"><div><div class="set-lbl" data-i18n="rMonthly">Resumen mensual</div><div class="set-sub" data-i18n="rMonthlySub">Gastos por categoría</div></div><div class="set-arr">›</div></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secLanguage">Idioma</div>
+      <div class="set-card">
+        <div class="set-row" onclick="openLangModal()">
+          <div><div class="set-lbl" data-i18n="rLang">Idioma de la app</div><div class="set-sub" id="lang-sub">Español 🇦🇷</div></div>
+          <div style="display:flex;align-items:center;gap:8px"><div class="set-val" id="lang-val">🇦🇷 ES</div><div class="set-arr">›</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secCurrency">Moneda</div>
+      <div class="set-card">
+        <div class="set-row" onclick="openCurrModal()"><div><div class="set-lbl" data-i18n="rCurrency">Moneda principal</div><div class="set-sub" id="curr-sub">Peso Argentino · ARS</div></div><div style="display:flex;align-items:center;gap:8px"><div class="set-val" id="curr-val">🇦🇷 ARS</div><div class="set-arr">›</div></div></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secNumbers">Números</div>
+      <div class="set-card">
+        <div class="set-row" onclick="toggleComma(this)"><div><div class="set-lbl" data-i18n="rDecimal">Coma decimal</div><div class="set-sub" id="comma-sub">Activo: 1.250,50</div></div><div class="toggle on" id="tog-comma"></div></div>
+        <div class="set-row" onclick="toggleThousands(this)"><div><div class="set-lbl" data-i18n="rThousands">Separador de miles</div><div class="set-sub" data-i18n="rThousandsSub">Ej: 1.250 vs 1250</div></div><div class="toggle on" id="tog-thousands"></div></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secData">Datos</div>
+      <div class="set-card">
+        <div class="set-row" onclick="goTo('s-data')"><div><div class="set-lbl" data-i18n="rData">Gestionar datos</div><div class="set-sub" data-i18n="rDataSub">Exportar e importar historial</div></div><div class="set-arr">›</div></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secGeneral">General</div>
+      <div class="set-card">
+        <div class="set-row" onclick="toggleBudgetAlerts(this)"><div><div class="set-lbl" data-i18n="rBudgetAlerts">Alertas de presupuesto</div><div class="set-sub" data-i18n="rBudgetAlertsSub">Avisa al 80% y 100% del límite</div></div><div class="toggle on" id="tog-budget"></div></div>
+        <div class="set-row" onclick="toggleHideOnStart(this)"><div><div class="set-lbl" data-i18n="rHideBalance">Ocultar balance al abrir</div><div class="set-sub" data-i18n="rHideBalanceSub">El balance aparece tapado</div></div><div class="toggle" id="tog-hide-start"></div></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secAppearance">Apariencia</div>
+      <div class="set-card">
+        <div class="set-row" onclick="toggleDarkMode(this)"><div><div class="set-lbl" data-i18n="rDarkMode">Modo oscuro</div></div><div class="toggle on" id="tog-dark"></div></div>
+        <div class="set-row" style="cursor:default"><div><div class="set-lbl" data-i18n="rAccent">Color de acento</div></div><div class="accent-dots" id="accent-dots"></div></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-ttl" data-i18n="secDanger">Zona de peligro</div>
+      <div class="set-card">
+        <div class="set-row" onclick="clearAll()"><div><div class="set-lbl" style="color:var(--rd)" data-i18n="rClearAll">Borrar todos los datos</div></div><div class="set-arr" style="color:var(--rd)">›</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODALS ══ -->
+<!-- Cat modal -->
+<div class="modal-bg hidden" id="cat-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title" id="cat-modal-title">Nueva categoría</div>
+      <button class="modal-x" onclick="closeCatModal()">✕</button>
+    </div>
+    <input class="modal-inp" type="text" placeholder="Nombre" id="cat-name-inp" maxlength="20">
+    <div class="modal-lbl">Ícono</div>
+    <div class="emoji-picker" id="emoji-picker"></div>
+    <div class="modal-lbl">Color</div>
+    <div class="color-picker" id="color-picker"></div>
+    <button class="modal-btn" onclick="saveCat()">Guardar categoría</button>
+    <button class="modal-btn danger" id="cat-del-btn" style="display:none" onclick="deleteCat()">Eliminar categoría</button>
+  </div>
+</div>
+
+<!-- Budget modal -->
+<div class="modal-bg hidden" id="budget-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title" id="budget-modal-title">Nuevo presupuesto</div>
+      <button class="modal-x" onclick="closeBudgetModal()">✕</button>
+    </div>
+    <div class="modal-lbl">Categoría</div>
+    <div class="cat-grid" id="budget-cat-grid" style="margin-bottom:16px"></div>
+    <div class="modal-lbl">Límite mensual</div>
+    <input class="modal-inp" type="number" placeholder="0" id="budget-limit-inp" min="0">
+    <button class="modal-btn" onclick="saveBudget()">Guardar presupuesto</button>
+    <button class="modal-btn danger" id="budget-del-btn" style="display:none" onclick="deleteBudget()">Eliminar presupuesto</button>
+  </div>
+</div>
+
+<!-- Goal modal -->
+<div class="modal-bg hidden" id="goal-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title" id="goal-modal-title">Nueva meta</div>
+      <button class="modal-x" onclick="closeGoalModal()">✕</button>
+    </div>
+    <input class="modal-inp" type="text" placeholder="Nombre de la meta (ej: Viaje a Europa)" id="goal-name-inp" maxlength="40">
+    <div class="modal-lbl">Monto objetivo</div>
+    <input class="modal-inp" type="number" placeholder="0" id="goal-target-inp" min="0">
+    <div class="modal-lbl">Ahorrado hasta ahora</div>
+    <input class="modal-inp" type="number" placeholder="0" id="goal-saved-inp" min="0">
+    <div class="modal-lbl">Ícono</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="goal-emoji-row"></div>
+    <button class="modal-btn" onclick="saveGoal()">Guardar meta</button>
+    <button class="modal-btn secondary" id="goal-add-btn" style="display:none" onclick="addToGoal()">✏️ Editar monto ahorrado</button>
+    <button class="modal-btn danger" id="goal-del-btn" style="display:none" onclick="deleteGoal()">Eliminar meta</button>
+  </div>
+</div>
+
+<!-- Recurring modal -->
+<div class="modal-bg hidden" id="rec-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title" id="rec-modal-title">Nuevo recurrente</div>
+      <button class="modal-x" onclick="closeRecModal()">✕</button>
+    </div>
+    <div class="type-toggle" style="margin:0 0 14px">
+      <div class="type-btn ae" id="rec-btn-e" onclick="setRecType('expense')">🔴 Gasto</div>
+      <div class="type-btn" id="rec-btn-i" onclick="setRecType('income')">🟢 Ingreso</div>
+    </div>
+    <input class="modal-inp" type="text" placeholder="Nombre (ej: Alquiler, Netflix)" id="rec-name-inp" maxlength="40">
+    <div class="modal-lbl">Monto</div>
+    <input class="modal-inp" type="number" placeholder="0" id="rec-amt-inp" min="0">
+    <div class="modal-lbl">Categoría</div>
+    <div class="cat-grid" id="rec-cat-grid" style="margin-bottom:14px"></div>
+    <div class="modal-lbl">Día del mes</div>
+    <input class="modal-inp" type="number" placeholder="1-31" id="rec-day-inp" min="1" max="31">
+    <button class="modal-btn" onclick="saveRec()">Guardar recurrente</button>
+    <button class="modal-btn danger" id="rec-del-btn" style="display:none" onclick="deleteRec()">Eliminar</button>
+  </div>
+</div>
+
+
+<!-- Lang modal -->
+<div class="curr-modal hidden" id="lang-modal">
+  <div class="curr-overlay" onclick="closeLangModal()"></div>
+  <div class="curr-sheet">
+    <div class="curr-handle"></div>
+    <div class="curr-title">Idioma de la app</div>
+    <div class="curr-list" id="lang-list"></div>
+  </div>
+</div>
+
+<!-- Currency modal -->
+<div class="curr-modal hidden" id="curr-modal">
+  <div class="curr-overlay" onclick="closeCurrModal()"></div>
+  <div class="curr-sheet">
+    <div class="curr-handle"></div>
+    <div class="curr-title">Seleccionar moneda</div>
+    <input class="curr-search" type="text" placeholder="Buscar..." id="curr-search" oninput="filterCurr(this.value)">
+    <div class="curr-list" id="curr-list"></div>
+  </div>
+</div>
+
+<!-- Confirm -->
+<div class="confirm-bg hidden" id="confirm-bg">
+  <div class="confirm-card">
+    <div class="confirm-title" id="conf-title">¿Confirmar?</div>
+    <div class="confirm-msg" id="conf-msg"></div>
+    <div class="confirm-btns">
+      <button class="confirm-btn cancel" onclick="closeConfirm()">Cancelar</button>
+      <button class="confirm-btn ok" id="conf-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DATA SCREEN ══ -->
+<div class="screen hidden" id="s-data">
+  <div class="nav" style="padding:14px 20px 8px">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="data">Gestionar datos</div>
+    <div style="width:60px"></div>
+  </div>
+  <!-- Tabs -->
+  <div style="display:flex;padding:0 20px;border-bottom:1px solid var(--br);flex-shrink:0">
+    <div class="data-tab active" id="data-tab-exp" onclick="switchDataTab('export')" data-i18n="exportTab">Exportar</div>
+    <div class="data-tab" id="data-tab-imp" onclick="switchDataTab('import')" data-i18n="importTab">Importar</div>
+  </div>
+  <div class="scroll" style="padding-top:16px">
+
+    <!-- ── TAB EXPORTAR ── -->
+    <div id="data-pane-export">
+      <div class="data-export-card" onclick="exportXLSX()">
+        <div class="data-export-ico">📊</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;margin-bottom:2px">Excel (.xlsx)</div>
+          <div style="font-size:12px;color:var(--mu)">Historial completo con hoja de resumen</div>
+        </div>
+        <div style="color:var(--gr);font-size:18px">↓</div>
+      </div>
+      <div class="data-export-card" onclick="exportCSVNew()">
+        <div class="data-export-ico">📄</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;margin-bottom:2px">CSV</div>
+          <div style="font-size:12px;color:var(--mu)">Compatible con Excel, Google Sheets</div>
+        </div>
+        <div style="color:var(--gr);font-size:18px">↓</div>
+      </div>
+      <div class="data-export-card" onclick="exportPDF()">
+        <div class="data-export-ico">📑</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;margin-bottom:2px">PDF</div>
+          <div style="font-size:12px;color:var(--mu)">Informe con tabla de movimientos</div>
+        </div>
+        <div style="color:var(--gr);font-size:18px">↓</div>
+      </div>
+      <div class="data-export-card" onclick="exportSankey()">
+        <div class="data-export-ico">🌊</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;margin-bottom:2px">Sankey</div>
+          <div style="font-size:12px;color:var(--mu)">Diagrama de flujo de dinero</div>
+        </div>
+        <div style="color:var(--gr);font-size:18px">↓</div>
+      </div>
+      <!-- Sankey preview -->
+      <div id="sankey-preview-wrap" style="display:none;margin-top:8px">
+        <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Vista previa del diagrama:</div>
+        <div id="sankey-preview-svg" style="background:var(--s1);border:1px solid var(--br);border-radius:16px;overflow:hidden;margin-bottom:10px"></div>
+        <button onclick="downloadSankeyNow()" style="width:100%;padding:12px;border-radius:14px;background:var(--gr);border:none;color:#0f0f13;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">Descargar SVG</button>
+      </div>
+    </div>
+
+    <!-- ── TAB IMPORTAR ── -->
+    <div id="data-pane-import" style="display:none">
+      <div class="data-drop-zone" id="data-drop-zone" onclick="document.getElementById('data-file-inp').click()"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="handleDataDrop(event)">
+        <div style="font-size:36px;margin-bottom:8px">📂</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">Soltá o tocá para seleccionar</div>
+        <div style="font-size:12px;color:var(--mu)">.csv · .xlsx · .xls · .pdf</div>
+      </div>
+      <!-- Preview -->
+      <div id="import-preview" style="display:none">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px" id="import-preview-title">0 movimientos detectados</div>
+        <div style="font-size:11px;color:var(--mu);display:flex;gap:8px;padding:0 0 6px;border-bottom:1px solid var(--br);font-weight:600">
+          <span style="flex:1">Fecha</span><span style="width:60px">Tipo</span><span style="width:80px;text-align:right">Monto</span><span style="flex:1">Categoría</span>
+        </div>
+        <div id="import-preview-rows"></div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button onclick="cancelImport()" style="flex:1;padding:12px;border-radius:12px;background:var(--s2);border:1px solid var(--br);color:var(--tx);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">Cancelar</button>
+          <button id="confirm-import-btn" onclick="confirmImport()" style="flex:2;padding:12px;border-radius:12px;background:var(--gr);border:none;color:#0f0f13;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">Confirmar importar</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- File inputs -->
+<input type="file" id="import-csv-inp" accept=".csv" style="display:none" onchange="handleImportCSV(this)">
+<input type="file" id="import-json-inp" accept=".json" style="display:none" onchange="handleImportJSON(this)">
+<input type="file" id="data-file-inp" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="handleDataFileSelect(this)">
+
+<!-- ══════════════════════════════════════
+     SPLIT — PANTALLA PRINCIPAL
+══════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════
+     SPLIT — PANTALLAS
+══════════════════════════════════════════ -->
+
+<!-- ── SPLIT MAIN ── -->
+<!-- ══════════════════════════════════════════
+     SPLIT — PANTALLAS
+══════════════════════════════════════════ -->
+
+<!-- ── SPLIT MAIN ── -->
+<div class="screen hidden" id="s-split">
+  <div class="nav">
+    <div class="logo">fin<span>·</span>flow <span style="font-size:11px;color:var(--bl);background:var(--bld);padding:2px 8px;border-radius:8px;margin-left:4px;font-weight:500">Split</span></div>
+    <div class="nav-acts">
+      <div class="icon-btn" onclick="goTo('s-split-settings')" title="Ajustes Split">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+      <div class="icon-btn" onclick="goTo('s-home')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="sp-tabs" style="margin-top:4px">
+    <div class="sp-tab active" id="split-tab-groups" onclick="switchSplitTab('groups')" data-i18n="splitGroups">Grupos</div>
+    <div class="sp-tab" id="split-tab-debts" onclick="switchSplitTab('debts')" data-i18n="splitDebts">Mis deudas</div>
+    <div class="sp-tab" id="split-tab-activity" onclick="switchSplitTab('activity')" data-i18n="splitActivity">Actividad</div>
+  </div>
+  <div class="scroll" id="split-scroll"></div>
+  <div class="fab-wrap">
+    <button class="fab" onclick="openNewGroup()" style="background:var(--bl);box-shadow:0 8px 28px rgba(107,140,255,.4)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ── SPLIT GROUP DETAIL ── -->
+<div class="screen hidden" id="s-split-group">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" id="grp-title">Grupo</div>
+    <div class="icon-btn" onclick="openGroupSettings()">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    </div>
+  </div>
+  <!-- Balance rápido del usuario -->
+  <div style="padding:0 20px 8px;flex-shrink:0" id="grp-balance-bar"></div>
+  <!-- Tabs internos -->
+  <div class="sp-tabs">
+    <div class="sp-tab active" id="grp-tab-expenses" onclick="switchGrpTab('expenses')" data-i18n="grpExpenses">Gastos</div>
+    <div class="sp-tab" id="grp-tab-balances" onclick="switchGrpTab('balances')" data-i18n="grpDebts">Deudas</div>
+    <div class="sp-tab" id="grp-tab-stats" onclick="switchGrpTab('stats')" data-i18n="grpStats">Stats</div>
+  </div>
+  <div class="scroll" id="grp-scroll"></div>
+  <div class="fab-wrap">
+    <button class="fab" onclick="openAddSplitExpense()" style="background:var(--bl);box-shadow:0 8px 28px rgba(107,140,255,.4)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ── SPLIT AGREGAR GASTO — diseño limpio ── -->
+<div class="screen hidden" id="s-split-expense">
+
+  <!-- NAV -->
+  <div class="tx-screen-nav">
+    <button class="tx-nav-pill" onclick="goBack()" data-i18n="cancelBtn">Cancelar</button>
+    <div id="split-exp-title" style="font-size:15px;font-weight:600;color:var(--mu)" data-i18n="splitExpTitle">Nuevo gasto</div>
+    <button class="tx-nav-pill save" onclick="saveSplitExpense()" data-i18n="saveBtn">Guardar</button>
+  </div>
+
+  <!-- MONTO -->
+  <div class="tx-amt-block" onclick="showSplitNumpad()" style="cursor:pointer">
+    <div style="font-size:13px;color:var(--mu);margin-bottom:4px" id="split-curr-lbl">ARS</div>
+    <div class="amt-num ec" id="split-amt-display" style="font-size:52px">0<span class="amt-cur"></span></div>
+    <div style="font-size:11px;color:var(--mu);margin-top:6px" data-i18n="tapAmount">Tocá para ingresar el monto</div>
+  </div>
+
+  <!-- DESCRIPCIÓN -->
+  <div class="tx-row" style="border-top:1px solid var(--br)">
+    <div id="split-exp-cat-icon" style="width:34px;height:34px;border-radius:10px;background:var(--bld);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💸</div>
+    <input class="tx-desc-inp" type="text" placeholder="¿En qué gastaron? (opcional)" id="split-desc-inp" maxlength="60" style="flex:1" data-i18n-ph="splitDescPh">
+  </div>
+
+  <!-- CATEGORÍA -->
+  <div class="tx-cats-section">
+    <div class="tx-cats-label"><span data-i18n="splitCatRequired">Categoría *</span></div>
+    <div class="tx-cats-grid" id="split-cat-grid"></div>
+    <div id="split-cat-actions" style="display:none;margin-top:10px;align-items:center;gap:8px">
+      <span id="split-sel-cat-lbl" style="font-size:12px;color:var(--mu);flex:1"></span>
+      <button onclick="editSelectedSplitCat()" style="font-size:12px;color:var(--bl);background:var(--bld);border:1px solid rgba(107,140,255,.3);border-radius:8px;padding:5px 12px;cursor:pointer;font-family:inherit;font-weight:500">Editar ›</button>
+    </div>
+  </div>
+
+  <!-- PAGADOR -->
+  <div class="tx-row" onclick="openPayerModal()" style="cursor:pointer">
+    <div class="tx-row-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <div class="tx-row-label" data-i18n="splitPaid">Pagó</div>
+    <div style="display:flex;align-items:center;gap:8px;flex:1">
+      <div id="payer-avatar-mini" style="width:26px;height:26px;border-radius:50%;background:var(--gd);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--gr)">Y</div>
+      <div id="payer-name-mini" style="font-size:14px;font-weight:500">Yo</div>
+    </div>
+    <div class="tx-row-arrow">›</div>
+  </div>
+
+  <!-- DIVISIÓN -->
+  <div class="tx-row" onclick="openSplitOptionsModal()" style="cursor:pointer">
+    <div class="tx-row-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="tx-row-label" data-i18n="splitDivide">Dividir</div>
+    <div style="flex:1">
+      <div id="split-summary-text" style="font-size:14px;font-weight:500">Partes iguales</div>
+      <div id="split-summary-sub" style="font-size:11px;color:var(--mu);margin-top:1px"></div>
+    </div>
+    <div class="tx-row-arrow">›</div>
+  </div>
+
+  <!-- NOTA -->
+  <div class="tx-row">
+    <div class="tx-row-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="17" y1="14" x2="3" y2="14"/><line x1="13" y1="18" x2="3" y2="18"/></svg>
+    </div>
+    <input class="tx-desc-inp" type="text" placeholder="Nota opcional" id="split-note-inp" maxlength="80" style="flex:1" data-i18n-ph="splitNotePh">
+  </div>
+
+  <!-- AGREGAR A FINANZAS -->
+  <div class="tx-row" onclick="document.getElementById('split-to-personal').classList.toggle('on')" style="cursor:pointer">
+    <div class="tx-row-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="tx-row-value" style="font-size:13px" data-i18n="splitToPersonal">Agregar a mis finanzas</div>
+    <div class="toggle on" id="split-to-personal"></div>
+  </div>
+
+  <!-- Spacer -->
+  <div id="split-numpad-spacer" style="height:20px"></div>
+
+  <!-- TECLADO SPLIT — oculto por defecto -->
+  <div id="split-numpad" style="position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--bg);border-top:1px solid var(--br);z-index:100;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px">
+      <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace" id="split-numpad-preview">0</div>
+      <button onclick="hideSplitNumpad()" style="background:var(--s2);border:none;color:var(--mu);font-size:13px;font-weight:500;padding:6px 14px;border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif" data-i18n="done">Listo</button>
+    </div>
+    <div class="numpad" style="border:none;border-top:1px solid var(--br)">
+      <div class="nk" onclick="snp('1')">1</div><div class="nk" onclick="snp('2')">2</div><div class="nk" onclick="snp('3')">3</div>
+      <div class="nk" onclick="snp('4')">4</div><div class="nk" onclick="snp('5')">5</div><div class="nk" onclick="snp('6')">6</div>
+      <div class="nk" onclick="snp('7')">7</div><div class="nk" onclick="snp('8')">8</div><div class="nk" onclick="snp('9')">9</div>
+      <div class="nk sm" id="split-dec-key" onclick="snp('dec')">,</div>
+      <div class="nk" onclick="snp('0')">0</div>
+      <div class="nk" onclick="snp('del')">⌫</div>
+    </div>
+  </div>
+
+
+  <div style="display:none"><div id="split-payer-row"></div><div id="split-participants-row"></div><div id="split-cat-label"></div><div id="split-members-division"></div><div id="split-cat-list"></div></div>
+</div>
+
+<!-- ── SPLIT DETALLE GASTO ── -->
+<div class="screen hidden" id="s-split-exp-detail">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="expDetail">Detalle del gasto</div>
+    <div class="icon-btn" id="split-exp-edit-btn" onclick="editSplitExpense()">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    </div>
+  </div>
+  <div class="scroll" id="split-exp-detail-scroll"></div>
+</div>
+
+<!-- ── SPLIT SETTINGS ── -->
+<div class="screen hidden" id="s-split-settings">
+  <div class="nav">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
+    <div class="scr-title" data-i18n="splitSettings">Ajustes de Split</div>
+    <div style="width:38px"></div>
+  </div>
+  <div class="scroll">
+    <div class="sp-set-section">
+      <div class="sp-set-title">Deudas</div>
+      <div class="set-card">
+        <div class="set-row" onclick="toggleSplitPref('simplify')">
+          <div>
+            <div class="set-lbl">Simplificar deudas</div>
+            <div class="set-sub">Minimiza el número de pagos entre miembros</div>
+          </div>
+          <div class="toggle on" id="sp-pref-simplify"></div>
+        </div>
+        <div class="set-row" onclick="toggleSplitPref('showSettled')">
+          <div>
+            <div class="set-lbl">Mostrar pagos saldados</div>
+            <div class="set-sub">Ver el historial de pagos ya realizados</div>
+          </div>
+          <div class="toggle on" id="sp-pref-showSettled"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sp-set-section">
+      <div class="sp-set-title">División por defecto</div>
+      <div class="set-card">
+        <div class="set-row" onclick="setSplitDefaultMethod('equal')" id="sp-def-equal">
+          <div><div class="set-lbl">⚖️ Partes iguales</div></div>
+          <div id="sp-def-equal-check" style="color:var(--gr);font-weight:600">✓</div>
+        </div>
+        <div class="set-row" onclick="setSplitDefaultMethod('pct')" id="sp-def-pct">
+          <div><div class="set-lbl">% Porcentaje</div></div>
+          <div id="sp-def-pct-check" style="display:none;color:var(--gr);font-weight:600">✓</div>
+        </div>
+        <div class="set-row" onclick="setSplitDefaultMethod('exact')" id="sp-def-exact">
+          <div><div class="set-lbl">$ Monto exacto</div></div>
+          <div id="sp-def-exact-check" style="display:none;color:var(--gr);font-weight:600">✓</div>
+        </div>
+        <div class="set-row" onclick="setSplitDefaultMethod('shares')" id="sp-def-shares">
+          <div><div class="set-lbl">✕ Partes personalizadas</div></div>
+          <div id="sp-def-shares-check" style="display:none;color:var(--gr);font-weight:600">✓</div>
+        </div>
+      </div>
+    </div>
+    <div class="sp-set-section">
+      <div class="sp-set-title">Finanzas personales</div>
+      <div class="set-card">
+        <div class="set-row" onclick="toggleSplitPref('autoPersonal')">
+          <div>
+            <div class="set-lbl">Agregar gastos automáticamente</div>
+            <div class="set-sub">Cada gasto Split se suma a tu historial personal</div>
+          </div>
+          <div class="toggle" id="sp-pref-autoPersonal"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sp-set-section">
+      <div class="sp-set-title">Zona de peligro</div>
+      <div class="set-card">
+        <div class="set-row" onclick="clearAllSplitData()">
+          <div><div class="set-lbl" style="color:var(--rd)">Borrar todos los grupos y gastos</div></div>
+          <div class="set-arr" style="color:var(--rd)">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ SPLIT MODALS ══ -->
+
+<!-- Nuevo / editar grupo -->
+<div class="modal-bg hidden" id="new-group-modal">
+  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr" style="flex-shrink:0">
+      <div class="modal-title" id="new-group-title" data-i18n="newGroup">Nuevo grupo</div>
+      <button class="modal-x" onclick="closeNewGroup()">✕</button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto">
+      <!-- Emoji + Nombre en una fila -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div id="group-emoji-btn" onclick="toggleEmojiPicker()" style="width:52px;height:52px;border-radius:14px;background:var(--bld);border:2px solid rgba(107,140,255,.3);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;flex-shrink:0">👥</div>
+        <input class="modal-inp" type="text" placeholder="Nombre del grupo" id="group-name-inp" maxlength="30" style="margin:0;flex:1;font-size:16px;font-weight:500">
+      </div>
+      <!-- Emoji picker (colapsado) -->
+      <div id="group-emoji-picker" style="display:none;margin-bottom:14px">
+        <div style="display:flex;gap:7px;flex-wrap:wrap" id="group-emoji-row"></div>
+      </div>
+
+      <!-- Integrantes -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Integrantes</div>
+        <div id="group-members-list" style="margin-bottom:12px"></div>
+
+        <!-- Búsqueda de integrantes -->
+        <div style="background:var(--s2);border:1px solid var(--br);border-radius:13px;padding:10px 14px">
+          <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Agregar integrante por nombre o email</div>
+          <div style="display:flex;gap:8px">
+            <input type="text" placeholder="Nombre o email" id="new-member-inp" maxlength="50"
+              style="flex:1;background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none"
+              onkeydown="if(event.key==='Enter')addMember()"
+              oninput="searchMembersLive(this.value)">
+            <button onclick="addMember()" style="padding:0 16px;border-radius:10px;background:var(--bl);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer;flex-shrink:0">+</button>
+          </div>
+          <div id="member-search-results" style="margin-top:8px"></div>
+          <div style="font-size:10px;color:var(--mu);margin-top:8px;line-height:1.5">
+            💡 Si el contacto ya usa CashWise con su email, verá el grupo al ingresar.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones -->
+    <div style="flex-shrink:0;padding-top:14px">
+      <button class="modal-btn" style="background:var(--bl);color:#fff;margin-bottom:8px" onclick="saveGroup()" id="save-group-btn">Crear grupo</button>
+      <button class="modal-btn danger" id="delete-group-btn" style="display:none" onclick="deleteGroup()">Eliminar grupo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Liquidar deuda -->
+<div class="modal-bg hidden" id="settle-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title">Registrar pago</div>
+      <button class="modal-x" onclick="closeSettleModal()">✕</button>
+    </div>
+    <!-- Avatares estilo Splitwise -->
+    <div class="sp-settle-avatars">
+      <div class="sp-settle-from">
+        <div class="sp-settle-avatar" id="settle-from-avatar" style="background:var(--rdd);color:var(--rd)">?</div>
+        <div class="sp-settle-name" id="settle-from-name" style="color:var(--rd)">Yo</div>
+      </div>
+      <div class="sp-settle-arrow">→</div>
+      <div class="sp-settle-to">
+        <div class="sp-settle-avatar" id="settle-to-avatar" style="background:var(--gd);color:var(--gr)">?</div>
+        <div class="sp-settle-name" id="settle-to-name" style="color:var(--gr)">A</div>
+      </div>
+    </div>
+    <div id="settle-info" style="background:var(--s2);border-radius:13px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.8;text-align:center"></div>
+    <div class="modal-lbl">Monto a pagar</div>
+    <input class="modal-inp" type="number" id="settle-amt-inp" placeholder="0" min="0" style="font-size:18px;font-weight:600;text-align:center">
+    <div style="background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>
+        <div style="font-size:13px;font-weight:500">Registrar en mis finanzas</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:2px">Como gasto con badge Split</div>
+      </div>
+      <div class="toggle on" id="settle-to-personal"></div>
+    </div>
+    <button class="modal-btn" style="background:var(--gr);color:#0f0f13" onclick="confirmSettle()">✅ Confirmar pago</button>
+  </div>
+</div>
+
+
+
+<!-- MODAL PAGADOR -->
+<div class="modal-bg hidden" id="payer-modal">
+  <div class="modal-sheet" style="max-height:80vh">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title">¿Quién pagó?</div>
+      <button class="modal-x" onclick="document.getElementById('payer-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div id="payer-modal-list" style="overflow-y:auto;max-height:55vh"></div>
+    <!-- Opción: varios pagaron -->
+    <div style="padding:14px 0 6px;border-top:1px solid var(--br)">
+      <div style="font-size:12px;color:var(--mu);padding:0 4px 6px">Si más de uno pagó, ajustá los montos exactos en División.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OPCIONES DE DIVISIÓN (estilo Splitwise img 2) -->
+<div class="modal-bg hidden" id="split-options-modal">
+  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title">Opciones de división</div>
+      <button onclick="closeSplitOptionsModal()" style="background:none;border:none;color:var(--gr);font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Listo</button>
+    </div>
+    <!-- Tabs de método — estilo Splitwise -->
+    <div style="display:flex;gap:8px;padding:0 0 16px;overflow-x:auto;flex-shrink:0;scrollbar-width:none">
+      <button class="sp-method-tab active" id="smt-equal" onclick="setSplitMethodModal('equal')">
+        <svg width="20" height="14" viewBox="0 0 24 14"><rect x="0" y="0" width="24" height="4" rx="2" fill="currentColor"/><rect x="0" y="10" width="24" height="4" rx="2" fill="currentColor"/></svg>
+        <span>Igual</span>
+      </button>
+      <button class="sp-method-tab" id="smt-exact" onclick="setSplitMethodModal('exact')">
+        <span style="font-size:15px;font-weight:700">1.23</span>
+        <span>Exacto</span>
+      </button>
+      <button class="sp-method-tab" id="smt-pct" onclick="setSplitMethodModal('pct')">
+        <span style="font-size:15px;font-weight:700">%</span>
+        <span>%</span>
+      </button>
+      <button class="sp-method-tab" id="smt-shares" onclick="setSplitMethodModal('shares')">
+        <svg width="20" height="16" viewBox="0 0 20 16"><rect x="0" y="0" width="4" height="16" rx="2" fill="currentColor" opacity=".4"/><rect x="6" y="4" width="4" height="12" rx="2" fill="currentColor" opacity=".7"/><rect x="12" y="2" width="4" height="14" rx="2" fill="currentColor" opacity=".55"/><rect x="18" y="0" width="4" height="16" rx="2" fill="currentColor"/></svg>
+        <span>Partes</span>
+      </button>
+      <button class="sp-method-tab" id="smt-adjustment" onclick="setSplitMethodModal('adjustment')">
+        <span style="font-size:15px;font-weight:700">+/−</span>
+        <span>Ajuste</span>
+      </button>
+    </div>
+    <!-- Descripción del método -->
+    <div id="split-method-desc" style="font-size:12px;color:var(--mu);text-align:center;margin-bottom:14px;padding:8px 16px;background:var(--s2);border-radius:10px;flex-shrink:0"></div>
+    <!-- Lista de miembros con montos -->
+    <div id="split-options-list" style="flex:1;overflow-y:auto"></div>
+    <!-- Footer: total por persona -->
+    <div style="padding:14px 0 4px;border-top:1px solid var(--br);flex-shrink:0">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div id="split-per-person" style="font-size:15px;font-weight:600;font-family:'DM Mono',monospace"></div>
+          <div id="split-person-count" style="font-size:11px;color:var(--mu);margin-top:2px"></div>
+        </div>
+        <button onclick="selectAllParticipants()" style="background:var(--gd);color:var(--gr);border:none;padding:7px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+          Todos <div id="all-selected-check" style="width:18px;height:18px;border-radius:50%;background:var(--gr);display:flex;align-items:center;justify-content:center;font-size:11px;color:#0f0f13">✓</div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CATEGORÍA SPLIT -->
+<div class="modal-bg hidden" id="split-cat-modal">
+  <div class="modal-sheet" style="max-height:88vh;display:flex;flex-direction:column">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title">Categoría</div>
+      <button class="modal-x" onclick="document.getElementById('split-cat-modal').classList.add('hidden')">✕</button>
+    </div>
+    <input type="text" placeholder="🔍  Buscar categoría" id="split-cat-search" oninput="filterSplitCats()" style="background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:11px 14px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;flex-shrink:0">
+    <div class="auth-overlay hidden" id="auth-overlay">
+  <div style="position:relative;width:100%;max-width:360px">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:34px;font-weight:600;letter-spacing:-.8px;margin-bottom:8px">fin<span style="color:var(--gr)">·</span>flow</div>
+      <div style="font-size:13px;color:var(--mu);line-height:1.6">Tu dinero, bajo control.<br>Gratis, sin publicidad, para siempre.</div>
+    </div>
+
+    <!-- AVISO FILE:// -->
+    <div id="auth-file-warning" style="display:none;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:14px;padding:12px 14px;margin-bottom:16px;font-size:12px;line-height:1.6;color:#fbbf24">
+      <strong>⚠️ Modo local detectado</strong><br>
+      El login con Google y Email requiere un servidor HTTP.<br>
+      Abrí el archivo con <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px">python3 -m http.server 8080</code> o usá sin cuenta.
+    </div>
+
+    <!-- BOTÓN SIN CUENTA — prominente -->
+    <button onclick="skipAuth()" style="width:100%;padding:14px;border-radius:16px;background:var(--gr);border:none;color:#0f0f13;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:14px">
+      ▶ Empezar sin cuenta
+    </button>
+    <div style="text-align:center;font-size:11px;color:var(--mu);margin-bottom:20px">Tus datos se guardan en este dispositivo</div>
+
+    <!-- Card con login/register -->
+    <div style="background:var(--s1);border:1px solid var(--br);border-radius:22px;padding:22px">
+      <div style="font-size:12px;color:var(--mu);text-align:center;margin-bottom:14px">O sincronizá con una cuenta</div>
+      <!-- Tabs -->
+      <div class="auth-tab-row">
+        <div class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Iniciar sesión</div>
+        <div class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Crear cuenta</div>
+      </div>
+      <!-- Error -->
+      <div class="auth-error" id="auth-error"></div>
+      <!-- Login form -->
+      <div id="auth-form-login">
+        <input class="auth-input" type="email" placeholder="Email" id="auth-email-login" autocomplete="email" inputmode="email">
+        <input class="auth-input" type="password" placeholder="Contraseña" id="auth-pass-login" autocomplete="current-password" onkeydown="if(event.key==='Enter')authEmailLogin()">
+        <div style="text-align:right;margin-bottom:14px">
+          <span style="font-size:12px;color:var(--bl);cursor:pointer" onclick="authForgotPassword()">¿Olvidaste tu contraseña?</span>
+        </div>
+        <button class="auth-btn primary" onclick="authEmailLogin()" id="btn-email-login">Iniciar sesión</button>
+      </div>
+      <!-- Register form -->
+      <div id="auth-form-register" style="display:none">
+        <input class="auth-input" type="text" placeholder="Tu nombre" id="auth-name-register" autocomplete="name">
+        <input class="auth-input" type="email" placeholder="Email" id="auth-email-register" autocomplete="email" inputmode="email">
+        <input class="auth-input" type="password" placeholder="Contraseña (mín. 6 caracteres)" id="auth-pass-register" autocomplete="new-password">
+        <button class="auth-btn primary" onclick="authEmailRegister()" id="btn-email-register">Crear cuenta</button>
+      </div>
+      <!-- Google -->
+      <div class="auth-divider">o continuá con</div>
+      <button class="auth-btn google" onclick="authGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continuar con Google
+      </button>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+
+<!-- Modal filtro categoría allTx -->
+<div class="modal-bg hidden" id="alltx-cat-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title">Filtrar por categoría</div>
+      <button class="modal-x" onclick="document.getElementById('alltx-cat-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div id="alltx-cat-list" style="max-height:60vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- Modal filtro fecha allTx -->
+<div class="modal-bg hidden" id="alltx-date-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title">Filtrar por fecha</div>
+      <button class="modal-x" onclick="document.getElementById('alltx-date-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div>
+        <div class="modal-lbl">Desde</div>
+        <input type="date" id="alltx-date-from" class="modal-inp" style="margin:0" onchange="filterAllTx()">
+      </div>
+      <div>
+        <div class="modal-lbl">Hasta</div>
+        <input type="date" id="alltx-date-to" class="modal-inp" style="margin:0" onchange="filterAllTx()">
+      </div>
+    </div>
+    <button class="modal-btn" style="background:var(--bl);color:#fff" onclick="applyAllTxDateFilter()">Aplicar</button>
+    <button class="modal-btn" onclick="clearAllTxDateFilter()">Limpiar fechas</button>
+  </div>
+</div>
+
+<!-- Modal historial abonos a meta -->
+<div class="modal-bg hidden" id="goal-history-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-title">Historial de abonos</div>
+      <button class="modal-x" onclick="document.getElementById('goal-history-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div id="goal-history-list" style="max-height:60vh;overflow-y:auto"></div>
+    <button class="modal-btn danger" id="goal-withdraw-btn" onclick="withdrawGoalAmount()">Retirar monto</button>
+  </div>
+</div>
+
+<!-- Modal bienvenida — aparece solo al registrarse por primera vez -->
+<div class="modal-bg hidden" id="welcome-modal">
+  <div class="modal-sheet" style="text-align:center;padding:32px 24px">
+    <div style="font-size:48px;margin-bottom:16px">🎉</div>
+    <div style="font-size:22px;font-weight:600;color:var(--tx);margin-bottom:8px">
+      ¡Bienvenido a CashWise!
+    </div>
+    <div id="welcome-name" style="font-size:15px;color:var(--gr);font-weight:500;margin-bottom:16px"></div>
+    <div style="font-size:14px;color:var(--mu);line-height:1.7;margin-bottom:28px">
+      Tu app de finanzas personales está lista.<br>
+      Empezá registrando tu primer gasto. 💸
+    </div>
+    <button onclick="closeWelcome()"
+      style="width:100%;padding:14px;border-radius:14px;background:var(--gr);
+             border:none;color:#0f0f13;font-size:15px;font-weight:700;cursor:pointer">
+      ¡Empezar!
+    </button>
+  </div>
+</div>
+
+<!-- Modal resumen mensual — aparece el 1ro de cada mes -->
+<div class="modal-bg hidden" id="monthly-modal">
+  <div class="modal-sheet" style="text-align:center;padding:32px 24px">
+    <div style="font-size:48px;margin-bottom:16px">📊</div>
+    <div style="font-size:22px;font-weight:600;color:var(--tx);margin-bottom:8px">
+      Tu resumen de <span id="monthly-modal-mes"></span> está listo
+    </div>
+    <div style="font-size:14px;color:var(--mu);line-height:1.7;margin-bottom:6px">
+      Gastos del mes
+    </div>
+    <div id="monthly-modal-gasto" style="font-size:28px;font-weight:700;color:var(--rd);margin-bottom:6px"></div>
+    <div style="font-size:14px;color:var(--mu);line-height:1.7;margin-bottom:6px">
+      Ingresos del mes
+    </div>
+    <div id="monthly-modal-ingreso" style="font-size:28px;font-weight:700;color:var(--gr);margin-bottom:24px"></div>
+    <button onclick="goTo('s-monthly');closeMonthlyModal()"
+      style="width:100%;padding:14px;border-radius:14px;background:var(--gr);
+             border:none;color:#0f0f13;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">
+      Ver resumen completo
+    </button>
+    <button onclick="closeMonthlyModal()"
+      style="width:100%;padding:12px;border-radius:14px;background:var(--s2);
+             border:1px solid var(--br);color:var(--mu);font-size:14px;cursor:pointer">
+      Ahora no
+    </button>
+  </div>
+</div>
+
+<!-- ══ AUTH OVERLAY ══ -->
+
+
+
+
+
+<!-- TACHO GLOBAL — aparece flotando cuando se edita un movimiento -->
+
+<div id="tx-delete-btn" onclick="deleteTx()" style="display:none;position:absolute;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:var(--rdd);border:2px solid rgba(240,86,106,.5);align-items:center;justify-content:center;cursor:pointer;z-index:200;box-shadow:0 4px 20px rgba(240,86,106,.35);transition:transform .15s,opacity .2s">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><
+</div>
+<div class="toast" id="toast"></div>
+</div>
