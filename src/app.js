@@ -394,12 +394,14 @@ function drawDualCanvas(txs, period) {
   const cv = _initCanvas('chart-cv'); if(!cv) return;
   const { ctx, w, h } = cv;
   let { incData, expData } = _buildPeriodData(txs, period);
-  let incCum = [], expCum = [], iSum = 0, eSum = 0;
-  for(let i = 0; i < incData.length; i++) {
-    iSum += incData[i]; incCum.push(iSum);
-    eSum += expData[i]; expCum.push(eSum);
+  if(period === 'todo') {
+    let incCum = [], expCum = [], iSum = 0, eSum = 0;
+    for(let i = 0; i < incData.length; i++) {
+      iSum += incData[i]; incCum.push(iSum);
+      eSum += expData[i]; expCum.push(eSum);
+    }
+    incData = incCum; expData = expCum;
   }
-  incData = incCum; expData = expCum;
   if(!incData.length) return;
   const n = incData.length;
   const maxVal = Math.max(...incData, ...expData, 1);
@@ -409,19 +411,18 @@ function drawDualCanvas(txs, period) {
   const yp = v => PAD.t + ch - (v/maxVal)*ch;
 
   function drawLine(data, color, fillColor) {
-    if(data.every(v=>v===0)) return;
-    // Área rellena muy sutil
+    if(!data.length || data.every(v=>v===0)) return;
+    const bottom = PAD.t + ch;
     ctx.beginPath();
-    ctx.moveTo(xp(0), PAD.t + ch);
+    ctx.moveTo(xp(0), bottom);
     ctx.lineTo(xp(0), yp(data[0]));
     for(let i=1; i<data.length; i++) {
       const cpx = (xp(i-1)+xp(i))/2;
       ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
     }
-    ctx.lineTo(xp(data.length-1), PAD.t + ch);
+    ctx.lineTo(xp(data.length-1), bottom);
     ctx.closePath();
     ctx.fillStyle = fillColor; ctx.fill();
-    // Línea principal
     ctx.beginPath();
     ctx.moveTo(xp(0), yp(data[0]));
     for(let i=1; i<data.length; i++) {
@@ -429,7 +430,6 @@ function drawDualCanvas(txs, period) {
       ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
     }
     ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-    // Punto final sólido con interior oscuro
     ctx.beginPath();
     ctx.arc(xp(data.length-1), yp(data[data.length-1]), 5, 0, Math.PI*2);
     ctx.fillStyle = color; ctx.fill();
@@ -438,9 +438,8 @@ function drawDualCanvas(txs, period) {
     ctx.fillStyle = 'rgba(15,15,19,0.8)'; ctx.fill();
   }
 
-  // Gastos detrás, ingresos adelante
   drawLine(expData, '#f0566a', 'rgba(240,86,106,0.08)');
-  drawLine(incData, '#34D48A', 'rgba(52,212,138,0.08)');
+  drawLine(incData, '#34D48A', 'rgba(52,212,138,0.10)');
 }
 
 function drawNetCanvas(txs, period) {
