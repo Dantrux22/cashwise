@@ -206,6 +206,7 @@ function fmt(n){
   return a.toLocaleString('es-AR',opts);
 }
 function fmtShort(n){ if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return fmt(n); }
+function fmtCompact(n){ if(Math.abs(n)>=100000) return (n/1000).toFixed(0).replace('.',getSep())+'k'; if(Math.abs(n)>=10000) return (n/1000).toFixed(1).replace('.',getSep())+'k'; return fmt(n); }
 function getSep(){ return S.useComma?',':'.'; }
 function sym(){ return S.currency.sym; }
 
@@ -301,9 +302,9 @@ function refreshHome(){
   const cn=document.getElementById('c-net');
   cn.textContent=(net>=0?'+':'-')+s+fmt(net);
   cn.className='chart-net'+(net<0?' neg':'');
-  document.getElementById('cs-inc').textContent='+'+s+fmtShort(income);
-  document.getElementById('cs-exp').textContent='-'+s+fmtShort(expense);
-  document.getElementById('cs-net').textContent=(net>=0?'+':'-')+s+fmtShort(Math.abs(net));
+  document.getElementById('cs-inc').textContent='+'+s+fmtCompact(income);
+  document.getElementById('cs-exp').textContent='-'+s+fmtCompact(expense);
+  document.getElementById('cs-net').textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
 
   drawChart(txs);
   renderTxList(txs,'tx-list',5);
