@@ -46,6 +46,19 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
   .nav{
     padding: 16px 20px !important;
   }
+  .profile-stats-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:16px;
+  }
+  .stat-card{
+    background:var(--s2);
+    border:1px solid var(--br);
+    border-radius:16px;
+    padding:16px;
+    text-align:center;
+  }
 }
 
 /* SCREENS */

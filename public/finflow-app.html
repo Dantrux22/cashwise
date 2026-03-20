@@ -62,6 +62,19 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
   .nav{
     padding: 16px 20px !important;
   }
+  .profile-stats-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:16px;
+  }
+  .stat-card{
+    background:var(--s2);
+    border:1px solid var(--br);
+    border-radius:16px;
+    padding:16px;
+    text-align:center;
+  }
 }
 
 /* SCREENS */
@@ -6089,14 +6102,13 @@ function initAuth(){
     return;
   }
   // Manejar resultado de redirect (Google sign-in desde redirect)
-  _fbAuth.getRedirectResult().then(result=>{
+  // Manejar resultado del redirect de Google
+  _fbAuth.getRedirectResult().then(result => {
     if(result && result.user){
-      console.log('[finflow] Redirect result: usuario logueado');
+      onUserLoggedIn(result.user);
     }
-  }).catch(e=>{
-    if(e.code && e.code !== 'auth/no-auth-event'){
-      console.warn('[finflow] Redirect error:', e.code);
-    }
+  }).catch(e => {
+    if(e.code !== 'auth/no-auth-event') console.warn('Redirect error:', e);
   });
   // Listener principal de estado
   _fbAuth.onAuthStateChanged(async user => {
@@ -6183,25 +6195,19 @@ async function authEmailRegister(){
 
 // ── Google ──
 async function authGoogle(){
-  if(!FIREBASE_ENABLED){ showAuthError('Firebase no configurado. Pegá tus claves.'); return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  // file:// no soporta OAuth — informar al usuario
-  if(location.protocol === 'file:'){
-    showAuthError('Para login con Google abrí el archivo desde un servidor. Usá "Usar sin cuenta" o el login con email.');
-    return;
-  }
+  if(!_fbAuth) return;
   try{
-    // Intentar popup primero, fallback a redirect
-    await _fbAuth.signInWithPopup(provider);
-    clearAuthError();
-  }catch(e){
-    if(e.code==='auth/popup-blocked'||e.code==='auth/popup-cancelled'||e.code==='auth/operation-not-supported-in-this-environment'){
-      try{ await _fbAuth.signInWithRedirect(provider); }
-      catch(e2){ showAuthError(authErrorMsg(e2.code)); }
-    } else if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
-      showAuthError(authErrorMsg(e.code));
+    const provider = new firebase.auth.GoogleAuthProvider();
+    // En móvil usar redirect, en desktop usar popup
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if(isMobile){
+      await _fbAuth.signInWithRedirect(provider);
+    } else {
+      const result = await _fbAuth.signInWithPopup(provider);
+      await onUserLoggedIn(result.user);
     }
+  }catch(e){
+    showAuthError('Error al iniciar sesión con Google: ' + e.message);
   }
 }
 
