@@ -326,125 +326,139 @@ function setFilter(p,el){
 // ═══════════════════════════════════════════
 // CHARTS
 // ═══════════════════════════════════════════
-function drawCanvas(canvasId, incomeVals, expVals, labels, H){
-  const canvas=document.getElementById(canvasId);
+function drawCanvas(txs, period) {
+  const canvas = document.getElementById('chart-cv');
   if(!canvas) return;
-  const W=canvas.parentElement.clientWidth||340;
-  const dpr=window.devicePixelRatio||1;
-  canvas.width=W*dpr; canvas.height=H*dpr;
-  canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth || 340;
+  const h = canvas.offsetHeight || 120;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
 
-  // Si solo hay 1 punto duplicamos para poder dibujar una línea
-  if(labels.length===1){ labels=[labels[0],labels[0]]; incomeVals=[0,incomeVals[0]]; expVals=[0,expVals[0]]; }
+  const now = new Date();
+  let labels = [], incomeData = [], expenseData = [];
 
-  const n=labels.length, padL=14, padR=48, padT=12, padB=10;
-  const maxVal=Math.max(...incomeVals,...expVals,1);
-  const xs=labels.map((_,i)=>padL+(i/(n-1))*(W-padL-padR));
-  function yOf(v){ return H-padB-(v/maxVal)*(H-padT-padB); }
-
-  // Grid lines sutiles
-  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
-  [0.25,0.5,0.75,1].forEach(f=>{
-    const y=H-padB-f*(H-padT-padB);
-    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR+8,y); ctx.stroke();
-  });
-
-  function drawLine(vals, color){
-    if(vals.every(v=>v===0)) return;
-    const pts=vals.map((v,i)=>({x:xs[i],y:yOf(v)}));
-
-    // Línea curva (bezier) — sin relleno
-    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
-    for(let i=1;i<pts.length;i++){
-      const cx=(pts[i-1].x+pts[i].x)/2;
-      ctx.bezierCurveTo(cx,pts[i-1].y,cx,pts[i].y,pts[i].x,pts[i].y);
+  if(period === 'semana') {
+    const startOfWeek = new Date(now);
+    const day = now.getDay() || 7;
+    startOfWeek.setDate(now.getDate() - day + 1);
+    startOfWeek.setHours(0,0,0,0);
+    for(let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      labels.push(['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][i]);
+      const dayTxs = txs.filter(t => {
+        const td = new Date(t.date);
+        return td.toDateString() === d.toDateString();
+      });
+      incomeData.push(dayTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
+      expenseData.push(dayTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
     }
-    ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.stroke();
-
-    // Puntos en cada data point
-    pts.forEach((p,i)=>{
-      ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
-      ctx.fillStyle=color; ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x,p.y,2.2,0,Math.PI*2);
-      ctx.fillStyle='#0f0f13'; ctx.fill();
-    });
-
-    // Valor al final de la línea
-    const last=pts[pts.length-1];
-    const lastVal=vals[vals.length-1];
-    if(lastVal>0){
-      ctx.font=`500 10px 'DM Mono',monospace`;
-      ctx.fillStyle=color;
-      ctx.textAlign='left'; ctx.textBaseline='middle';
-      ctx.fillText(sym()+fmtShort(lastVal), last.x+8, last.y);
+  } else if(period === 'mes') {
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    for(let i = 1; i <= daysInMonth; i++) {
+      labels.push(i % 5 === 0 || i === 1 ? String(i) : '');
+      const dayTxs = txs.filter(t => {
+        const td = new Date(t.date);
+        return td.getDate() === i && td.getMonth() === now.getMonth() && td.getFullYear() === now.getFullYear();
+      });
+      incomeData.push(dayTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
+      expenseData.push(dayTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
+    }
+  } else if(period === 'año') {
+    const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    for(let m = 0; m < 12; m++) {
+      labels.push(monthNames[m]);
+      const monthTxs = txs.filter(t => {
+        const td = new Date(t.date);
+        return td.getMonth() === m && td.getFullYear() === now.getFullYear();
+      });
+      incomeData.push(monthTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
+      expenseData.push(monthTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
+    }
+  } else {
+    if(!txs.length) return;
+    const sorted = [...txs].sort((a,b) => new Date(a.date)-new Date(b.date));
+    const firstDate = new Date(sorted[0].date);
+    const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    let cur = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    while(cur <= end) {
+      const m = cur.getMonth(); const y = cur.getFullYear();
+      labels.push(monthNames[m]);
+      const monthTxs = txs.filter(t => {
+        const td = new Date(t.date);
+        return td.getMonth() === m && td.getFullYear() === y;
+      });
+      incomeData.push(monthTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
+      expenseData.push(monthTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
+      cur.setMonth(cur.getMonth()+1);
     }
   }
 
-  drawLine(expVals,'#f0566a');
-  drawLine(incomeVals,'#34d48a');
-  return {ctx,xs,labels};
+  if(!labels.length) return;
+
+  // Acumulados
+  let incCum = [], expCum = [], iSum = 0, eSum = 0;
+  for(let i = 0; i < labels.length; i++) {
+    iSum += incomeData[i]; incCum.push(iSum);
+    eSum += expenseData[i]; expCum.push(eSum);
+  }
+
+  const maxVal = Math.max(...incCum, ...expCum, 1);
+  const PAD_L = 8, PAD_R = 16, PAD_T = 20, PAD_B = 28;
+  const chartW = w - PAD_L - PAD_R;
+  const chartH = h - PAD_T - PAD_B;
+  const n = labels.length;
+  const xPos = i => PAD_L + (i / (n - 1 || 1)) * chartW;
+  const yPos = v => PAD_T + chartH - (v / maxVal) * chartH;
+
+  function drawStepLine(data, color) {
+    if(data.every(v => v === 0)) return;
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.moveTo(xPos(0), yPos(data[0]));
+    for(let i = 1; i < data.length; i++) {
+      ctx.lineTo(xPos(i), yPos(data[i-1]));
+      ctx.lineTo(xPos(i), yPos(data[i]));
+    }
+    ctx.stroke();
+    // Punto al final
+    const lastX = xPos(data.length - 1);
+    const lastY = yPos(data[data.length - 1]);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  drawStepLine(expCum, '#f0566a');
+  drawStepLine(incCum, '#34D48A');
+
+  // Labels eje X sobre el canvas
+  ctx.fillStyle = 'rgba(120,120,160,0.7)';
+  ctx.font = `${10 * (w/390)}px DM Sans, sans-serif`;
+  ctx.textAlign = 'center';
+  const step = Math.ceil(n / 6);
+  for(let i = 0; i < n; i += step) {
+    if(labels[i]) ctx.fillText(labels[i], xPos(i), h - 6);
+  }
+  if(labels[n-1]) ctx.fillText(labels[n-1], xPos(n-1), h - 6);
 }
 
 function drawChart(txs){
-  let labels=[],inc=[],exp=[];
-  const now=new Date();
-  if(curPeriod==='semana'){
-    const D=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']; labels=D;
-    const startW=new Date(now); startW.setDate(now.getDate()-((now.getDay()+6)%7)); startW.setHours(0,0,0,0);
-    D.forEach((_,i)=>{
-      const s=new Date(startW); s.setDate(startW.getDate()+i);
-      const e=new Date(s); e.setDate(e.getDate()+1);
-      const d=txs.filter(t=>{const dt=new Date(t.date);return dt>=s&&dt<e;});
-      inc.push(d.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
-      exp.push(d.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
-    });
-  } else if(curPeriod==='mes'){
-    labels=['S1','S2','S3','S4'];
-    [0,1,2,3].forEach(w=>{
-      const s=new Date(now.getFullYear(),now.getMonth(),w*7+1);
-      const e=new Date(now.getFullYear(),now.getMonth(),w*7+8);
-      const d=txs.filter(t=>{const dt=new Date(t.date);return dt>=s&&dt<e;});
-      inc.push(d.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
-      exp.push(d.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
-    });
-  } else if(curPeriod==='año'){
-    labels=MSHORT;
-    MSHORT.forEach((_,i)=>{
-      const d=txs.filter(t=>new Date(t.date).getMonth()===i&&sameYear(t.date));
-      inc.push(d.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
-      exp.push(d.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
-    });
-  } else {
-    // todo — agrupar por mes disponible
-    const months={};
-    txs.forEach(t=>{
-      const d=new Date(t.date);
-      const k=`${d.getFullYear()}-${d.getMonth()}`;
-      if(!months[k]) months[k]={m:d.getMonth(),y:d.getFullYear(),inc:0,exp:0};
-      if(t.type==='income') months[k].inc+=t.amount;
-      if(t.type==='expense') months[k].exp+=t.amount;
-    });
-    const sorted=Object.values(months).sort((a,b)=>a.y!==b.y?a.y-b.y:a.m-b.m).slice(-8);
-    if(sorted.length===0){ labels=[''];inc=[0];exp=[0]; }
-    else { labels=sorted.map(m=>MSHORT[m.m]); inc=sorted.map(m=>m.inc); exp=sorted.map(m=>m.exp); }
-  }
-  drawCanvas('chart-cv',inc,exp,labels,120);
+  // c-xlbls ya no se usa — los labels se dibujan en el canvas
   const xlbls=document.getElementById('c-xlbls');
-  if(xlbls){ xlbls.innerHTML=''; labels.forEach(l=>{const s=document.createElement('span');s.textContent=l;xlbls.appendChild(s);}); }
+  if(xlbls) xlbls.innerHTML='';
+  drawCanvas(txs, curPeriod);
 }
 
 function drawTrendChart(){
-  // Últimos 6 meses
-  const now=new Date();
-  const months=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    months.push({m:d.getMonth(),y:d.getFullYear(),lbl:MSHORT[d.getMonth()]});
-  }
-  const inc=months.map(({m,y})=>S.txs.filter(t=>t.type==='income'&&new Date(t.date).getMonth()===m&&new Date(t.date).getFullYear()===y).reduce((a,t)=>a+t.amount,0));
-  const exp=months.map(({m,y})=>S.txs.filter(t=>t.type==='expense'&&new Date(t.date).getMonth()===m&&new Date(t.date).getFullYear()===y).reduce((a,t)=>a+t.amount,0));
-  drawCanvas('trend-cv',inc,exp,months.map(m=>m.lbl),80);
+  drawCanvas(S.txs, 'todo');
 }
 
 // ═══════════════════════════════════════════
