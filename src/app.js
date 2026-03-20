@@ -2646,9 +2646,9 @@ function importMoneeExcel() {
 }
 
 function parseMoneeExcel(arrayBuffer) {
-  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false, raw: true });
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
 
   const MONEE_CAT_MAP = {
     'Salario':'Sueldo','Otros Ingresos':'Otro',
@@ -2665,6 +2665,10 @@ function parseMoneeExcel(arrayBuffer) {
     'July':6,'August':7,'September':8,'October':9,'November':10,'December':11
   };
 
+  // Debug: mostrar estructura del archivo
+  if(rows.length > 0) console.log('[Monee] Headers:', JSON.stringify(rows[0]));
+  if(rows.length > 1) console.log('[Monee] Fila 1 completa:', JSON.stringify(rows[1]));
+
   let imported = 0, skipped = 0, duplicates = 0;
   const newTxs = [];
 
@@ -2673,6 +2677,8 @@ function parseMoneeExcel(arrayBuffer) {
     if(!row || row.length < 6) continue;
 
     const [account, category, description, person, dateStr, amount, recurring, status] = row;
+
+    if(i === 1) console.log('[Monee] dateStr:', dateStr, '| tipo:', typeof dateStr, '| isDate:', dateStr instanceof Date, '| amount:', amount, '| status:', status);
 
     if(status && status !== 'Settled') { skipped++; continue; }
     if(!amount || amount === 0) { skipped++; continue; }
