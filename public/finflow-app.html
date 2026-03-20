@@ -6194,6 +6194,7 @@ function initAuth(){
     return;
   }
   // Manejar resultado de redirect (Google sign-in desde redirect)
+  const oobCode = urlParams.get('oobCode');
   // Manejar resultado del redirect de Google
   _fbAuth.getRedirectResult().then(result => {
     if(result && result.user){
