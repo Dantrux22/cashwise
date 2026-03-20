@@ -4576,7 +4576,7 @@ function importMoneeExcel() {
 }
 
 function parseMoneeExcel(arrayBuffer) {
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false, raw: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
@@ -4607,13 +4607,13 @@ function parseMoneeExcel(arrayBuffer) {
     if(status && status !== 'Settled') { skipped++; continue; }
     if(!amount || amount === 0) { skipped++; continue; }
 
-    // Parsear fecha — puede ser string "19 March 2026" o número serial de Excel
     let date;
     try {
-      if(typeof dateStr === 'number') {
-        const excelEpoch = new Date(1899, 11, 30);
-        const d = new Date(excelEpoch.getTime() + dateStr * 86400000);
-        date = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0).toISOString();
+      if(dateStr instanceof Date) {
+        date = new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate(), 12, 0, 0).toISOString();
+      } else if(typeof dateStr === 'number') {
+        const d = new Date(Math.round((dateStr - 25569) * 86400 * 1000));
+        date = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0).toISOString();
       } else {
         const parts = String(dateStr).trim().split(' ');
         const day = parseInt(parts[0]);
