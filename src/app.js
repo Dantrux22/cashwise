@@ -4293,6 +4293,8 @@ async function authEmailRegister(){
   try{
     const cred = await _fbAuth.createUserWithEmailAndPassword(email, pass);
     await cred.user.updateProfile({ displayName: name });
+    await cred.user.sendEmailVerification();
+    showToast('📧 Revisá tu email para verificar tu cuenta');
     clearAuthError();
     showWelcome(name);
   }catch(e){
@@ -4342,6 +4344,10 @@ function skipAuth(){
 // ── Cuando se loguea ──
 async function onUserLoggedIn(user){
   hideAuthOverlay();
+  // Si el email no está verificado, mostrar aviso
+  if(user.email && !user.emailVerified && !user.providerData.find(p => p.providerId === 'google.com')){
+    showToast('⚠️ Verificá tu email para sincronizar en la nube');
+  }
   const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
   if (isNewUser) showWelcome(user.displayName || 'nuevo usuario');
   S.linkedAccount={
