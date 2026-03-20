@@ -301,9 +301,9 @@ function refreshHome(){
   const cn=document.getElementById('c-net');
   cn.textContent=(net>=0?'+':'-')+s+fmt(net);
   cn.className='chart-net'+(net<0?' neg':'');
-  document.getElementById('cs-inc').textContent='+'+s+fmt(income);
-  document.getElementById('cs-exp').textContent='-'+s+fmt(expense);
-  document.getElementById('cs-net').textContent=(net>=0?'+':'-')+s+fmt(net);
+  document.getElementById('cs-inc').textContent='+'+s+fmtShort(income);
+  document.getElementById('cs-exp').textContent='-'+s+fmtShort(expense);
+  document.getElementById('cs-net').textContent=(net>=0?'+':'-')+s+fmtShort(Math.abs(net));
 
   drawChart(txs);
   renderTxList(txs,'tx-list',5);
@@ -412,26 +412,26 @@ function drawCanvas(txs, period) {
   const chartW = w - PAD_L - PAD_R;
   const chartH = h - PAD_T - PAD_B;
   const n = labels.length;
-  const xPos = i => PAD_L + (i / (n - 1 || 1)) * chartW;
+  const xPos = i => n <= 1 ? PAD_L + chartW / 2 : PAD_L + (i / (n - 1)) * chartW;
   const yPos = v => PAD_T + chartH - (v / maxVal) * chartH;
 
   function drawStepLine(data, color) {
-    if(data.every(v => v === 0)) return;
+    if(!data.length || data.every(v => v === 0)) return;
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
-    ctx.moveTo(xPos(0), yPos(data[0]));
+    // Arrancar desde el origen (0) en el eje Y
+    ctx.moveTo(xPos(0), yPos(0));
+    ctx.lineTo(xPos(0), yPos(data[0]));
     for(let i = 1; i < data.length; i++) {
       ctx.lineTo(xPos(i), yPos(data[i-1]));
       ctx.lineTo(xPos(i), yPos(data[i]));
     }
     ctx.stroke();
-    // Punto al final
-    const lastX = xPos(data.length - 1);
-    const lastY = yPos(data[data.length - 1]);
+    // Punto final
     ctx.beginPath();
-    ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+    ctx.arc(xPos(data.length-1), yPos(data[data.length-1]), 5, 0, Math.PI*2);
     ctx.fillStyle = color;
     ctx.fill();
   }
