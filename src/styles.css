@@ -134,7 +134,7 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
 .chart-legend{display:flex;gap:12px}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mu)}
 .leg-bar{width:9px;height:9px;border-radius:3px}
-.chart-cv-wrap{height:120px;position:relative;margin-bottom:6px}
+.chart-cv-wrap{height:170px;position:relative;margin-bottom:0}
 canvas.cv{width:100%;height:100%}
 .chart-xlbls{display:flex;justify-content:space-between}
 .chart-xlbls span{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace}

@@ -150,7 +150,7 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
 .chart-legend{display:flex;gap:12px}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mu)}
 .leg-bar{width:9px;height:9px;border-radius:3px}
-.chart-cv-wrap{height:120px;position:relative;margin-bottom:6px}
+.chart-cv-wrap{height:170px;position:relative;margin-bottom:0}
 canvas.cv{width:100%;height:100%}
 .chart-xlbls{display:flex;justify-content:space-between}
 .chart-xlbls span{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace}
@@ -2278,24 +2278,20 @@ function drawCanvas(txs, period) {
   ctx.clearRect(0, 0, w, h);
 
   const now = new Date();
-  let labels = [], incData = [], expData = [];
+  let incData = [], expData = [];
 
   if(period === 'semana') {
-    const days = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     const start = new Date(now);
     start.setDate(now.getDate() - ((now.getDay()+6)%7));
     start.setHours(0,0,0,0);
     for(let i = 0; i < 7; i++) {
       const d = new Date(start); d.setDate(start.getDate()+i);
-      labels.push(days[i]);
       const day = txs.filter(t => new Date(t.date).toDateString() === d.toDateString());
       incData.push(day.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
       expData.push(day.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
     }
   } else if(period === 'mes') {
-    const weeks = ['S1','S2','S3','S4'];
     for(let wk=0; wk<4; wk++) {
-      labels.push(weeks[wk]);
       const wTxs = txs.filter(t => {
         const d = new Date(t.date);
         return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear() && Math.floor((d.getDate()-1)/7)===wk;
@@ -2304,9 +2300,7 @@ function drawCanvas(txs, period) {
       expData.push(wTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
     }
   } else if(period === 'año') {
-    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     for(let m=0; m<12; m++) {
-      labels.push(months[m]);
       const mTxs = txs.filter(t => { const d=new Date(t.date); return d.getMonth()===m && d.getFullYear()===now.getFullYear(); });
       incData.push(mTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
       expData.push(mTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
@@ -2315,11 +2309,9 @@ function drawCanvas(txs, period) {
     if(!txs.length) return;
     const sorted = [...txs].sort((a,b)=>new Date(a.date)-new Date(b.date));
     const first = new Date(sorted[0].date);
-    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     let cur = new Date(first.getFullYear(), first.getMonth(), 1);
     while(cur <= now) {
       const m=cur.getMonth(), y=cur.getFullYear();
-      labels.push(months[m]);
       const mTxs = txs.filter(t=>{ const d=new Date(t.date); return d.getMonth()===m&&d.getFullYear()===y; });
       incData.push(mTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0));
       expData.push(mTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0));
@@ -2327,33 +2319,33 @@ function drawCanvas(txs, period) {
     }
   }
 
-  if(!labels.length) return;
-  const n = labels.length;
+  if(!incData.length && !expData.length) return;
+  const n = Math.max(incData.length, expData.length);
   const maxVal = Math.max(...incData, ...expData, 1);
-  const PAD = {l:8, r:16, t:16, b:28};
+  const PAD = {l:8, r:16, t:16, b:8};
   const cw = w - PAD.l - PAD.r;
   const ch = h - PAD.t - PAD.b;
   const xp = i => PAD.l + (i/(n-1||1))*cw;
   const yp = v => PAD.t + ch - (v/maxVal)*ch;
 
-  function drawLine(data, color) {
+  function drawLine(data, color, fillColor) {
     if(data.every(v=>v===0)) return;
     // Área rellena
     ctx.beginPath();
     ctx.moveTo(xp(0), yp(0));
     ctx.lineTo(xp(0), yp(data[0]));
-    for(let i=1; i<n; i++) {
+    for(let i=1; i<data.length; i++) {
       const cpx = (xp(i-1)+xp(i))/2;
       ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
     }
-    ctx.lineTo(xp(n-1), yp(0));
+    ctx.lineTo(xp(data.length-1), yp(0));
     ctx.closePath();
-    ctx.fillStyle = color === '#34D48A' ? 'rgba(52,212,138,0.15)' : 'rgba(240,86,106,0.15)';
+    ctx.fillStyle = fillColor;
     ctx.fill();
     // Línea
     ctx.beginPath();
     ctx.moveTo(xp(0), yp(data[0]));
-    for(let i=1; i<n; i++) {
+    for(let i=1; i<data.length; i++) {
       const cpx = (xp(i-1)+xp(i))/2;
       ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
     }
@@ -2362,21 +2354,13 @@ function drawCanvas(txs, period) {
     ctx.stroke();
     // Punto final
     ctx.beginPath();
-    ctx.arc(xp(n-1), yp(data[n-1]), 4, 0, Math.PI*2);
+    ctx.arc(xp(data.length-1), yp(data[data.length-1]), 4, 0, Math.PI*2);
     ctx.fillStyle = color;
     ctx.fill();
   }
 
-  drawLine(incData, '#34D48A');
-  drawLine(expData, '#f0566a');
-
-  // Labels eje X
-  ctx.fillStyle = 'rgba(120,120,160,0.7)';
-  ctx.font = `${Math.max(9, 10*(w/390))}px DM Sans, sans-serif`;
-  ctx.textAlign = 'center';
-  const step = Math.ceil(n/6);
-  for(let i=0; i<n; i+=step) ctx.fillText(labels[i], xp(i), h-6);
-  if((n-1)%step !== 0) ctx.fillText(labels[n-1], xp(n-1), h-6);
+  drawLine(incData, '#34D48A', 'rgba(52,212,138,0.15)');
+  drawLine(expData, '#f0566a', 'rgba(240,86,106,0.15)');
 }
 
 function drawChart(txs){
