@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CashWise — Verificando...</title>
+<style>
+  body { margin:0; background:#0f0f13; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'Helvetica Neue',sans-serif; }
+  .box { text-align:center; padding:40px 24px; color:#f0f0f8; }
+  .emoji { font-size:56px; margin-bottom:24px; }
+  h2 { font-size:22px; font-weight:700; margin:0 0 12px; }
+  p { font-size:15px; color:#7878a0; line-height:1.6; margin:0 0 32px; }
+  .btn { display:inline-block; background:#34D48A; color:#0f0f13; padding:14px 32px; border-radius:50px; text-decoration:none; font-weight:700; font-size:15px; }
+  .spinner { width:40px; height:40px; border:3px solid #2a2a3a; border-top-color:#34D48A; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="spinner"></div>
+  <h2>Verificando tu email...</h2>
+  <p>Espera un momento</p>
+</div>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyB6DJpoQBHQWC0Rcf6V6d5AwYUP4u5P94g",
+  authDomain: "gestor-de-gastos-22.firebaseapp.com",
+  projectId: "gestor-de-gastos-22"
+});
+
+const auth = firebase.auth();
+const params = new URLSearchParams(window.location.search);
+const mode = params.get('mode');
+const oobCode = params.get('oobCode');
+const APP_URL = 'https://dantrux22.github.io/cashwise/public/finflow-app.html';
+
+function showSuccess() {
+  document.getElementById('box').innerHTML = `
+    <div class="emoji">✅</div>
+    <h2>¡Email verificado!</h2>
+    <p>Tu cuenta de CashWise está activa.<br>Ya podés sincronizar tus datos en la nube.</p>
+    <a href="${APP_URL}" class="btn">Abrir CashWise</a>
+  `;
+}
+
+function showError(msg) {
+  document.getElementById('box').innerHTML = `
+    <div class="emoji">❌</div>
+    <h2>Link inválido</h2>
+    <p>${msg}<br>Pedí un nuevo link desde la app.</p>
+    <a href="${APP_URL}" class="btn">Volver a CashWise</a>
+  `;
+}
+
+if(mode === 'verifyEmail' && oobCode) {
+  auth.applyActionCode(oobCode)
+    .then(() => showSuccess())
+    .catch(e => showError('Este link ya fue usado o expiró.'));
+} else {
+  showError('Link inválido.');
+}
+</script>
+</body>
+</html>
