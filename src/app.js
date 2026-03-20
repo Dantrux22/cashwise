@@ -284,7 +284,7 @@ function applyRecurring(){
 let curPeriod='todo';
 
 function refreshHome(){
-  const txs=filterTxs(curPeriod);
+  const txs=curPeriod==='todo'?S.txs:filterTxs(curPeriod);
   const income=txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const expense=txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
   const invest=S.txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
@@ -534,9 +534,6 @@ function renderChartTypeUI() {
 }
 
 function drawChart(txs){
-  // c-xlbls ya no se usa — los labels se dibujan en el canvas
-  const xlbls=document.getElementById('c-xlbls');
-  if(xlbls) xlbls.innerHTML='';
   drawCanvas(txs, curPeriod);
 }
 
