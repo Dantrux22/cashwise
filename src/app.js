@@ -4335,6 +4335,14 @@ async function authForgotPassword(){
 }
 
 // ── Usar sin cuenta ──
+function showEmailAuth() {
+  const overlay = document.getElementById('auth-overlay');
+  if(overlay) {
+    overlay.classList.remove('hidden');
+    switchAuthTab('register');
+  }
+}
+
 function skipAuth(){
   S.skipAuth=true; saveState();
   hideAuthOverlay();

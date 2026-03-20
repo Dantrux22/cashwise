@@ -1004,6 +1004,19 @@ canvas.cv{width:100%;height:100%}
           <div class="set-arr" id="fb-arr">›</div>
         </div>
       </div>
+      <div style="text-align:center;padding:8px 0;color:var(--mu);font-size:13px">o</div>
+      <div class="set-card" onclick="showEmailAuth()" style="cursor:pointer">
+        <div class="set-row">
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--bld);display:flex;align-items:center;justify-content:center;margin-right:14px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--bl)" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          </div>
+          <div>
+            <div class="set-lbl">Email y contraseña</div>
+            <div class="set-sub">Registrarse o iniciar sesión</div>
+          </div>
+          <div style="margin-left:auto;color:var(--mu)">›</div>
+        </div>
+      </div>
     </div>
     <div class="set-sec">
       <div class="set-sec-ttl">Mis estadísticas</div>
@@ -6239,6 +6252,14 @@ async function authForgotPassword(){
 }
 
 // ── Usar sin cuenta ──
+function showEmailAuth() {
+  const overlay = document.getElementById('auth-overlay');
+  if(overlay) {
+    overlay.classList.remove('hidden');
+    switchAuthTab('register');
+  }
+}
+
 function skipAuth(){
   S.skipAuth=true; saveState();
   hideAuthOverlay();
