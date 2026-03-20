@@ -332,7 +332,7 @@ function setFilter(p,el){
 // CHARTS
 // ═══════════════════════════════════════════
 function drawCanvas(txs, period) {
-  const chartType = S.chartType || 'net';
+  const chartType = S.chartType || 'dual';
   if(chartType === 'net') drawNetCanvas(txs, period);
   else drawDualCanvas(txs, period);
 }
@@ -529,7 +529,7 @@ function setChartType(type) {
 }
 
 function renderChartTypeUI() {
-  const type = S.chartType || 'net';
+  const type = S.chartType || 'dual';
   const netEl = document.getElementById('chart-type-net');
   const dualEl = document.getElementById('chart-type-dual');
   if(netEl) netEl.textContent = type === 'net' ? '✓' : '';
