@@ -2428,9 +2428,12 @@ function drawNetCanvas(txs, period) {
     ctx.fillStyle = color; ctx.fill();
   }
 
-  // Ingresos acumulados (verde claro, debajo) → neto acumulado (verde vivo, encima)
+  // Ingresos acumulados: siempre verde (siempre positivo)
   drawNetLine(incAccum, 'rgba(52,212,138,0.5)', 'rgba(52,212,138,0.08)');
-  drawNetLine(netAccum, '#34D48A', 'rgba(52,212,138,0.15)');
+  // Neto acumulado: verde si positivo, rojo si negativo
+  const netColor = netAccum[n-1] >= 0 ? '#34D48A' : '#f0566a';
+  const netFill  = netAccum[n-1] >= 0 ? 'rgba(52,212,138,0.15)' : 'rgba(240,86,106,0.15)';
+  drawNetLine(netAccum, netColor, netFill);
 }
 
 function setChartType(type) {
