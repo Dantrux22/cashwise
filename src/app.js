@@ -2677,14 +2677,21 @@ function parseMoneeExcel(arrayBuffer) {
     if(status && status !== 'Settled') { skipped++; continue; }
     if(!amount || amount === 0) { skipped++; continue; }
 
+    // Parsear fecha — puede ser string "19 March 2026" o número serial de Excel
     let date;
     try {
-      const parts = String(dateStr).trim().split(' ');
-      const day = parseInt(parts[0]);
-      const month = MONTH_MAP[parts[1]];
-      const year = parseInt(parts[2]);
-      if(isNaN(day) || isNaN(month) || isNaN(year)) throw new Error();
-      date = new Date(year, month, day, 12, 0, 0).toISOString();
+      if(typeof dateStr === 'number') {
+        const excelEpoch = new Date(1899, 11, 30);
+        const d = new Date(excelEpoch.getTime() + dateStr * 86400000);
+        date = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0).toISOString();
+      } else {
+        const parts = String(dateStr).trim().split(' ');
+        const day = parseInt(parts[0]);
+        const month = MONTH_MAP[parts[1]];
+        const year = parseInt(parts[2]);
+        if(isNaN(day) || isNaN(month) || isNaN(year)) throw new Error();
+        date = new Date(year, month, day, 12, 0, 0).toISOString();
+      }
     } catch(e) { skipped++; continue; }
 
     const note = String(description || '').trim();
