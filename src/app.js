@@ -280,7 +280,7 @@ function applyRecurring(){
 // ═══════════════════════════════════════════
 // HOME REFRESH
 // ═══════════════════════════════════════════
-let curPeriod='semana';
+let curPeriod='todo';
 
 function refreshHome(){
   const txs=filterTxs(curPeriod);
@@ -427,8 +427,8 @@ function drawCanvas(txs, period) {
     ctx.fill();
   }
 
-  drawLine(expData, '#f0566a');
   drawLine(incData, '#34D48A');
+  drawLine(expData, '#f0566a');
 
   // Labels eje X
   ctx.fillStyle = 'rgba(120,120,160,0.7)';

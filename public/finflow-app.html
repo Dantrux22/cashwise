@@ -657,10 +657,10 @@ canvas.cv{width:100%;height:100%}
     </div>
     <!-- Filtros -->
     <div class="filter-row">
-      <div class="pill active" onclick="setFilter('semana',this)" data-i18n="thisWeek">Semana</div>
+      <div class="pill" onclick="setFilter('semana',this)" data-i18n="thisWeek">Semana</div>
       <div class="pill" onclick="setFilter('mes',this)" data-i18n="thisMonth">Mes</div>
       <div class="pill" onclick="setFilter('año',this)" data-i18n="thisYear">Año</div>
-      <div class="pill" onclick="setFilter('todo',this)" data-i18n="all">Todo</div>
+      <div class="pill active" onclick="setFilter('todo',this)" data-i18n="all">Todo</div>
     </div>
     <!-- Gráfico período -->
     <div class="chart-wrap au">
@@ -2220,7 +2220,7 @@ function applyRecurring(){
 // ═══════════════════════════════════════════
 // HOME REFRESH
 // ═══════════════════════════════════════════
-let curPeriod='semana';
+let curPeriod='todo';
 
 function refreshHome(){
   const txs=filterTxs(curPeriod);
@@ -2367,8 +2367,8 @@ function drawCanvas(txs, period) {
     ctx.fill();
   }
 
-  drawLine(expData, '#f0566a');
   drawLine(incData, '#34D48A');
+  drawLine(expData, '#f0566a');
 
   // Labels eje X
   ctx.fillStyle = 'rgba(120,120,160,0.7)';
