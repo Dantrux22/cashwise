@@ -1035,18 +1035,20 @@
         <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Integrantes</div>
         <div id="group-members-list" style="margin-bottom:12px"></div>
 
-        <!-- Búsqueda de integrantes -->
+        <!-- Agregar integrante -->
         <div style="background:var(--s2);border:1px solid var(--br);border-radius:13px;padding:10px 14px">
-          <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Agregar integrante por nombre o email</div>
-          <div style="display:flex;gap:8px">
-            <input type="text" placeholder="Nombre o email" id="new-member-inp" maxlength="50"
+          <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Agregar integrante</div>
+          <div id="add-member-row" style="display:flex;gap:8px;margin-bottom:8px">
+            <input id="member-name-inp" placeholder="Nombre" maxlength="50"
               style="flex:1;background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none"
-              onkeydown="if(event.key==='Enter')addMember()"
-              oninput="searchMembersLive(this.value)">
-            <button onclick="addMember()" style="padding:0 16px;border-radius:10px;background:var(--bl);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer;flex-shrink:0">+</button>
+              onkeydown="if(event.key==='Enter')addMemberToGroup()">
+            <input id="member-email-inp" placeholder="Email (opcional)" type="email"
+              style="flex:1.5;background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none"
+              onkeydown="if(event.key==='Enter')addMemberToGroup()">
+            <button onclick="addMemberToGroup()"
+              style="background:var(--bl);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;font-size:15px;cursor:pointer;flex-shrink:0">+</button>
           </div>
-          <div id="member-search-results" style="margin-top:8px"></div>
-          <div style="font-size:10px;color:var(--mu);margin-top:8px;line-height:1.5">
+          <div style="font-size:10px;color:var(--mu);line-height:1.5">
             💡 Si el contacto ya usa CashWise con su email, verá el grupo al ingresar.
           </div>
         </div>

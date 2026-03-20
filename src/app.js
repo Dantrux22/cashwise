@@ -4058,7 +4058,10 @@ function renderGroupMembersList(){
       <div style="width:32px;height:32px;border-radius:50%;background:var(--bld);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--bl)">
         ${m.name[0].toUpperCase()}
       </div>
-      <span style="flex:1;font-size:13px;font-weight:500">${m.name}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">${m.name}</div>
+        ${m.email?`<div style="font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.uid?'✓ ':''} ${m.email}</div>`:''}
+      </div>
       <button onclick="removeMember('${m.id}')" style="width:28px;height:28px;border-radius:50%;background:var(--rdd);border:none;color:var(--rd);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>`;
     list.appendChild(el);
   });
@@ -4070,14 +4073,33 @@ function renderGroupMembersList(){
   }
 }
 
-function addMember(){
-  const inp=document.getElementById('new-member-inp');
-  const name=inp.value.trim(); if(!name){ return; }
-  if(name.toLowerCase()===ME_NAME().toLowerCase()){ showToast('⚠️ Ya estás en el grupo'); inp.value=''; return; }
-  if(groupMembers.some(m=>m.name.toLowerCase()===name.toLowerCase())){ showToast('⚠️ Ese nombre ya existe'); inp.value=''; return; }
-  groupMembers.push({id:uid(),name,isMe:false});
-  inp.value=''; renderGroupMembersList();
+async function addMemberToGroup(){
+  const nameInp=document.getElementById('member-name-inp');
+  const emailInp=document.getElementById('member-email-inp');
+  const name=nameInp?.value.trim();
+  const email=emailInp?.value.trim().toLowerCase();
+  if(!name){ showToast('⚠️ Ingresá un nombre'); return; }
+  if(name.toLowerCase()===ME_NAME().toLowerCase()){ showToast('⚠️ Ya estás en el grupo'); return; }
+  if(groupMembers.some(m=>m.name.toLowerCase()===name.toLowerCase())){ showToast('⚠️ Ese nombre ya existe'); return; }
+  let memberUid=null, resolvedName=name;
+  if(email){
+    showToast('🔍 Buscando usuario...');
+    const found=await findUserByEmail(email);
+    if(found){
+      memberUid=found.uid;
+      resolvedName=found.name||name;
+      showToast('✅ Usuario encontrado: '+resolvedName);
+    } else {
+      showToast('⚠️ Usuario no encontrado — se agregará como invitado');
+    }
+  }
+  groupMembers.push({id:uid(),name:resolvedName,isMe:false,email:email||null,uid:memberUid||null});
+  if(nameInp) nameInp.value='';
+  if(emailInp) emailInp.value='';
+  renderGroupMembersList();
 }
+// alias para compatibilidad
+function addMember(){ addMemberToGroup(); }
 
 function removeMember(id){
   // No se puede remover si tiene gastos asignados (si es edición)
@@ -4118,6 +4140,18 @@ function saveGroup(){
   } else {
     S.split.groups.push({id:uid(),name,emoji:groupEmoji,members:allMembers,createdAt:new Date().toISOString()});
     showToast('✅ Grupo "'+name+'" creado');
+    // Sincronizar con Firestore si el usuario está logueado
+    if(FIREBASE_ENABLED&&_fbDb&&_authUser){
+      const newGroup=S.split.groups[S.split.groups.length-1];
+      newGroup.ownerUid=_authUser.uid;
+      newGroup.ownerEmail=_authUser.email;
+      const membersWithUid=newGroup.members.filter(m=>m.uid&&!m.isMe);
+      _fbDb.collection('splitGroups').doc(newGroup.id).set({
+        ...newGroup,
+        sharedWith:membersWithUid.map(m=>m.uid)
+      }).then(()=>showToast('☁️ Grupo sincronizado en la nube'))
+        .catch(e=>console.error('saveGroup Firestore:',e));
+    }
   }
   saveState(); closeNewGroup(); renderSplitContent();
 }
@@ -4756,6 +4790,8 @@ async function onUserLoggedIn(user){
     showToast('✅ Datos cargados desde tu cuenta');
   }
   updateProfileUI(user);
+  saveUserProfile(user);
+  loadSharedSplitGroups(user);
 }
 
 // ── Sync modal ──
@@ -4782,6 +4818,51 @@ async function syncChoice(choice){
     showToast('💾 Manteniendo datos locales');
   }
   if(_authUser) updateProfileUI(_authUser);
+}
+
+// ── Perfiles de usuario en Firestore ──
+async function saveUserProfile(user){
+  if(!FIREBASE_ENABLED||!_fbDb||!user) return;
+  try{
+    await _fbDb.collection('userProfiles').doc(user.uid).set({
+      email: user.email.toLowerCase(),
+      name: user.displayName||user.email.split('@')[0],
+      photoURL: user.photoURL||null,
+      updatedAt: new Date().toISOString()
+    },{merge:true});
+  }catch(e){ console.error('saveUserProfile:',e); }
+}
+
+async function findUserByEmail(email){
+  if(!FIREBASE_ENABLED||!_fbDb) return null;
+  try{
+    const snap=await _fbDb.collection('userProfiles').where('email','==',email.toLowerCase()).get();
+    if(snap.empty) return null;
+    const doc=snap.docs[0];
+    return {uid:doc.id,...doc.data()};
+  }catch(e){ console.error('findUserByEmail:',e); return null; }
+}
+
+// ── Grupos Split compartidos ──
+async function loadSharedSplitGroups(user){
+  if(!FIREBASE_ENABLED||!_fbDb||!user) return;
+  try{
+    const snap=await _fbDb.collection('splitGroups')
+      .where('sharedWith','array-contains',user.uid)
+      .get();
+    if(snap.empty) return;
+    let added=0;
+    snap.docs.forEach(doc=>{
+      const group=doc.data();
+      const exists=S.split.groups.find(g=>g.id===group.id);
+      if(!exists){
+        group.members=group.members.map(m=>({...m,isMe:m.uid===user.uid}));
+        S.split.groups.push(group);
+        added++;
+      }
+    });
+    if(added>0){ saveState(); showToast('✅ '+added+' grupo(s) compartido(s) cargado(s)'); }
+  }catch(e){ console.error('loadSharedSplitGroups:',e); }
 }
 
 // ── Firestore: subir ──
