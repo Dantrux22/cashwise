@@ -4595,9 +4595,8 @@ function parseMoneeExcel(arrayBuffer) {
     'July':6,'August':7,'September':8,'October':9,'November':10,'December':11
   };
 
-  // Debug: mostrar estructura del archivo
-  if(rows.length > 0) console.log('[Monee] Headers:', JSON.stringify(rows[0]));
-  if(rows.length > 1) console.log('[Monee] Fila 1 completa:', JSON.stringify(rows[1]));
+  // Debug temporal
+  alert('HEADERS: ' + JSON.stringify(rows[0]) + '\n\nFILA 1: ' + JSON.stringify(rows[1]));
 
   let imported = 0, skipped = 0, duplicates = 0;
   const newTxs = [];
