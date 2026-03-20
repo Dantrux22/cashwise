@@ -4530,6 +4530,7 @@ function showVerificationPending(user) {
       Revisá tu bandeja de entrada y spam.<br>Tocá el link para activar tu cuenta.
     </div>
     <button onclick="checkEmailVerification()"
+      style="width:100%;max-width:320px;padding:16px;border-radius:16px;background:var(--gr);border:none;color:#0f0f13;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:12px">
       Ya verifiqué mi email ✓
     </button>
     <button onclick="resendVerificationEmail('${user.email}')"
@@ -6193,8 +6194,28 @@ function initAuth(){
     if(!S.skipAuth) showAuthOverlay();
     return;
   }
-  // Manejar resultado de redirect (Google sign-in desde redirect)
+  // Detectar si venimos de un link de verificación de email
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode = urlParams.get('mode');
   const oobCode = urlParams.get('oobCode');
+
+  if(mode === 'verifyEmail' && oobCode) {
+    _fbAuth.applyActionCode(oobCode).then(() => {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      if(_fbAuth.currentUser) {
+        _fbAuth.currentUser.reload().then(() => {
+          document.getElementById('verify-overlay')?.remove();
+          showToast('✅ Email verificado correctamente');
+          onUserLoggedIn(_fbAuth.currentUser);
+        });
+      } else {
+        showToast('✅ Email verificado — iniciá sesión');
+      }
+    }).catch(() => {
+      showToast('⚠️ Link inválido o expirado');
+    });
+  }
+
   // Manejar resultado del redirect de Google
   _fbAuth.getRedirectResult().then(result => {
     if(result && result.user){
