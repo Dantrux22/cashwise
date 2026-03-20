@@ -390,6 +390,7 @@ function _initCanvas(id) {
   return { canvas, ctx, w, h };
 }
 
+// Gráfico dual: bezier para semana/mes/año, líneas rectas para todo
 function drawDualCanvas(txs, period) {
   const cv = _initCanvas('chart-cv'); if(!cv) return;
   const { ctx, w, h } = cv;
