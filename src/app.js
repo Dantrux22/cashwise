@@ -294,9 +294,9 @@ function refreshHome(){
   hBalEl.textContent=(net<0?'-':'')+fmt(net);
   hBalEl.style.color=net<0?'var(--rd)':net===0?'var(--mu)':'var(--tx)';
   document.getElementById('h-sym').textContent=s;
-  document.getElementById('h-inc').textContent=s+fmt(income);
-  document.getElementById('h-exp').textContent=s+fmt(expense);
-  document.getElementById('h-net').textContent=(net>=0?'+':'-')+s+fmt(net);
+  document.getElementById('h-inc').textContent=s+fmtCompact(income);
+  document.getElementById('h-exp').textContent=s+fmtCompact(expense);
+  document.getElementById('h-net').textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
   document.getElementById('h-invest').textContent=s+fmt(invest);
 
   const cn=document.getElementById('c-net');

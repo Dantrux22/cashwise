@@ -120,13 +120,12 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
 .bal-num{font-size:46px;font-weight:300;letter-spacing:-2.5px;font-family:'DM Mono',monospace;line-height:1.05;display:flex;align-items:baseline;gap:3px}
 .bal-sym{color:var(--mu);font-size:22px}
 .bal-row{display:flex;gap:8px;margin-top:14px}
-.bal-stats{display:flex;flex-direction:column;gap:6px;margin-top:12px}
-.bal-stats-row{display:flex;gap:8px}
-.bal-stat-lbl{font-size:11px;color:var(--mu);margin-bottom:3px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.bal-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.bal-stat-lbl{font-size:10px;color:var(--mu);margin-bottom:3px;display:flex;align-items:center;gap:3px;white-space:nowrap}
 .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;display:inline-block}
 .dot.g{background:var(--gr)}.dot.r{background:var(--rd)}.dot.b{background:var(--bl)}.dot.a{background:var(--am)}
-.bal-stat-val{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;white-space:nowrap;overflow:visible}
-.bal-stat{flex:1;min-width:0;background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:10px 12px}
+.bal-stat-val{font-size:clamp(10px,3.2vw,13px);font-weight:600;font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bal-stat{background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:8px 6px;min-width:0;overflow:hidden}
 .bal-stat-val.g{color:var(--gr)}.bal-stat-val.r{color:var(--rd)}.bal-stat-val.b{color:var(--bl)}.bal-stat-val.a{color:var(--am)}
 .invest-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--br);display:flex;justify-content:space-between;align-items:center;cursor:pointer}
 .invest-row-l{display:flex;align-items:center;gap:7px}
@@ -632,21 +631,17 @@ canvas.cv{width:100%;height:100%}
       <div class="bal-lbl" id="h-bal-lbl" data-i18n="balLbl">Balance disponible</div>
       <div class="bal-num"><span class="bal-sym" id="h-sym">$</span><span id="h-bal" style="transition:color .3s">0</span></div>
       <div class="bal-stats">
-        <div class="bal-stats-row">
-          <div class="bal-stat">
-            <div class="bal-stat-lbl"><span style="color:var(--gr)">●</span><span data-i18n="incomeLabel">Ingresos</span></div>
-            <div class="bal-stat-val g" id="h-inc">$0</div>
-          </div>
-          <div class="bal-stat">
-            <div class="bal-stat-lbl"><span style="color:var(--rd)">●</span><span data-i18n="expenseLabel">Gastos</span></div>
-            <div class="bal-stat-val r" id="h-exp">$0</div>
-          </div>
+        <div class="bal-stat">
+          <div class="bal-stat-lbl"><span style="color:var(--gr)">●</span> Ingresos</div>
+          <div class="bal-stat-val g" id="h-inc"></div>
         </div>
-        <div class="bal-stats-row">
-          <div class="bal-stat" style="flex:1">
-            <div class="bal-stat-lbl"><span style="color:var(--bl)">●</span><span data-i18n="netLabel">Neto</span></div>
-            <div class="bal-stat-val b" id="h-net">$0</div>
-          </div>
+        <div class="bal-stat">
+          <div class="bal-stat-lbl"><span style="color:var(--rd)">●</span> Gastos</div>
+          <div class="bal-stat-val r" id="h-exp"></div>
+        </div>
+        <div class="bal-stat">
+          <div class="bal-stat-lbl"><span style="color:var(--bl)">●</span> Neto</div>
+          <div class="bal-stat-val b" id="h-net"></div>
         </div>
       </div>
       <div class="invest-row" onclick="goTo('s-invest')">
@@ -2239,9 +2234,9 @@ function refreshHome(){
   hBalEl.textContent=(net<0?'-':'')+fmt(net);
   hBalEl.style.color=net<0?'var(--rd)':net===0?'var(--mu)':'var(--tx)';
   document.getElementById('h-sym').textContent=s;
-  document.getElementById('h-inc').textContent=s+fmt(income);
-  document.getElementById('h-exp').textContent=s+fmt(expense);
-  document.getElementById('h-net').textContent=(net>=0?'+':'-')+s+fmt(net);
+  document.getElementById('h-inc').textContent=s+fmtCompact(income);
+  document.getElementById('h-exp').textContent=s+fmtCompact(expense);
+  document.getElementById('h-net').textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
   document.getElementById('h-invest').textContent=s+fmt(invest);
 
   const cn=document.getElementById('c-net');

@@ -32,21 +32,17 @@
       <div class="bal-lbl" id="h-bal-lbl" data-i18n="balLbl">Balance disponible</div>
       <div class="bal-num"><span class="bal-sym" id="h-sym">$</span><span id="h-bal" style="transition:color .3s">0</span></div>
       <div class="bal-stats">
-        <div class="bal-stats-row">
-          <div class="bal-stat">
-            <div class="bal-stat-lbl"><span style="color:var(--gr)">●</span><span data-i18n="incomeLabel">Ingresos</span></div>
-            <div class="bal-stat-val g" id="h-inc">$0</div>
-          </div>
-          <div class="bal-stat">
-            <div class="bal-stat-lbl"><span style="color:var(--rd)">●</span><span data-i18n="expenseLabel">Gastos</span></div>
-            <div class="bal-stat-val r" id="h-exp">$0</div>
-          </div>
+        <div class="bal-stat">
+          <div class="bal-stat-lbl"><span style="color:var(--gr)">●</span> Ingresos</div>
+          <div class="bal-stat-val g" id="h-inc"></div>
         </div>
-        <div class="bal-stats-row">
-          <div class="bal-stat" style="flex:1">
-            <div class="bal-stat-lbl"><span style="color:var(--bl)">●</span><span data-i18n="netLabel">Neto</span></div>
-            <div class="bal-stat-val b" id="h-net">$0</div>
-          </div>
+        <div class="bal-stat">
+          <div class="bal-stat-lbl"><span style="color:var(--rd)">●</span> Gastos</div>
+          <div class="bal-stat-val r" id="h-exp"></div>
+        </div>
+        <div class="bal-stat">
+          <div class="bal-stat-lbl"><span style="color:var(--bl)">●</span> Neto</div>
+          <div class="bal-stat-val b" id="h-net"></div>
         </div>
       </div>
       <div class="invest-row" onclick="goTo('s-invest')">
