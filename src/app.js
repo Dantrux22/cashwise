@@ -310,7 +310,7 @@ function refreshHome(){
   const csInvEl=document.getElementById('cs-inv'); if(csInvEl) csInvEl.textContent=s+fmtCompact(invest);
 
   drawChart(mainTxs);
-  renderTxList(mainTxs,'tx-list',5);
+  renderTxList(mainTxs.filter(t=>t.type!=='invest'),'tx-list',5);
   if(S.hidden) applyHide(true);
   // Secondary currency mini-row
   _renderSecondaryRow();
@@ -1912,6 +1912,11 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.budgets)) S.budgets=[];
         if(!Array.isArray(S.goals)) S.goals=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
+        // Re-hydrate currency from CURRENCIES array to ensure all fields present;
+        // fall back to the exported object itself, then to default
+        if(S.currency&&S.currency.code){
+          S.currency=CURRENCIES.find(c=>c.code===S.currency.code)||S.currency;
+        }
         if(!S.currency||!S.currency.sym) S.currency=CURRENCIES[0];
         if(typeof S.useComma==='undefined') S.useComma=true;
         if(typeof S.hidden==='undefined') S.hidden=false;
@@ -1926,7 +1931,7 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.split.groups)) S.split.groups=[];
         if(!Array.isArray(S.split.expenses)) S.split.expenses=[];
         if(!S.splitPrefs||typeof S.splitPrefs!=='object') S.splitPrefs={simplify:true,showSettled:true,autoPersonal:false,defaultMethod:'equal'};
-        saveState(); updateCurrUI(); refreshHome();
+        saveState(); updateCurrUI(); refreshHome(); renderInvest();
         showToast('✅ Datos restaurados correctamente');
       });
     }catch(_e){ showToast('❌ Archivo inválido'); }
