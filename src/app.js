@@ -4092,6 +4092,10 @@ async function addMemberToGroup(){
   if(!name){ showToast('⚠️ Ingresá un nombre'); return; }
   if(name.toLowerCase()===ME_NAME().toLowerCase()){ showToast('⚠️ Ya estás en el grupo'); return; }
   if(groupMembers.some(m=>m.name.toLowerCase()===name.toLowerCase())){ showToast('⚠️ Ese nombre ya existe'); return; }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    showToast('⚠️ Email inválido — ingresá un email completo (ej: nombre@gmail.com)');
+    return;
+  }
   let memberUid=null, resolvedName=name;
   if(email){
     showToast('🔍 Buscando usuario...');
@@ -4146,6 +4150,25 @@ function saveGroup(){
       // Remover los que ya no están
       const newIds=groupMembers.filter(m=>!m.isMe).map(m=>m.id);
       g.members=g.members.filter(m=>m.isMe||newIds.includes(m.id));
+
+      // Sync updated group to Firestore
+      if(FIREBASE_ENABLED&&_fbDb&&_authUser){
+        const membersWithUid=g.members.filter(m=>m.uid&&!m.isMe);
+        const allMemberEmails=g.members.filter(m=>!m.isMe&&m.email).map(m=>m.email.toLowerCase());
+        const firestoreDoc={
+          ...g,
+          sharedWith:membersWithUid.map(m=>m.uid),
+          sharedWithEmails:allMemberEmails
+        };
+        console.log('[Split] Updating group in Firestore:', firestoreDoc.id, firestoreDoc.name,
+          '| sharedWith:', firestoreDoc.sharedWith,
+          '| sharedWithEmails:', firestoreDoc.sharedWithEmails,
+          '| members:', firestoreDoc.members.map(m=>({name:m.name,uid:m.uid,email:m.email}))
+        );
+        _fbDb.collection('splitGroups').doc(g.id).set(firestoreDoc)
+          .then(()=>console.log('[Split] Group updated OK:', firestoreDoc.id))
+          .catch(e=>console.error('[Split] editGroup Firestore error:',e));
+      }
     }
     showToast('✅ Grupo actualizado');
   } else {
