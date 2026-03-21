@@ -3984,10 +3984,9 @@ function addSplitComment(expId){
 function deleteSplitExpense(expId){
   showConfirm('Eliminar gasto','¿Eliminar este gasto? Los balances del grupo se actualizarán.',()=>{
     const exp=S.split.expenses.find(e=>e.id===expId);
-    const gid=exp?exp.groupId:null;
     S.split.expenses=S.split.expenses.filter(e=>e.id!==expId);
     saveState();
-    if(gid) syncSplitGroupToFirestore(gid);
+    if(exp) removeExpenseFromFirestore(exp);
     goBack(); renderGroupDetail(); showToast('🗑️ Gasto eliminado');
   });
 }
@@ -4472,7 +4471,7 @@ function saveSplitExpense(){
     }
   }
   saveState();
-  syncSplitGroupToFirestore(curGroupId);
+  addExpenseToFirestore(exp);
   showToast('✅ '+spSym()+spFmt(total)+' agregado al grupo');
   goBack(); renderGroupDetail();
 }
@@ -4514,7 +4513,7 @@ function confirmSettle(){
   const fromName=getMemberName(settleData.gid,settleData.fromId);
   const toName=getMemberName(settleData.gid,settleData.toId);
   // Registrar como gasto de tipo "pago" en el grupo
-  S.split.expenses.push({
+  const settleExp={
     id:uid(), groupId:settleData.gid, amount:amt,
     desc:`${fromName} → ${toName}`,
     cat:'', note:'Liquidación de deuda',
@@ -4522,7 +4521,8 @@ function confirmSettle(){
     shares:[{memberId:settleData.toId,amount:amt}],
     date:new Date().toISOString(), emoji:'💸',
     comments:[], isSettlement:true,
-  });
+  };
+  S.split.expenses.push(settleExp);
   // Al historial personal
   if(toPersonal&&g){
     const isMe=g.members.find(m=>m.id===settleData.fromId&&m.isMe);
@@ -4535,7 +4535,7 @@ function confirmSettle(){
     }
   }
   saveState();
-  syncSplitGroupToFirestore(settleData.gid);
+  addExpenseToFirestore(settleExp);
   closeSettleModal();
   renderGroupDetail(); renderSplitContent();
   showToast('✅ Pago de '+spSym()+spFmt(amt)+' registrado');
@@ -4910,18 +4910,27 @@ async function findUserByEmail(email){
 }
 
 // ── Sincronización de gastos Split a Firestore ──
-async function syncSplitGroupToFirestore(groupId){
-  if(!FIREBASE_ENABLED||!_fbDb||!_authUser) return;
+// Fix 3: Use arrayUnion/arrayRemove to avoid race conditions instead of overwriting
+async function addExpenseToFirestore(expense){
+  if(!FIREBASE_ENABLED||!_fbDb||!_authUser||!expense) return;
   try{
-    const group=S.split.groups.find(g=>g.id===groupId);
-    if(!group) return;
-    const expenses=S.split.expenses.filter(e=>e.groupId===groupId);
-    await _fbDb.collection('splitGroups').doc(groupId).update({
-      expenses,
+    await _fbDb.collection('splitGroups').doc(expense.groupId).update({
+      expenses: firebase.firestore.FieldValue.arrayUnion(expense),
       updatedAt:new Date().toISOString(),
       updatedBy:_authUser.uid
     });
-  }catch(e){ console.error('syncSplitGroupToFirestore:',e); }
+  }catch(e){ console.error('addExpenseToFirestore:',e); }
+}
+
+async function removeExpenseFromFirestore(expense){
+  if(!FIREBASE_ENABLED||!_fbDb||!_authUser||!expense) return;
+  try{
+    await _fbDb.collection('splitGroups').doc(expense.groupId).update({
+      expenses: firebase.firestore.FieldValue.arrayRemove(expense),
+      updatedAt:new Date().toISOString(),
+      updatedBy:_authUser.uid
+    });
+  }catch(e){ console.error('removeExpenseFromFirestore:',e); }
 }
 
 // ── Listeners en tiempo real para grupos Split ──
@@ -4930,15 +4939,30 @@ function listenSplitGroup(groupId){
   if(!FIREBASE_ENABLED||!_fbDb||!_authUser) return;
   const unsubscribe=_fbDb.collection('splitGroups').doc(groupId)
     .onSnapshot(doc=>{
-      if(!doc.exists) return;
+      if(!doc.exists){
+        // Fix 1: doc was deleted — purge from local state
+        S.split.groups=S.split.groups.filter(g=>g.id!==groupId);
+        S.split.expenses=S.split.expenses.filter(e=>e.groupId!==groupId);
+        stopListenSplitGroup(groupId);
+        saveState(); renderSplitContent();
+        return;
+      }
       const remoteGroup=doc.data();
       const idx=S.split.groups.findIndex(g=>g.id===groupId);
       if(idx!==-1){
+        // Fix 4: Firestore is source of truth — replace entirely, don't merge
         S.split.groups[idx]={
-          ...S.split.groups[idx],
           ...remoteGroup,
-          members:remoteGroup.members.map(m=>({...m,isMe:m.uid===_authUser.uid}))
+          members:(remoteGroup.members||[]).map(m=>({
+            ...m,
+            isMe:m.uid===_authUser.uid||(m.email&&m.email.toLowerCase()===_authUser.email?.toLowerCase())
+          }))
         };
+        // Fix 2: sync expenses from group doc into S.split.expenses
+        if(Array.isArray(remoteGroup.expenses)){
+          S.split.expenses=S.split.expenses.filter(e=>e.groupId!==groupId);
+          S.split.expenses.push(...remoteGroup.expenses);
+        }
         saveState();
         const detail=document.getElementById('s-split-detail');
         if(detail&&!detail.classList.contains('hidden')){
@@ -5025,9 +5049,9 @@ function _handleSplitGroupChange(doc, user){
       linkMemberUidInGroup(group.id,user.email,user.uid);
     }
   } else {
-    // Update existing entry with latest remote data
-    S.split.groups[idx]={...S.split.groups[idx],...group};
-    console.log('[Split] Updated existing group in local state:', group.name);
+    // Fix 4: Replace entirely with Firestore data — don't merge with local state
+    S.split.groups[idx]=group;
+    console.log('[Split] Replaced existing group with Firestore data:', group.name);
   }
   // Ensure doc-level listener is running for real-time expense/member updates
   listenSplitGroup(group.id);
@@ -5086,7 +5110,15 @@ function setupSplitGroupListeners(user){
       });
       let anyNew=false;
       snap.docChanges().forEach(change=>{
-        if(change.type==='removed') return;
+        // Fix 1 & 5: handle removed — purge from local state, stop doc-level listener
+        if(change.type==='removed'){
+          const groupId=change.doc.id;
+          S.split.groups=S.split.groups.filter(g=>g.id!==groupId);
+          S.split.expenses=S.split.expenses.filter(e=>e.groupId!==groupId);
+          stopListenSplitGroup(groupId);
+          saveState(); renderSplitContent();
+          return;
+        }
         if(_handleSplitGroupChange(change.doc,user)) anyNew=true;
       });
       if(anyNew){
