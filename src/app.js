@@ -4149,9 +4149,11 @@ function saveGroup(){
       newGroup.ownerUid=_authUser.uid;
       newGroup.ownerEmail=_authUser.email;
       const membersWithUid=newGroup.members.filter(m=>m.uid&&!m.isMe);
+      const allMemberEmails=newGroup.members.filter(m=>!m.isMe&&m.email).map(m=>m.email.toLowerCase());
       _fbDb.collection('splitGroups').doc(newGroup.id).set({
         ...newGroup,
-        sharedWith:membersWithUid.map(m=>m.uid)
+        sharedWith:membersWithUid.map(m=>m.uid),
+        sharedWithEmails:allMemberEmails
       }).then(()=>showToast('☁️ Grupo sincronizado en la nube'))
         .catch(e=>console.error('saveGroup Firestore:',e));
     }
@@ -4914,32 +4916,77 @@ function stopAllSplitListeners(){
 async function loadSharedSplitGroups(user){
   if(!FIREBASE_ENABLED||!_fbDb||!user) return;
   try{
-    const snap=await _fbDb.collection('splitGroups')
-      .where('sharedWith','array-contains',user.uid)
-      .get();
-    if(snap.empty) return;
+    // Run both queries in parallel: by uid (already linked) and by email (invited before registering)
+    const queries=[
+      _fbDb.collection('splitGroups').where('sharedWith','array-contains',user.uid).get()
+    ];
+    if(user.email){
+      queries.push(
+        _fbDb.collection('splitGroups').where('sharedWithEmails','array-contains',user.email.toLowerCase()).get()
+      );
+    }
+    const snaps=await Promise.all(queries);
+
+    // Merge results, deduplicating by group id
+    const groupMap=new Map();
+    snaps.forEach(snap=>snap.docs.forEach(doc=>groupMap.set(doc.id,doc.data())));
+    if(groupMap.size===0) return;
+
     let added=0;
-    snap.docs.forEach(doc=>{
-      const group=doc.data();
+    const linkPromises=[];
+    groupMap.forEach(group=>{
       const exists=S.split.groups.find(g=>g.id===group.id);
       if(!exists){
-        group.members=group.members.map(m=>({...m,isMe:m.uid===user.uid}));
+        group.members=group.members.map(m=>{
+          const isMe=m.uid===user.uid||(m.email&&m.email.toLowerCase()===user.email?.toLowerCase());
+          // Backfill uid on the local member object so isMe works correctly
+          return {...m,isMe,uid:(isMe&&!m.uid)?user.uid:m.uid};
+        });
         S.split.groups.push(group);
         added++;
       }
+      // If found by email and uid not yet stored in member entry → backfill in Firestore
+      const memberNeedsUid=group.members?.find(
+        m=>m.email&&m.email.toLowerCase()===user.email?.toLowerCase()&&!m.uid
+      );
+      if(memberNeedsUid){
+        linkPromises.push(linkMemberUidInGroup(group.id,user.email,user.uid));
+      }
     });
+
+    await Promise.all(linkPromises);
+
     if(added>0){
       saveState();
       S.split.groups.forEach(g=>{
         if(g.ownerUid&&g.ownerUid!==user.uid) listenSplitGroup(g.id);
       });
+      renderSplitContent();
       showToast('✅ '+added+' grupo(s) compartido(s) cargado(s)');
     }
-    // Activar listeners para grupos propios también
+    // Activate listeners for own groups too
     S.split.groups.forEach(g=>{
       if(g.ownerUid===user.uid) listenSplitGroup(g.id);
     });
   }catch(e){ console.error('loadSharedSplitGroups:',e); }
+}
+
+// When a user logs in and was previously added by email (uid was null),
+// backfill their uid into the group document so future queries find them by uid.
+async function linkMemberUidInGroup(groupId,email,userUid){
+  if(!FIREBASE_ENABLED||!_fbDb) return;
+  try{
+    const docRef=_fbDb.collection('splitGroups').doc(groupId);
+    const doc=await docRef.get();
+    if(!doc.exists) return;
+    const group=doc.data();
+    const members=group.members.map(m=>
+      (m.email&&m.email.toLowerCase()===email.toLowerCase()&&!m.uid)?{...m,uid:userUid}:m
+    );
+    const sharedWith=[...(group.sharedWith||[])];
+    if(!sharedWith.includes(userUid)) sharedWith.push(userUid);
+    await docRef.update({members,sharedWith});
+  }catch(e){ console.error('linkMemberUidInGroup:',e); }
 }
 
 // ── Firestore: subir ──
