@@ -320,7 +320,7 @@ canvas.cv{width:100%;height:100%}
 /* MODALS */
 .modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.72);z-index:80;display:flex;align-items:flex-end}
 .modal-bg.hidden{display:none}
-.modal-sheet{width:100%;background:var(--s1);border-radius:24px 24px 0 0;padding:0 20px 36px;max-height:88vh;overflow-y:auto;position:relative}
+.modal-sheet{width:100%;background:var(--s1);border-radius:24px 24px 0 0;padding:0 20px 36px;max-height:88vh;overflow-y:auto;overflow-x:hidden;position:relative}
 .modal-handle{position:sticky;top:0;background:var(--s1);padding-top:12px;padding-bottom:4px;z-index:2;display:flex;justify-content:center}
 .modal-handle::before{content:'';display:block;width:36px;height:4px;background:var(--br);border-radius:2px}
 .modal-hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 0 16px;position:sticky;top:28px;background:var(--s1);z-index:1}
@@ -1570,18 +1570,18 @@ canvas.cv{width:100%;height:100%}
 
 <!-- Nuevo / editar grupo -->
 <div class="modal-bg hidden" id="new-group-modal">
-  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column">
+  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
     <div class="modal-handle"></div>
     <div class="modal-hdr" style="flex-shrink:0">
       <div class="modal-title" id="new-group-title" data-i18n="newGroup">Nuevo grupo</div>
       <button class="modal-x" onclick="closeNewGroup()">✕</button>
     </div>
 
-    <div style="flex:1;overflow-y:auto;padding-top:8px">
+    <div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 0 16px">
       <!-- Emoji + Nombre en una fila -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <div id="group-emoji-btn" onclick="toggleEmojiPicker()" style="width:52px;height:52px;border-radius:14px;background:var(--bld);border:2px solid rgba(107,140,255,.3);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;flex-shrink:0">👥</div>
-        <input class="modal-inp" type="text" placeholder="Nombre del grupo" id="group-name-inp" maxlength="30" style="margin:0;flex:1;font-size:16px;font-weight:500">
+        <input class="modal-inp" type="text" placeholder="Nombre del grupo" id="group-name-inp" maxlength="30" style="margin:0;flex:1;min-width:0;font-size:16px;font-weight:500">
       </div>
       <!-- Emoji picker (colapsado) -->
       <div id="group-emoji-picker" style="display:none;margin-bottom:14px">
@@ -5979,9 +5979,9 @@ function renderGroupMembersList(){
       <div style="width:32px;height:32px;border-radius:50%;background:var(--bld);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--bl)">
         ${m.name[0].toUpperCase()}
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500">${m.name}</div>
-        ${m.email?`<div style="font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.uid?'✓ ':''} ${m.email}</div>`:''}
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</div>
+        ${m.email?`<div style="font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${m.uid?'✓ ':''} ${m.email}</div>`:''}
       </div>
       <button onclick="removeMember('${m.id}')" style="width:28px;height:28px;border-radius:50%;background:var(--rdd);border:none;color:var(--rd);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>`;
     list.appendChild(el);

@@ -973,18 +973,18 @@
 
 <!-- Nuevo / editar grupo -->
 <div class="modal-bg hidden" id="new-group-modal">
-  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column">
+  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
     <div class="modal-handle"></div>
     <div class="modal-hdr" style="flex-shrink:0">
       <div class="modal-title" id="new-group-title" data-i18n="newGroup">Nuevo grupo</div>
       <button class="modal-x" onclick="closeNewGroup()">✕</button>
     </div>
 
-    <div style="flex:1;overflow-y:auto;padding-top:8px">
+    <div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 0 16px">
       <!-- Emoji + Nombre en una fila -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <div id="group-emoji-btn" onclick="toggleEmojiPicker()" style="width:52px;height:52px;border-radius:14px;background:var(--bld);border:2px solid rgba(107,140,255,.3);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;flex-shrink:0">👥</div>
-        <input class="modal-inp" type="text" placeholder="Nombre del grupo" id="group-name-inp" maxlength="30" style="margin:0;flex:1;font-size:16px;font-weight:500">
+        <input class="modal-inp" type="text" placeholder="Nombre del grupo" id="group-name-inp" maxlength="30" style="margin:0;flex:1;min-width:0;font-size:16px;font-weight:500">
       </div>
       <!-- Emoji picker (colapsado) -->
       <div id="group-emoji-picker" style="display:none;margin-bottom:14px">

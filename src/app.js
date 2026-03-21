@@ -4069,9 +4069,9 @@ function renderGroupMembersList(){
       <div style="width:32px;height:32px;border-radius:50%;background:var(--bld);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--bl)">
         ${m.name[0].toUpperCase()}
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500">${m.name}</div>
-        ${m.email?`<div style="font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.uid?'✓ ':''} ${m.email}</div>`:''}
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</div>
+        ${m.email?`<div style="font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${m.uid?'✓ ':''} ${m.email}</div>`:''}
       </div>
       <button onclick="removeMember('${m.id}')" style="width:28px;height:28px;border-radius:50%;background:var(--rdd);border:none;color:var(--rd);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>`;
     list.appendChild(el);
