@@ -1331,7 +1331,7 @@ canvas.cv{width:100%;height:100%}
 <!-- ── SPLIT MAIN ── -->
 <div class="screen hidden" id="s-split">
   <div class="nav">
-    <div class="logo">fin<span>·</span>flow <span style="font-size:11px;color:var(--bl);background:var(--bld);padding:2px 8px;border-radius:8px;margin-left:4px;font-weight:500">Split</span></div>
+    <div class="logo">CashWise <span style="font-size:11px;color:var(--bl);background:var(--bld);padding:2px 8px;border-radius:8px;margin-left:4px;font-weight:500">Split</span></div>
     <div class="nav-acts">
       <div class="icon-btn" onclick="goTo('s-split-settings')" title="Ajustes Split">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1586,24 +1586,20 @@ canvas.cv{width:100%;height:100%}
       </div>
 
       <!-- Integrantes -->
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Integrantes</div>
+      <div style="margin-bottom:16px">
+        <div class="modal-lbl" style="margin-bottom:10px">Integrantes</div>
         <div id="group-members-list" style="margin-bottom:12px"></div>
 
         <!-- Agregar integrante -->
-        <div style="background:var(--s2);border:1px solid var(--br);border-radius:13px;padding:10px 14px">
-          <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Agregar integrante</div>
-          <div id="add-member-row" style="display:flex;gap:8px;margin-bottom:8px">
-            <input id="member-name-inp" placeholder="Nombre" maxlength="50"
-              style="flex:1;background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none"
-              onkeydown="if(event.key==='Enter')addMemberToGroup()">
-            <input id="member-email-inp" placeholder="Email (opcional)" type="email"
-              style="flex:1.5;background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none"
-              onkeydown="if(event.key==='Enter')addMemberToGroup()">
-            <button onclick="addMemberToGroup()"
-              style="background:var(--bl);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;font-size:15px;cursor:pointer;flex-shrink:0">+</button>
-          </div>
-          <div style="font-size:10px;color:var(--mu);line-height:1.5">
+        <div style="background:var(--s2);border:1px solid var(--br);border-radius:14px;padding:14px 16px">
+          <div style="font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Agregar integrante</div>
+          <input id="member-name-inp" placeholder="Nombre" maxlength="50" class="modal-inp"
+            onkeydown="if(event.key==='Enter')document.getElementById('member-email-inp').focus()">
+          <input id="member-email-inp" placeholder="Email (opcional)" type="email" class="modal-inp"
+            onkeydown="if(event.key==='Enter')addMemberToGroup()">
+          <button onclick="addMemberToGroup()"
+            style="width:100%;padding:12px;border-radius:12px;background:var(--bl);color:#fff;border:none;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px">+ Agregar</button>
+          <div style="font-size:11px;color:var(--mu);line-height:1.5">
             💡 Si el contacto ya usa CashWise con su email, verá el grupo al ingresar.
           </div>
         </div>
