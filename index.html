@@ -7074,20 +7074,45 @@ async function onUserLoggedIn(user){
   saveState();
   const hasLocalData = S.txs.length>0||S.split.groups.length>0;
   const cloudData = await loadFromCloud(user.uid);
+
   if(!cloudData||cloudData._isEmpty){
-    // Nube vacía → subir datos locales automáticamente
-    if(hasLocalData){
-      await uploadToCloud(user.uid);
-      showToast('☁️ Datos locales subidos a tu cuenta');
-    }
-  } else if(hasLocalData){
-    // Datos en ambos lados → subir locales automáticamente
+    // Cloud empty → push local data up
+    if(hasLocalData){ await uploadToCloud(user.uid); showToast('☁️ Datos locales subidos a tu cuenta'); }
+    updateProfileUI(user); saveUserProfile(user); refreshSplitGroups(); return;
+  }
+
+  // Normalise timestamps to ms for comparison
+  const _tsToMs=ts=>{
+    if(!ts) return 0;
+    if(ts.seconds) return ts.seconds*1000;               // Firestore Timestamp
+    if(ts.toDate) return ts.toDate().getTime();          // Firestore Timestamp (compat)
+    return new Date(ts).getTime();                       // ISO string
+  };
+  const cloudMs=_tsToMs(cloudData.updatedAt);
+  const localMs=S.lastSync?new Date(S.lastSync).getTime():0;
+  console.log('[Sync] cloud updatedAt ms:', cloudMs, '| local lastSync ms:', localMs);
+
+  if(cloudMs>localMs){
+    // Firestore is newer → download (another device made changes after our last sync)
+    console.log('[Sync] → downloading cloud data (cloud is newer)');
+    mergeCloudData(cloudData);
+    saveState(); updateCurrUI(); refreshHome(); renderInvest();
+    showToast('☁️ Datos actualizados desde tu cuenta');
+  } else if(localMs>0){
+    // Local is newer or equal → upload
+    console.log('[Sync] → uploading local data (local is newer or equal)');
     await uploadToCloud(user.uid);
     showToast('☁️ Datos sincronizados con tu cuenta');
+  } else if(hasLocalData){
+    // No lastSync on either side but local has data → upload (first login with offline txs)
+    console.log('[Sync] → uploading local data (first login, local has data)');
+    await uploadToCloud(user.uid);
+    showToast('☁️ Datos locales subidos a tu cuenta');
   } else {
-    // Solo hay datos en la nube → cargar
+    // Fresh install, no local data → download everything
+    console.log('[Sync] → downloading cloud data (fresh install)');
     mergeCloudData(cloudData);
-    saveState(); refreshHome();
+    saveState(); updateCurrUI(); refreshHome(); renderInvest();
     showToast('✅ Datos cargados desde tu cuenta');
   }
   updateProfileUI(user);
@@ -7310,6 +7335,7 @@ async function linkMemberUidInGroup(groupId,email,userUid){
 async function uploadToCloud(uid){
   if(!FIREBASE_ENABLED||!_fbDb||!uid) return;
   try{
+    console.log('[Upload] txs count:', S.txs.length, '| first invest:', JSON.stringify(S.txs.find(t=>t.type==='invest')||null));
     await _fbDb.collection('users').doc(uid).set({
       txs: S.txs||[],
       cats: S.cats,
@@ -7346,6 +7372,7 @@ async function loadFromCloud(uid){
 
 // ── Merge datos de la nube ──
 function mergeCloudData(data){
+  console.log('[Merge] cloud txs count:', Array.isArray(data.txs)?data.txs.length:'n/a', '| first invest:', JSON.stringify((data.txs||[]).find(t=>t.type==='invest')||null));
   if(Array.isArray(data.txs))       S.txs=data.txs;
   if(data.cats&&typeof data.cats==='object') S.cats=data.cats;
   if(Array.isArray(data.budgets))   S.budgets=data.budgets;
@@ -7565,7 +7592,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260321075110')
+    navigator.serviceWorker.register('./sw.js?v=20260321075941')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
