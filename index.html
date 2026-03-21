@@ -1267,6 +1267,14 @@ canvas.cv{width:100%;height:100%}
 
     <!-- ── TAB EXPORTAR ── -->
     <div id="data-pane-export">
+      <div class="data-export-card" onclick="exportJSON()" style="border-color:rgba(245,166,35,.25);background:var(--amd)">
+        <div class="data-export-ico">🗄️</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;margin-bottom:2px">Backup completo (.json)</div>
+          <div style="font-size:12px;color:var(--mu)">Todos tus datos. Úsalo para restaurar la app.</div>
+        </div>
+        <div style="color:var(--am);font-size:18px">↓</div>
+      </div>
       <div class="data-export-card" onclick="exportXLSX()">
         <div class="data-export-ico">📊</div>
         <div style="flex:1">
@@ -1309,6 +1317,14 @@ canvas.cv{width:100%;height:100%}
 
     <!-- ── TAB IMPORTAR ── -->
     <div id="data-pane-import" style="display:none">
+      <div class="data-export-card" onclick="importJSON()" style="margin-bottom:12px;border-color:rgba(245,166,35,.25);background:var(--amd)">
+        <div class="data-export-ico">🗄️</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;margin-bottom:2px">Restaurar backup (.json)</div>
+          <div style="font-size:12px;color:var(--mu)">Restaura todos tus datos desde un backup anterior.</div>
+        </div>
+        <div style="color:var(--am);font-size:18px">↑</div>
+      </div>
       <div class="data-export-card" onclick="importMoneeExcel()" style="margin-bottom:12px">
         <div class="data-export-ico">🟣</div>
         <div style="flex:1">
@@ -7490,7 +7506,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260321071406')
+    navigator.serviceWorker.register('./sw.js?v=20260321072122')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
