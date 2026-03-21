@@ -4201,11 +4201,22 @@ function saveGroup(){
 }
 
 function deleteGroup(){
-  showConfirm('Eliminar grupo','¿Eliminar "'+getGroup(curGroupId)?.name+'" y todos sus gastos? No se puede deshacer.',()=>{
-    S.split.groups=S.split.groups.filter(g=>g.id!==curGroupId);
-    S.split.expenses=S.split.expenses.filter(e=>e.groupId!==curGroupId);
+  const grp=getGroup(curGroupId);
+  if(!grp) return;
+  showConfirm('Eliminar grupo','¿Eliminar "'+grp.name+'" y todos sus gastos? Esta acción no se puede deshacer.',()=>{
+    const groupId=curGroupId;
+    // Stop real-time listener before removing from state
+    stopListenSplitGroup(groupId);
+    S.split.groups=S.split.groups.filter(g=>g.id!==groupId);
+    S.split.expenses=S.split.expenses.filter(e=>e.groupId!==groupId);
     saveState(); closeNewGroup(); goBack(); renderSplitContent();
     showToast('🗑️ Grupo eliminado');
+    // Delete Firestore document (owner only — see security rules below)
+    if(FIREBASE_ENABLED&&_fbDb&&_authUser){
+      _fbDb.collection('splitGroups').doc(groupId).delete()
+        .then(()=>console.log('[Split] Group deleted from Firestore:', groupId))
+        .catch(e=>console.error('[Split] deleteGroup Firestore error:', e.code, e.message));
+    }
   });
 }
 
@@ -4959,6 +4970,7 @@ function stopAllSplitCollectionListeners(){
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIRESTORE SECURITY RULES REQUIRED for splitGroups collection:
+// Update these in Firebase Console → Firestore → Rules
 //
 //   match /splitGroups/{groupId} {
 //     allow read: if request.auth != null && (
@@ -4966,15 +4978,19 @@ function stopAllSplitCollectionListeners(){
 //       request.auth.uid in resource.data.sharedWith ||
 //       request.auth.token.email in resource.data.sharedWithEmails
 //     );
-//     allow write: if request.auth != null && (
+//     allow create: if request.auth != null &&
+//       request.resource.data.ownerUid == request.auth.uid;
+//     allow update: if request.auth != null && (
 //       resource.data.ownerUid == request.auth.uid ||
 //       request.auth.uid in resource.data.sharedWith
 //     );
-//     allow create: if request.auth != null &&
-//       request.resource.data.ownerUid == request.auth.uid;
+//     allow delete: if request.auth != null &&
+//       resource.data.ownerUid == request.auth.uid;
 //   }
 //
-// Without this, member queries silently fail with "permission-denied".
+// NOTE: Firestore "write" covers create+update+delete, but it's safer to
+// split them so only the owner can delete, while members can update (add expenses).
+// Without the delete rule, deleteGroup() will silently fail with "permission-denied".
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Handles a Firestore snapshot change for a shared/owned split group.
