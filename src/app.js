@@ -291,7 +291,9 @@ function refreshHome(){
   const income=txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const expense=txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
   const invest=S.txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
-  const net=income-expense-invest;
+  // Only invest txs without excludeFromNet reduce the net balance
+  const investForNet=txs.filter(t=>t.type==='invest'&&!t.excludeFromNet).reduce((a,t)=>a+t.amount,0);
+  const net=income-expense-investForNet;
   const s=sym();
 
   const hBalEl=document.getElementById('h-bal');
@@ -603,6 +605,9 @@ function openAdd(forceType){
   if(titleEl) titleEl.textContent='Nueva transacción';
   const noteEl=document.getElementById('note-inp');
   if(noteEl) noteEl.value='';
+  // Reset "Excluir del neto" toggle
+  const enToggle=document.getElementById('exclude-net-toggle');
+  if(enToggle) enToggle.classList.remove('on');
   txDate=new Date(); updateDateLbl();
   setType(forceType||'expense');
   updateAmt();
@@ -638,6 +643,9 @@ function setType(txT){
   // Categorías
   renderTxCatCircles(txT);
   updateAmt();
+  // Mostrar/ocultar toggle "Excluir del neto" solo para inversiones
+  const enRow=document.getElementById('exclude-net-row');
+  if(enRow) enRow.style.display=txT==='invest'?'':'none';
 }
 
 function buildCatGrid(containerId, type, selected, onSel){
@@ -679,7 +687,10 @@ function saveTx(){
   const amt=normAmt(amtStr);
   if(amt<=0){ showToast('⚠️ Ingresá un monto'); return; }
   const note=document.getElementById('note-inp').value.trim();
+  const enToggle=document.getElementById('exclude-net-toggle');
+  const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
   const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:(typeof txDate!=='undefined'?txDate:new Date()).toISOString()};
+  if(excludeFromNet) tx.excludeFromNet=true;
   if(editingId){ const i=S.txs.findIndex(t=>t.id===editingId); if(i!==-1)S.txs[i]=tx; showToast('✅ Actualizado'); }
   else { S.txs.unshift(tx); showToast(`✅ ${txType==='income'?'+':'-'}${sym()}${fmt(amt)}`); }
   saveState();
@@ -722,6 +733,9 @@ function openEdit(id){
   setType(tx.type);
   updateAmt();
   renderTxCatCircles(tx.type);
+  // Restore "Excluir del neto" toggle from saved tx
+  const enToggle=document.getElementById('exclude-net-toggle');
+  if(enToggle){ enToggle.classList.remove('on'); if(tx.excludeFromNet) enToggle.classList.add('on'); }
   // Tacho en modo edición: borra el movimiento
   showDeleteBtn(true);
   hideNumpad();
