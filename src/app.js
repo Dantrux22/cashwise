@@ -21,8 +21,8 @@ if(FIREBASE_ENABLED){
     _fbApp  = firebase.initializeApp(FIREBASE_CONFIG);
     _fbAuth = firebase.auth();
     _fbDb   = firebase.firestore();
-    console.log('[finflow] Firebase ✅');
-  }catch(e){ console.warn('[finflow] Firebase error:', e.message); }
+    console.log('[CashWise] Firebase ✅');
+  }catch(e){ console.warn('[CashWise] Firebase error:', e.message); }
 }
 
 
@@ -4994,7 +4994,7 @@ async function uploadToCloud(uid){
     S.lastSync=new Date().toISOString();
     // No llamar saveState() aquí para evitar loop infinito
     try{ localStorage.setItem(SK, JSON.stringify(S)); }catch(_e){}
-  }catch(e){ console.warn('[finflow] Error sync:', e.message); }
+  }catch(e){ console.warn('[CashWise] Error sync:', e.message); }
 }
 
 // ── Firestore: descargar ──
@@ -5003,7 +5003,7 @@ async function loadFromCloud(uid){
   try{
     const doc=await _fbDb.collection('users').doc(uid).get();
     return doc.exists?doc.data():{_isEmpty:true};
-  }catch(e){ console.warn('[finflow] Error load:', e.message); return null; }
+  }catch(e){ console.warn('[CashWise] Error load:', e.message); return null; }
 }
 
 // ── Merge datos de la nube ──
