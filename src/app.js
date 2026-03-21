@@ -2257,73 +2257,89 @@ function detectPlatform(){
 
 // ── renderProfile ──
 function renderProfile(){
+  const user = _authUser;
+  const s = sym();
+
   // Stats
-  const spent=S.txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const invest=S.txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
-  const totalCats=Object.values(S.cats).reduce((a,arr)=>a+arr.length,0);
-  const setEl=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
-  setEl('profile-tx-count', S.txs.length);
-  setEl('profile-spent-total', sym()+fmt(spent));
-  setEl('profile-cats', totalCats);
-  // Fecha de primer movimiento
-  if(S.txs.length){
-    const oldest=new Date(Math.min(...S.txs.map(t=>new Date(t.date))));
-    setEl('profile-since', oldest.toLocaleDateString('es-AR',{month:'short',year:'numeric'}));
-  } else {
-    setEl('profile-since','—');
-  }
-  // Auth state
-  const user=_authUser;
-  const linkedSec=document.getElementById('profile-linked-sec');
-  const unlinkedSec=document.getElementById('profile-unlinked-sec');
-  const accSec=document.getElementById('profile-account-sec');
-  const nameEl=document.getElementById('profile-name');
-  const emailEl=document.getElementById('profile-email');
-  const avatarEl=document.getElementById('profile-avatar');
+  const txCount = S.txs.length;
+  const spent = S.txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  const catCount = [...new Set(S.txs.map(t=>t.cat))].length;
+  const since = S.txs.length > 0
+    ? new Date([...S.txs].sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date)
+        .toLocaleDateString('es',{month:'short',year:'numeric'})
+    : '—';
+
+  const statTxs = document.getElementById('stat-txs');
+  const statSpent = document.getElementById('stat-spent');
+  const statCats = document.getElementById('stat-cats');
+  const statSince = document.getElementById('stat-since');
+  if(statTxs) statTxs.textContent = txCount;
+  if(statSpent) statSpent.textContent = s + fmtCompact(spent);
+  if(statCats) statCats.textContent = catCount;
+  if(statSince) statSince.textContent = since;
+
+  // Avatar e info
+  const avatarEl = document.getElementById('profile-avatar');
+  const initialEl = document.getElementById('profile-initial');
+  const nameEl = document.getElementById('profile-name');
+  const emailEl = document.getElementById('profile-email');
+  const badgeEl = document.getElementById('profile-badge');
+
   if(user){
-    // Logueado
-    if(linkedSec) linkedSec.style.display='block';
-    if(unlinkedSec) unlinkedSec.style.display='none';
-    if(accSec) accSec.style.display='block';
-    if(nameEl) nameEl.textContent=user.displayName||user.email.split('@')[0];
-    if(emailEl) emailEl.textContent=user.email;
-    if(user.photoURL&&avatarEl){
-      avatarEl.innerHTML='<img src="'+user.photoURL+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover" onerror="this.parentNode.textContent=String.fromCodePoint(128100)">';
+    const name = user.displayName || user.email.split('@')[0];
+    if(initialEl) initialEl.textContent = name[0].toUpperCase();
+    if(nameEl) nameEl.textContent = name;
+    if(emailEl) emailEl.textContent = user.email;
+    if(badgeEl){
+      badgeEl.textContent = user.emailVerified ? '✓ Cuenta verificada' : '⚠️ Email sin verificar';
+      badgeEl.style.color = user.emailVerified ? 'var(--gr)' : 'var(--am)';
     }
-    const linkedName=document.getElementById('profile-linked-name');
-    const linkedEmail=document.getElementById('profile-linked-email');
-    if(linkedName) linkedName.textContent=user.displayName||user.email.split('@')[0];
-    if(linkedEmail) linkedEmail.textContent=user.email;
-    // Ocultar botones de vincular
-    const gr=document.getElementById('google-row');
-    const fr=document.getElementById('facebook-row');
-    if(gr) gr.style.display='none';
-    if(fr) fr.style.display='none';
-    // Sección cuenta: sync info
-    if(accSec){
-      accSec.style.display='block';
-      accSec.innerHTML='<div class="set-sec-ttl">Cuenta</div><div class="set-card">'
-        +'<div class="set-row" style="cursor:default"><div><div class="set-lbl">Sincronización automática</div>'
-        +'<div class="set-sub">'+(S.lastSync?'Última: '+new Date(S.lastSync).toLocaleString('es-AR',{timeStyle:'short',dateStyle:'short'}):'Activa ✅')+'</div></div>'
-        +'<div style="font-size:18px">☁️</div></div>'
-        +'<div class="set-row" onclick="forceSync()"><div><div class="set-lbl">Sincronizar ahora</div></div><div class="set-arr">↑</div></div>'
-        +'<div class="set-row" onclick="authLogout()"><div><div class="set-lbl" style="color:var(--rd)">Cerrar sesión</div></div><div class="set-arr" style="color:var(--rd)">›</div></div>'
-        +'</div>';
+    if(user.photoURL && avatarEl){
+      avatarEl.innerHTML = `<img src="${user.photoURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     }
   } else {
-    // No logueado
-    if(linkedSec) linkedSec.style.display='none';
-    if(unlinkedSec) unlinkedSec.style.display='block';
-    if(accSec) accSec.style.display='none';
-    if(nameEl) nameEl.textContent=S.skipAuth?'Usando sin cuenta':'Sin sesión iniciada';
-    if(emailEl) emailEl.textContent=S.skipAuth?'Datos guardados en este dispositivo':'';
-    if(avatarEl) avatarEl.textContent='👤';
-    const gr=document.getElementById('google-row');
-    const fr=document.getElementById('facebook-row');
-    if(gr){ gr.style.display='flex'; gr.onclick=()=>showAuthOverlay(); }
-    if(fr) fr.style.display='none';
-    const gs=document.getElementById('google-sub');
-    if(gs) gs.textContent='Iniciar sesión para sincronizar';
+    if(initialEl) initialEl.textContent = '?';
+    if(nameEl) nameEl.textContent = 'Sin sesión iniciada';
+    if(emailEl) emailEl.textContent = '';
+    if(badgeEl){ badgeEl.textContent = 'Modo local'; badgeEl.style.color = 'var(--mu)'; }
+  }
+
+  // Sección de cuenta
+  const authSection = document.getElementById('profile-auth-section');
+  if(authSection){
+    if(user){
+      authSection.innerHTML = `
+        <div class="set-row" onclick="forceSync()" style="cursor:pointer">
+          <div>
+            <div class="set-lbl">Sincronizar ahora</div>
+            <div class="set-sub">${S.lastSync?'Última: '+new Date(S.lastSync).toLocaleString('es',{timeStyle:'short',dateStyle:'short'}):'Sincronización automática activa'}</div>
+          </div>
+          <div style="color:var(--bl)">↑</div>
+        </div>
+        <div class="set-row" onclick="authLogout()" style="cursor:pointer">
+          <div>
+            <div class="set-lbl" style="color:var(--rd)">Cerrar sesión</div>
+            <div class="set-sub">${user.email}</div>
+          </div>
+          <div style="color:var(--rd)">›</div>
+        </div>`;
+    } else {
+      authSection.innerHTML = `
+        <div class="set-row" onclick="showEmailAuth()" style="cursor:pointer">
+          <div>
+            <div class="set-lbl">Iniciar sesión con email</div>
+            <div class="set-sub">Sincronizá tus datos en la nube</div>
+          </div>
+          <div style="color:var(--mu)">›</div>
+        </div>
+        <div class="set-row" onclick="authGoogle()" style="cursor:pointer">
+          <div>
+            <div class="set-lbl">Iniciar sesión con Google</div>
+            <div class="set-sub">Acceso rápido con tu cuenta Google</div>
+          </div>
+          <div style="color:var(--mu)">›</div>
+        </div>`;
+    }
   }
 }
 
@@ -4980,9 +4996,6 @@ function updateProfileUI(user){
   }
   renderProfile();
 }
-
-// ── renderProfile override para mostrar estado auth ──
-
 
 // ── Errores Firebase en español ──
 function authErrorMsg(code){
