@@ -3598,14 +3598,6 @@ function renderAccentDots(){
 // ═══════════════════════════════════════════
 // EXPORT / IMPORT
 // ═══════════════════════════════════════════
-function exportCSV(){
-  const rows=[['id','tipo','monto','categoria','nota','fecha']];
-  S.txs.forEach(t=>rows.push([t.id,t.type,t.amount,t.cat||'',t.note||'',t.date]));
-  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
-  download('cashwise-historial.csv','data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv));
-  showToast('📥 CSV exportado');
-}
-
 function parseCSVLine(line){
   const res=[]; let cur=''; let inQ=false;
   for(let i=0;i<line.length;i++){
@@ -3711,39 +3703,37 @@ function exportCSVNew(){
 }
 
 // ═══════════════════════════════════════════
-// EXPORT — XLSX
+// EXPORT — XLSX (formato Monee)
 // ═══════════════════════════════════════════
-async function exportXLSX(){
+function exportXLSX(){
+  if(typeof XLSX === 'undefined'){ showToast('⚠️ Cargando...'); return; }
   if(!S.txs.length){ showToast('⚠️ Sin movimientos para exportar'); return; }
-  showToast('⏳ Generando Excel...');
-  try{
-    await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
-    const XLSX=window.XLSX;
-    // Hoja 1: Historial
-    const typeLabel={'income':'Ingreso','expense':'Gasto','invest':'Inversión'};
-    const histRows=[['Fecha','Tipo','Monto','Categoría','Nota']];
-    S.txs.forEach(t=>{
-      const d=new Date(t.date);
-      const fecha=d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
-      histRows.push([fecha, typeLabel[t.type]||t.type, t.amount, t.cat||'', t.note||'']);
-    });
-    const ws1=XLSX.utils.aoa_to_sheet(histRows);
-    // Hoja 2: Resumen
-    const totIncome=S.txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
-    const totExpense=S.txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-    const totInvest=S.txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
-    const catMap={};
-    S.txs.forEach(t=>{ if(!catMap[t.cat]) catMap[t.cat]=0; catMap[t.cat]+=t.amount; });
-    const topCats=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    const resRows=[['Resumen',''],[],['Tipo','Total'],['Ingresos',totIncome],['Gastos',totExpense],['Inversiones',totInvest],[],['Top categorías',''],['Categoría','Monto']];
-    topCats.forEach(([cat,amt])=>resRows.push([cat,amt]));
-    const ws2=XLSX.utils.aoa_to_sheet(resRows);
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,'Historial',ws1);
-    XLSX.utils.book_append_sheet(wb,'Resumen',ws2);
-    XLSX.writeFile(wb,'cashwise-historial.xlsx');
-    showToast('📊 Excel exportado');
-  }catch(e){ showToast('❌ Error al generar Excel'); console.error(e); }
+
+  const rows = S.txs
+    .sort((a,b) => new Date(b.date) - new Date(a.date))
+    .map(t => ({
+      'Account name': 'CashWise',
+      'Category': t.cat || 'General',
+      'Description': t.note || '',
+      'Person': S.userName || 'Usuario',
+      'Date': new Date(t.date).toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'}),
+      'Amount': t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
+      'Recurring': t.recurringId ? 'Yes' : 'No',
+      'Payment status': 'Settled'
+    }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:15}, {wch:20}, {wch:30}, {wch:12},
+    {wch:18}, {wch:12}, {wch:10}, {wch:15}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'CashWise');
+
+  const date = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `cashwise-export-${date}.xlsx`);
+  showToast('✅ Excel exportado');
 }
 
 // ═══════════════════════════════════════════
@@ -6726,6 +6716,7 @@ async function onUserLoggedIn(user){
     photoURL: user.photoURL||null,
     provider: user.providerData[0]?.providerId||'email',
   };
+  S.userName = user.displayName || user.email.split('@')[0];
   S.skipAuth=false;
   saveState();
   const hasLocalData = S.txs.length>0||S.split.groups.length>0;
