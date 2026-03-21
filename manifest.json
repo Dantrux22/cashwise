@@ -2,16 +2,23 @@
   "name": "CashWise",
   "short_name": "CashWise",
   "description": "Tu app de finanzas personales",
-  "start_url": "./finflow-app.html",
+  "start_url": "/cashwise/",
+  "scope": "/cashwise/",
   "display": "standalone",
   "background_color": "#0f0f13",
   "theme_color": "#34D48A",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "cashwise_icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "cashwise_icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "cashwise_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
