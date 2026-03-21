@@ -6514,19 +6514,34 @@ function initAuth(){
     });
   }
 
+  const returningFromRedirect = !!sessionStorage.getItem('cw_google_redirect');
+
   // Manejar resultado del redirect de Google
-  _fbAuth.getRedirectResult().then(result => {
+  _fbAuth.getRedirectResult().then(async result => {
+    sessionStorage.removeItem('cw_google_redirect');
     if(result && result.user){
-      onUserLoggedIn(result.user);
+      await onUserLoggedIn(result.user);
+    } else if(returningFromRedirect){
+      // Volvimos del redirect pero sin resultado — ITP de Safari bloqueó el estado
+      // El usuario puede estar cacheado en onAuthStateChanged; si no, mostrar error
+      if(!_authUser) showAuthError('No se pudo completar el login con Google. Intentá con email o revisá que el dominio esté autorizado en Firebase.');
     }
   }).catch(e => {
-    if(e.code !== 'auth/no-auth-event') console.warn('Redirect error:', e);
+    sessionStorage.removeItem('cw_google_redirect');
+    if(e.code !== 'auth/no-auth-event'){
+      console.warn('Redirect error:', e.code, e.message);
+      showAuthError('Error de Google: ' + (e.message || e.code));
+    }
   });
+
   // Listener principal de estado
   _fbAuth.onAuthStateChanged(async user => {
     _authUser = user;
     if(user){
-      await onUserLoggedIn(user);
+      // Si hay un redirect en vuelo, getRedirectResult() lo maneja para evitar doble llamada
+      if(!sessionStorage.getItem('cw_google_redirect')){
+        await onUserLoggedIn(user);
+      }
     } else {
       if(!S.skipAuth) showAuthOverlay();
     }
@@ -6610,18 +6625,39 @@ async function authEmailRegister(){
 // ── Google ──
 async function authGoogle(){
   if(!_fbAuth) return;
-  try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isSafari || isIOS) {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+  provider.setCustomParameters({ prompt: 'select_account' });
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if(isSafari || isIOS){
+    // Safari/iOS: redirect es más confiable que popup en WKWebView
+    try {
+      sessionStorage.setItem('cw_google_redirect', '1');
       await _fbAuth.signInWithRedirect(provider);
-    } else {
+    } catch(e){
+      sessionStorage.removeItem('cw_google_redirect');
+      showAuthError('Error iniciando Google: ' + e.message);
+    }
+  } else {
+    try {
       const result = await _fbAuth.signInWithPopup(provider);
       if(result.user) await onUserLoggedIn(result.user);
+    } catch(e){
+      if(e.code === 'auth/popup-blocked'){
+        // Desktop Safari u otro bloqueador — caer a redirect
+        try {
+          sessionStorage.setItem('cw_google_redirect', '1');
+          await _fbAuth.signInWithRedirect(provider);
+        } catch(e2){
+          sessionStorage.removeItem('cw_google_redirect');
+          showAuthError('Error: ' + e2.message);
+        }
+      } else if(e.code !== 'auth/popup-closed-by-user'){
+        showAuthError('Error Google: ' + e.message);
+      }
     }
-  } catch(e) {
-    showAuthError('Error Google: ' + e.message);
   }
 }
 
