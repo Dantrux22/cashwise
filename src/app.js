@@ -300,19 +300,12 @@ function refreshHome(){
   const net=income-expense-investForNet;
   const s=sym();
 
-  const hBalEl=document.getElementById('h-bal');
-  if(hBalEl){ hBalEl.textContent=(net<0?'-':'')+fmt(net); hBalEl.style.color=net<0?'var(--rd)':net===0?'var(--mu)':'var(--tx)'; }
-  const hSymEl=document.getElementById('h-sym'); if(hSymEl) hSymEl.textContent=s;
-  const hIncEl=document.getElementById('h-inc'); if(hIncEl) hIncEl.textContent=s+fmtCompact(income);
-  const hExpEl=document.getElementById('h-exp'); if(hExpEl) hExpEl.textContent=s+fmtCompact(expense);
-  const hNetEl=document.getElementById('h-net'); if(hNetEl) hNetEl.textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
-  const hInvEl=document.getElementById('h-invest'); if(hInvEl) hInvEl.textContent=s+fmt(invest);
-
   const cn=document.getElementById('c-net');
   if(cn){ cn.textContent=(net>=0?'+':'-')+s+fmt(net); cn.className='chart-net'+(net<0?' neg':''); }
   const csIncEl=document.getElementById('cs-inc'); if(csIncEl) csIncEl.textContent='+'+s+fmtCompact(income);
   const csExpEl=document.getElementById('cs-exp'); if(csExpEl) csExpEl.textContent='-'+s+fmtCompact(expense);
   const csNetEl=document.getElementById('cs-net'); if(csNetEl) csNetEl.textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
+  const csInvEl=document.getElementById('cs-inv'); if(csInvEl) csInvEl.textContent=s+fmtCompact(invest);
 
   drawChart(mainTxs);
   renderTxList(mainTxs,'tx-list',5);
@@ -1455,10 +1448,10 @@ function applyHide(hide){
     ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
     :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
   if(hide){
-    const ids=['h-bal','h-inc','h-exp','h-net','h-invest','cs-inc','cs-exp','cs-net','c-net','inv-total','inv-total2'];
+    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net','inv-total','inv-total2'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(!el.dataset.real) el.dataset.real=el.textContent; el.textContent=MASK; });
   } else {
-    const ids=['h-bal','h-inc','h-exp','h-net','h-invest','cs-inc','cs-exp','cs-net','c-net','inv-total','inv-total2'];
+    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net','inv-total','inv-total2'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; delete el.dataset.real; });
     refreshHome();
     if(curScreen==='s-invest') renderInvest();
@@ -1480,7 +1473,6 @@ function renderCurrList(list){
 function updateCurrUI(){
   document.getElementById('curr-val').textContent=S.currency.flag+' '+S.currency.code;
   document.getElementById('curr-sub').textContent=S.currency.name+' · '+S.currency.code;
-  document.getElementById('h-sym').textContent=S.currency.sym;
   document.getElementById('add-curr-lbl').textContent=S.currency.code;
   const is=document.getElementById('inv-sym'); if(is) is.textContent=S.currency.sym;
 }
@@ -1535,7 +1527,7 @@ function _renderSecondaryRow(){
   });
   const bal=document.getElementById('h-secondary-bal');
   if(bal) bal.textContent=parts.join(' · ');
-  row.style.display='flex';
+  row.style.display='block';
 }
 
 

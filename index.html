@@ -632,42 +632,9 @@ canvas.cv{width:100%;height:100%}
     </div>
   </div>
   <div class="scroll">
-    <!-- Balance -->
-    <div class="bal-card au">
-      <div class="bal-lbl" id="h-bal-lbl" data-i18n="balLbl">Balance disponible</div>
-      <div class="bal-num"><span class="bal-sym" id="h-sym">$</span><span id="h-bal" style="transition:color .3s">0</span></div>
-      <div class="bal-stats">
-        <div class="bal-stat">
-          <div class="bal-stat-lbl"><span style="color:var(--gr)">●</span> Ingresos</div>
-          <div class="bal-stat-val g" id="h-inc"></div>
-        </div>
-        <div class="bal-stat">
-          <div class="bal-stat-lbl"><span style="color:var(--rd)">●</span> Gastos</div>
-          <div class="bal-stat-val r" id="h-exp"></div>
-        </div>
-        <div class="bal-stat">
-          <div class="bal-stat-lbl"><span style="color:var(--bl)">●</span> Neto</div>
-          <div class="bal-stat-val b" id="h-net"></div>
-        </div>
-      </div>
-      <div class="invest-row" onclick="goTo('s-invest')">
-        <div class="invest-row-l">
-          <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-          <span class="invest-row-lbl" data-i18n="investedLabel">Invertido</span>
-        </div>
-        <div class="invest-row-r">
-          <span class="invest-row-val" id="h-invest">$0</span>
-          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-    </div>
     <!-- Inversiones en otras monedas (visible si hay invest con currency extranjera) -->
-    <div id="h-secondary-row" onclick="goTo('s-invest')" style="display:none;margin:-4px 0 12px;padding:8px 14px;background:var(--amd);border:1px solid rgba(245,166,35,.2);border-radius:12px;align-items:center;justify-content:space-between;cursor:pointer">
-      <div style="font-size:12px;color:var(--am)">📈 Invertido en otras monedas</div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--am)" id="h-secondary-bal"></span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--am)"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
+    <div id="h-secondary-row" onclick="goTo('s-invest')" style="display:none;margin:0 0 6px;padding:0 2px;cursor:pointer">
+      <span style="font-size:12px;color:var(--am);font-family:'DM Mono',monospace" id="h-secondary-bal"></span>
     </div>
     <!-- Filtros -->
     <div class="filter-row">
@@ -691,6 +658,7 @@ canvas.cv{width:100%;height:100%}
         <div class="cs-item"><div class="cs-lbl" data-i18n="incomeLabel">INGRESOS</div><div class="cs-val g" id="cs-inc">$0</div></div>
         <div class="cs-item"><div class="cs-lbl" data-i18n="expenseLabel">GASTOS</div><div class="cs-val r" id="cs-exp">$0</div></div>
         <div class="cs-item"><div class="cs-lbl" data-i18n="netLabel">NETO</div><div class="cs-val b" id="cs-net">$0</div></div>
+        <div class="cs-item" onclick="goTo('s-invest')" style="cursor:pointer"><div class="cs-lbl" data-i18n="investedLabel">INVERTIDO</div><div class="cs-val" style="color:var(--am)" id="cs-inv">$0</div></div>
       </div>
     </div>
     <!-- Movimientos -->
@@ -2243,19 +2211,12 @@ function refreshHome(){
   const net=income-expense-investForNet;
   const s=sym();
 
-  const hBalEl=document.getElementById('h-bal');
-  if(hBalEl){ hBalEl.textContent=(net<0?'-':'')+fmt(net); hBalEl.style.color=net<0?'var(--rd)':net===0?'var(--mu)':'var(--tx)'; }
-  const hSymEl=document.getElementById('h-sym'); if(hSymEl) hSymEl.textContent=s;
-  const hIncEl=document.getElementById('h-inc'); if(hIncEl) hIncEl.textContent=s+fmtCompact(income);
-  const hExpEl=document.getElementById('h-exp'); if(hExpEl) hExpEl.textContent=s+fmtCompact(expense);
-  const hNetEl=document.getElementById('h-net'); if(hNetEl) hNetEl.textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
-  const hInvEl=document.getElementById('h-invest'); if(hInvEl) hInvEl.textContent=s+fmt(invest);
-
   const cn=document.getElementById('c-net');
   if(cn){ cn.textContent=(net>=0?'+':'-')+s+fmt(net); cn.className='chart-net'+(net<0?' neg':''); }
   const csIncEl=document.getElementById('cs-inc'); if(csIncEl) csIncEl.textContent='+'+s+fmtCompact(income);
   const csExpEl=document.getElementById('cs-exp'); if(csExpEl) csExpEl.textContent='-'+s+fmtCompact(expense);
   const csNetEl=document.getElementById('cs-net'); if(csNetEl) csNetEl.textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
+  const csInvEl=document.getElementById('cs-inv'); if(csInvEl) csInvEl.textContent=s+fmtCompact(invest);
 
   drawChart(mainTxs);
   renderTxList(mainTxs,'tx-list',5);
@@ -3398,10 +3359,10 @@ function applyHide(hide){
     ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
     :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
   if(hide){
-    const ids=['h-bal','h-inc','h-exp','h-net','h-invest','cs-inc','cs-exp','cs-net','c-net','inv-total','inv-total2'];
+    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net','inv-total','inv-total2'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(!el.dataset.real) el.dataset.real=el.textContent; el.textContent=MASK; });
   } else {
-    const ids=['h-bal','h-inc','h-exp','h-net','h-invest','cs-inc','cs-exp','cs-net','c-net','inv-total','inv-total2'];
+    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net','inv-total','inv-total2'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; delete el.dataset.real; });
     refreshHome();
     if(curScreen==='s-invest') renderInvest();
@@ -3423,7 +3384,6 @@ function renderCurrList(list){
 function updateCurrUI(){
   document.getElementById('curr-val').textContent=S.currency.flag+' '+S.currency.code;
   document.getElementById('curr-sub').textContent=S.currency.name+' · '+S.currency.code;
-  document.getElementById('h-sym').textContent=S.currency.sym;
   document.getElementById('add-curr-lbl').textContent=S.currency.code;
   const is=document.getElementById('inv-sym'); if(is) is.textContent=S.currency.sym;
 }
@@ -3478,7 +3438,7 @@ function _renderSecondaryRow(){
   });
   const bal=document.getElementById('h-secondary-bal');
   if(bal) bal.textContent=parts.join(' · ');
-  row.style.display='flex';
+  row.style.display='block';
 }
 
 
@@ -7375,7 +7335,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260321054523')
+    navigator.serviceWorker.register('./sw.js?v=20260321055219')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
