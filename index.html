@@ -4776,9 +4776,16 @@ async function checkEmailVerification() {
   }
 }
 
+// NOTE: Firebase Console → Authentication → Templates → Email address verification
+// → Customize action URL → set to: https://dantrux22.github.io/cashwise/auth-action.html
+const EMAIL_VERIFICATION_SETTINGS = {
+  url: 'https://dantrux22.github.io/cashwise/auth-action.html',
+  handleCodeInApp: false
+};
+
 async function resendVerificationEmail(email) {
   try {
-    await _fbAuth.currentUser.sendEmailVerification();
+    await _fbAuth.currentUser.sendEmailVerification(EMAIL_VERIFICATION_SETTINGS);
     showToast('📧 Email reenviado a ' + email);
   } catch(e) {
     showToast('Error: ' + e.message);
@@ -6591,7 +6598,7 @@ async function authEmailRegister(){
   try{
     const cred = await _fbAuth.createUserWithEmailAndPassword(email, pass);
     await cred.user.updateProfile({ displayName: name });
-    await cred.user.sendEmailVerification();
+    await cred.user.sendEmailVerification(EMAIL_VERIFICATION_SETTINGS);
     clearAuthError();
     // onAuthStateChanged → onUserLoggedIn will show the verification pending screen
   }catch(e){
