@@ -3045,6 +3045,16 @@ function getMemberName(gid,mid){
   const m=g.members.find(x=>x.id===mid);
   return m?m.name:mid;
 }
+// Check if a member (by id) is the current user — uses both uid and email as fallback
+// so it works even when the member's uid hasn't been backfilled in Firestore yet.
+function getMemberIsMe(mid,g){
+  if(!g||!_authUser) return false;
+  const m=g.members.find(x=>x.id===mid);
+  if(!m) return false;
+  return m.isMe||
+    m.uid===_authUser.uid||
+    (m.email&&_authUser.email&&m.email.toLowerCase()===_authUser.email.toLowerCase());
+}
 function spSym(){ return sym(); }
 function spFmt(n){
   // Usa las preferencias de la app principal
@@ -3627,11 +3637,11 @@ function renderGroupExpenses(container){
   }
   exps.forEach(exp=>{
     const payer=getMemberName(curGroupId,exp.payerId);
-    const isPayer=g.members.find(m=>m.id===exp.payerId&&m.isMe);
-    const myShare=exp.shares.find(sh=>g.members.find(m=>m.id===sh.memberId&&m.isMe));
+    const isPayer=getMemberIsMe(exp.payerId,g);
+    const myShare=exp.shares.find(sh=>getMemberIsMe(sh.memberId,g));
     const el=document.createElement('div'); el.className='sp-exp-item';
     const sharesHtml=exp.shares.map(sh=>{
-      const isMe=g.members.find(m=>m.id===sh.memberId&&m.isMe);
+      const isMe=getMemberIsMe(sh.memberId,g);
       const isPayerChip=sh.memberId===exp.payerId;
       const cls=isPayerChip?'payer':isMe?'me':'';
       return `<div class="sp-share-chip ${cls}">${getMemberName(curGroupId,sh.memberId)}: ${spSym()}${spFmt(sh.amount)}</div>`;
@@ -3913,7 +3923,7 @@ function openSplitExpDetail(expId){
   dh.innerHTML='<span class="sec-ttl">División</span>'; scroll.appendChild(dh);
   exp.shares.forEach(sh=>{
     const mname=getMemberName(exp.groupId,sh.memberId);
-    const isMe=g&&g.members.find(m=>m.id===sh.memberId&&m.isMe);
+    const isMe=getMemberIsMe(sh.memberId,g);
     const isPayer=sh.memberId===exp.payerId;
     const el=document.createElement('div');
     el.style.cssText='background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px';
@@ -5040,18 +5050,21 @@ function _handleSplitGroupChange(doc, user){
     S.split.groups.push(group);
     isNew=true;
     console.log('[Split] Added new group to local state:', group.name);
-    // If discovered via email (uid was null in Firestore), backfill uid in the doc
+  } else {
+    // Fix 4: Replace entirely with Firestore data — don't merge with local state
+    S.split.groups[idx]=group;
+    console.log('[Split] Replaced existing group with Firestore data:', group.name);
+  }
+  // Always check if this user's uid needs to be backfilled in Firestore —
+  // handles both first-login AND re-login with persisted localStorage state.
+  if(user.email){
     const needsLink=remoteGroup.members?.find(
-      m=>m.email&&m.email.toLowerCase()===user.email?.toLowerCase()&&!m.uid
+      m=>m.email&&m.email.toLowerCase()===user.email.toLowerCase()&&!m.uid
     );
     if(needsLink){
       console.log('[Split] Backfilling uid for email member:', user.email);
       linkMemberUidInGroup(group.id,user.email,user.uid);
     }
-  } else {
-    // Fix 4: Replace entirely with Firestore data — don't merge with local state
-    S.split.groups[idx]=group;
-    console.log('[Split] Replaced existing group with Firestore data:', group.name);
   }
   // Ensure doc-level listener is running for real-time expense/member updates
   listenSplitGroup(group.id);
@@ -5151,20 +5164,31 @@ function setupSplitGroupListeners(user){
 }
 
 // When a user logs in and was previously added by email (uid was null in the group doc),
-// backfill their uid so future queries find them by uid instead of email.
+// backfill their uid atomically using a transaction.
+// Also adds uid to sharedWith so permission rules allow future writes.
 async function linkMemberUidInGroup(groupId,email,userUid){
   if(!FIREBASE_ENABLED||!_fbDb) return;
   try{
     const docRef=_fbDb.collection('splitGroups').doc(groupId);
-    const doc=await docRef.get();
-    if(!doc.exists) return;
-    const group=doc.data();
-    const members=group.members.map(m=>
-      (m.email&&m.email.toLowerCase()===email.toLowerCase()&&!m.uid)?{...m,uid:userUid}:m
-    );
-    const sharedWith=[...(group.sharedWith||[])];
-    if(!sharedWith.includes(userUid)) sharedWith.push(userUid);
-    await docRef.update({members,sharedWith});
+    await _fbDb.runTransaction(async tx=>{
+      const doc=await tx.get(docRef);
+      if(!doc.exists) return;
+      const data=doc.data();
+      const emailLc=email.toLowerCase();
+      // Find the member with matching email but missing uid
+      const needsUpdate=(data.members||[]).some(
+        m=>m.email&&m.email.toLowerCase()===emailLc&&!m.uid
+      );
+      if(!needsUpdate) return; // already linked, nothing to do
+      // Replace old member object (uid=null) with new one (uid filled in)
+      const updatedMembers=(data.members||[]).map(m=>
+        (m.email&&m.email.toLowerCase()===emailLc&&!m.uid)?{...m,uid:userUid}:m
+      );
+      // Add uid to sharedWith so write-permission rules allow this user to add expenses
+      const sharedWith=[...new Set([...(data.sharedWith||[]),userUid])];
+      tx.update(docRef,{members:updatedMembers,sharedWith});
+    });
+    console.log('[Split] linkMemberUidInGroup: uid',userUid,'→ email',email,'in group',groupId);
   }catch(e){ console.error('linkMemberUidInGroup:',e); }
 }
 
