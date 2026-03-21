@@ -1001,12 +1001,12 @@
           <div style="font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Agregar integrante</div>
           <input id="member-name-inp" placeholder="Nombre" maxlength="50" class="modal-inp"
             onkeydown="if(event.key==='Enter')document.getElementById('member-email-inp').focus()">
-          <input id="member-email-inp" placeholder="Email (opcional)" type="email" class="modal-inp"
+          <input id="member-email-inp" placeholder="Email" type="email" class="modal-inp" required
             onkeydown="if(event.key==='Enter')addMemberToGroup()">
           <button onclick="addMemberToGroup()"
             style="width:100%;padding:12px;border-radius:12px;background:var(--bl);color:#fff;border:none;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px">+ Agregar</button>
           <div style="font-size:11px;color:var(--mu);line-height:1.5">
-            💡 Si el contacto ya usa CashWise con su email, verá el grupo al ingresar.
+            💡 Ingresá el email para enviarle la invitación.
           </div>
         </div>
       </div>
