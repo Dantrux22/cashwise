@@ -2786,8 +2786,6 @@ function renderInvest(){
     const isSell=tx.investType==='sell';
     const txCode=tx.currency||mainCode;
     const txCur=CURRENCIES.find(c=>c.code===txCode)||{sym:txCode};
-    const mainNet=byCode[mainCode]||0;
-    const pct=mainNet>0&&!isSell&&txCode===mainCode?Math.round(tx.amount/mainNet*100):0;
     const amtStr=(isSell?'-':'')+txCur.sym+fmt(tx.amount)+(txCode!==mainCode?' '+txCode:'');
     const amtColor=isSell?'var(--rd)':'var(--am)';
     el.innerHTML=`
@@ -2795,13 +2793,11 @@ function renderInvest(){
       <div class="inv-info">
         <div class="inv-name">${tx.note||tx.cat||'Inversión'}</div>
         <div class="inv-sub">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${tx.date.slice(0,10)}</div>
-        ${!isSell&&txCode===mainCode?`<div class="inv-bar"><div class="inv-bar-fill" style="width:0%" data-pct="${pct}"></div></div>`:''}
       </div>
       <div class="inv-r"><div class="inv-val" style="color:${amtColor}">${amtStr}</div></div>`;
     el.style.cursor='pointer';
     el.onclick=()=>openEdit(tx.id);
     list.appendChild(el);
-    if(!isSell&&txCode===mainCode) setTimeout(()=>{ const f=el.querySelector('.inv-bar-fill'); if(f) f.style.width=f.dataset.pct+'%'; },150);
   });
 }
 
@@ -7436,7 +7432,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260321062016')
+    navigator.serviceWorker.register('./sw.js?v=20260321062548')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
