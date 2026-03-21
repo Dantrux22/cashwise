@@ -221,6 +221,7 @@ canvas.cv{width:100%;height:100%}
 .amt-num.ec{color:var(--rd)}.amt-num.ic{color:var(--gr)}.amt-num.vc{color:var(--am)}
 .amt-cur{display:inline-block;width:2px;height:50px;background:currentColor;margin-left:2px;border-radius:1px;animation:blink 1s infinite;flex-shrink:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes ptr-spin{to{transform:rotate(360deg)}}
 .cat-gw{padding:0 20px;flex-shrink:0;margin-bottom:8px}
 .cat-glbl{font-size:11px;color:var(--mu);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}

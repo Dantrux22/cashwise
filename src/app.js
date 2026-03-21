@@ -3195,6 +3195,55 @@ function closeWelcome() {
   document.getElementById('welcome-modal')?.classList.add('hidden');
 }
 
+// ── Cloud sync ──────────────────────────────────────────────────────────────
+let _lastSyncTime=0;
+const SYNC_COOLDOWN_MS=30000; // 30s minimum between syncs
+
+async function syncFromCloud(){
+  if(!FIREBASE_ENABLED||!_authUser||!_fbDb) return;
+  const now=Date.now();
+  if(now-_lastSyncTime<SYNC_COOLDOWN_MS) return;
+  _lastSyncTime=now;
+  try{
+    const cloudData=await loadFromCloud(_authUser.uid);
+    if(!cloudData||cloudData._isEmpty) return;
+    mergeCloudData(cloudData);
+    saveState(); updateCurrUI(); refreshHome(); renderInvest();
+  }catch(e){ console.warn('[Sync] syncFromCloud error:',e.message); }
+}
+
+// ── Pull-to-refresh ──────────────────────────────────────────────────────────
+function _initPullToRefresh(){
+  const scroll=document.getElementById('home-scroll');
+  const indicator=document.getElementById('ptr-indicator');
+  if(!scroll||!indicator) return;
+  let startY=0, pulling=false, triggered=false;
+  const THRESHOLD=60;
+
+  scroll.addEventListener('touchstart',e=>{
+    if(scroll.scrollTop>2) return; // only at top
+    startY=e.touches[0].clientY;
+    pulling=true; triggered=false;
+  },{passive:true});
+
+  scroll.addEventListener('touchmove',e=>{
+    if(!pulling) return;
+    const dy=e.touches[0].clientY-startY;
+    if(dy>THRESHOLD&&!triggered){
+      triggered=true;
+      indicator.style.display='flex';
+    }
+  },{passive:true});
+
+  scroll.addEventListener('touchend',()=>{
+    if(!pulling) return;
+    pulling=false;
+    if(triggered){
+      syncFromCloud().finally(()=>{ indicator.style.display='none'; });
+    }
+  });
+}
+
 window.addEventListener('load',()=>{
   detectPlatform();
   // Mostrar aviso si está en file://
@@ -3219,6 +3268,10 @@ window.addEventListener('load',()=>{
   refreshHome();
   if(S.hidden) applyHide(true);
   checkMonthlyReminder();
+  _initPullToRefresh();
+  // Auto-sync when app comes back into focus
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') syncFromCloud(); });
+  window.addEventListener('focus',()=>syncFromCloud());
 });
 
 

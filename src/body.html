@@ -30,7 +30,12 @@
       </div>
     </div>
   </div>
-  <div class="scroll">
+  <!-- Pull-to-refresh indicator -->
+  <div id="ptr-indicator" style="display:none;align-items:center;justify-content:center;gap:8px;padding:10px 0;font-size:12px;color:var(--mu);flex-shrink:0">
+    <svg id="ptr-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:ptr-spin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>
+    <span>Actualizando...</span>
+  </div>
+  <div class="scroll" id="home-scroll">
     <!-- Inversiones en otras monedas (visible si hay invest con currency extranjera) -->
     <div id="h-secondary-row" onclick="goTo('s-invest')" style="display:none;margin:0 0 6px;padding:0 2px;cursor:pointer">
       <span style="font-size:12px;color:var(--am);font-family:'DM Mono',monospace" id="h-secondary-bal"></span>
