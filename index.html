@@ -3829,6 +3829,8 @@ function handleImportCSV(inp){
 }
 
 function exportJSON(){
+  const firstInvest=S.txs.find(t=>t.type==='invest');
+  console.log('[Export] First invest tx (pre-serialize):', firstInvest?JSON.stringify({id:firstInvest.id,currency:firstInvest.currency,investType:firstInvest.investType,amount:firstInvest.amount}):'none');
   const payload={version:2,exportedAt:new Date().toISOString(),appName:'CashWise',data:S};
   download('cashwise-backup.json','data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(payload,null,2)));
   showToast('📦 Backup exportado');
@@ -3843,8 +3845,14 @@ function handleImportJSON(inp){
       // v2 wraps data under .data; v1 (legacy) is the raw S object
       const data=parsed.version>=2?parsed.data:parsed;
       showConfirm('Restaurar backup','Esto reemplazará todos tus datos actuales.',()=>{
+        // Step 1: apply imported data (shallow — arrays/objects replaced by reference)
         Object.assign(S,data);
-        // Guards — ensure all fields are valid after restore
+
+        // Debug: log first invest tx immediately after assign — should have currency/investType
+        const _dbgInvest=S.txs.find(t=>t.type==='invest');
+        console.log('[Import] After Object.assign — first invest tx:', _dbgInvest?JSON.stringify({id:_dbgInvest.id,currency:_dbgInvest.currency,investType:_dbgInvest.investType,amount:_dbgInvest.amount}):'none');
+
+        // Step 2: guards — only fix missing/invalid fields; never touch individual tx objects
         if(!Array.isArray(S.txs)) S.txs=[];
         if(!S.cats||typeof S.cats!=='object') S.cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
         if(!Array.isArray(S.cats.expense)) S.cats.expense=JSON.parse(JSON.stringify(DEFAULT_CATS.expense));
@@ -3853,8 +3861,7 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.budgets)) S.budgets=[];
         if(!Array.isArray(S.goals)) S.goals=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
-        // Re-hydrate currency from CURRENCIES array to ensure all fields present;
-        // fall back to the exported object itself, then to default
+        // Re-hydrate currency object from CURRENCIES array so all fields (flag, name, sym) are present
         if(S.currency&&S.currency.code){
           S.currency=CURRENCIES.find(c=>c.code===S.currency.code)||S.currency;
         }
@@ -3872,7 +3879,18 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.split.groups)) S.split.groups=[];
         if(!Array.isArray(S.split.expenses)) S.split.expenses=[];
         if(!S.splitPrefs||typeof S.splitPrefs!=='object') S.splitPrefs={simplify:true,showSettled:true,autoPersonal:false,defaultMethod:'equal'};
-        saveState(); updateCurrUI(); refreshHome(); renderInvest();
+
+        // Debug: confirm tx fields survived guards
+        const _dbgInvest2=S.txs.find(t=>t.type==='invest');
+        console.log('[Import] After guards — first invest tx:', _dbgInvest2?JSON.stringify({id:_dbgInvest2.id,currency:_dbgInvest2.currency,investType:_dbgInvest2.investType}):'none');
+
+        // Step 3: persist + upload immediately (skip debounce to avoid race with re-auth)
+        saveState();
+        if(typeof _authUser!=='undefined'&&_authUser&&typeof FIREBASE_ENABLED!=='undefined'&&FIREBASE_ENABLED){
+          clearTimeout(_syncDebounce);
+          uploadToCloud(_authUser.uid);
+        }
+        updateCurrUI(); refreshHome(); renderInvest();
         showToast('✅ Datos restaurados correctamente');
       });
     }catch(_e){ showToast('❌ Archivo inválido'); }
@@ -7225,8 +7243,13 @@ async function uploadToCloud(uid){
       recurring: S.recurring||[],
       currency: S.currency,
       useComma: S.useComma,
+      useThousands: S.useThousands!==false,
+      darkMode: S.darkMode!==false,
       accent: S.accent||'#34d48a',
       lang: S.lang||'es',
+      investCurrencies: S.investCurrencies||['USD','EUR'],
+      splitPrefs: S.splitPrefs||{simplify:true,showSettled:true,autoPersonal:false,defaultMethod:'equal'},
+      userName: S.userName||'',
       split: S.split||{groups:[],expenses:[]},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       _isEmpty: false,
@@ -7253,11 +7276,19 @@ function mergeCloudData(data){
   if(Array.isArray(data.budgets))   S.budgets=data.budgets;
   if(Array.isArray(data.goals))     S.goals=data.goals;
   if(Array.isArray(data.recurring)) S.recurring=data.recurring;
-  if(data.currency&&data.currency.sym) S.currency=data.currency;
+  // Re-hydrate currency from CURRENCIES array so all fields are present
+  if(data.currency&&data.currency.code){
+    S.currency=CURRENCIES.find(c=>c.code===data.currency.code)||data.currency;
+  }
   if(data.split&&Array.isArray(data.split.groups)) S.split=data.split;
   if(typeof data.useComma!=='undefined') S.useComma=data.useComma;
+  if(typeof data.useThousands!=='undefined') S.useThousands=data.useThousands;
+  if(typeof data.darkMode!=='undefined') S.darkMode=data.darkMode;
   if(data.accent) S.accent=data.accent;
   if(data.lang) S.lang=data.lang;
+  if(Array.isArray(data.investCurrencies)) S.investCurrencies=data.investCurrencies;
+  if(data.splitPrefs&&typeof data.splitPrefs==='object') S.splitPrefs=data.splitPrefs;
+  if(data.userName) S.userName=data.userName;
 }
 
 // ── Auto-sync al guardar ──
@@ -7459,7 +7490,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260321064146')
+    navigator.serviceWorker.register('./sw.js?v=20260321071406')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
