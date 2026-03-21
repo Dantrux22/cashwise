@@ -140,7 +140,7 @@ if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
 if(typeof S.useThousands==='undefined') S.useThousands=true;
 if(typeof S.darkMode==='undefined') S.darkMode=true;
-if(!('secondaryCurrency' in S)) S.secondaryCurrency=null;
+// No secondaryCurrency state — foreign currencies tracked per-invest-transaction only
 
 // ═══════════════════════════════════════════
 // NAV
@@ -169,7 +169,6 @@ function goTo(id){
     's-split':()=>initSplit(),
     's-split-group':()=>renderGroupDetail(),
     's-split-settings':()=>renderSplitSettings(),
-    's-currency-detail':()=>renderSecondaryCurrencyDetail(),
     's-data':()=>{ switchDataTab('export'); document.getElementById('import-preview').style.display='none'; document.getElementById('sankey-preview-wrap').style.display='none'; _pendingImportTxs=[]; },
   };
   if(R[id]) R[id]();
@@ -586,17 +585,17 @@ function buildTxItem(tx){
   const el=document.createElement('div'); el.className='tx-item';
   const recBadge=tx.recurringId?'<span class="rec-badge">↺</span>':'';
   const splitBadge=tx.isSplit?'<span class="rec-badge" style="color:var(--bl);background:var(--bld)">⚡ Split</span>':'';
-  const secCur=tx.currency&&tx.currency!==S.currency.code;
-  const currBadge=secCur?`<span class="rec-badge" style="color:var(--am);background:var(--amd)">${tx.currency}</span>`:'';
-  const txSym=secCur?(CURRENCIES.find(c=>c.code===tx.currency)||{sym:tx.currency}).sym:sym();
+  const foreignCur=isV&&tx.currency&&tx.currency!==S.currency.code;
+  const txSym=foreignCur?(CURRENCIES.find(c=>c.code===tx.currency)||{sym:tx.currency}).sym:sym();
+  const amtSuffix=foreignCur?' '+tx.currency:'';
   el.innerHTML=`
     <div class="tx-ico" style="background:${bg}">${emoji}</div>
     <div class="tx-info">
-      <div class="tx-name">${tx.note||tx.cat||'Sin nota'}${recBadge}${splitBadge}${currBadge}</div>
+      <div class="tx-name">${tx.note||tx.cat||'Sin nota'}${recBadge}${splitBadge}</div>
       <div class="tx-cat">${tx.cat||''}</div>
     </div>
     <div class="tx-r">
-      <div class="tx-amt ${cls}">${isIn?'+':isV?'':'-'}${txSym}${fmt(tx.amount)}</div>
+      <div class="tx-amt ${cls}">${isIn?'+':isV?'':'-'}${txSym}${fmt(tx.amount)}${amtSuffix}</div>
       <div class="tx-dt">${tx.date.slice(5,10).replace('-','/')}</div>
     </div>`;
   el.onclick=()=>openEdit(tx.id);
@@ -619,7 +618,7 @@ function openAdd(forceType){
   // Reset "Excluir del neto" toggle
   const enToggle=document.getElementById('exclude-net-toggle');
   if(enToggle) enToggle.classList.remove('on');
-  txCurrency='main';
+  txCurrency=S.currency.code;
   txDate=new Date(); updateDateLbl();
   setType(forceType||'expense');
   _updateTxCurrencyToggle();
@@ -659,6 +658,8 @@ function setType(txT){
   // Mostrar/ocultar toggle "Excluir del neto" solo para inversiones
   const enRow=document.getElementById('exclude-net-row');
   if(enRow) enRow.style.display=txT==='invest'?'':'none';
+  // Mostrar/ocultar selector de moneda solo para inversiones
+  _updateTxCurrencyToggle();
 }
 
 function buildCatGrid(containerId, type, selected, onSel){
@@ -704,7 +705,7 @@ function saveTx(){
   const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
   const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:(typeof txDate!=='undefined'?txDate:new Date()).toISOString()};
   if(excludeFromNet) tx.excludeFromNet=true;
-  if(txCurrency==='sec'&&S.secondaryCurrency) tx.currency=S.secondaryCurrency.code;
+  if(txType==='invest'&&txCurrency&&txCurrency!==S.currency.code) tx.currency=txCurrency;
   if(editingId){ const i=S.txs.findIndex(t=>t.id===editingId); if(i!==-1)S.txs[i]=tx; showToast('✅ Actualizado'); }
   else { S.txs.unshift(tx); showToast(`✅ ${txType==='income'?'+':'-'}${sym()}${fmt(amt)}`); }
   saveState();
@@ -750,8 +751,8 @@ function openEdit(id){
   // Restore "Excluir del neto" toggle from saved tx
   const enToggle=document.getElementById('exclude-net-toggle');
   if(enToggle){ enToggle.classList.remove('on'); if(tx.excludeFromNet) enToggle.classList.add('on'); }
-  // Restore currency selection
-  txCurrency=(tx.currency&&tx.currency!==S.currency.code&&S.secondaryCurrency&&tx.currency===S.secondaryCurrency.code)?'sec':'main';
+  // Restore currency selection (only meaningful for invest type)
+  txCurrency=(tx.type==='invest'&&tx.currency)?tx.currency:S.currency.code;
   _updateTxCurrencyToggle();
   // Tacho en modo edición: borra el movimiento
   showDeleteBtn(true);
@@ -803,30 +804,52 @@ function deleteTx(){
 // ═══════════════════════════════════════════
 function renderInvest(){
   const invTxs=S.txs.filter(t=>t.type==='invest').sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const total=invTxs.reduce((a,t)=>a+t.amount,0);
+  const mainCode=S.currency.code;
+  const mainTotal=invTxs.filter(t=>!t.currency||t.currency===mainCode).reduce((a,t)=>a+t.amount,0);
   const s=sym();
   document.getElementById('inv-sym').textContent=s;
-  document.getElementById('inv-total').textContent=fmt(total);
-  document.getElementById('inv-total2').textContent=s+fmt(total);
+  document.getElementById('inv-total').textContent=fmt(mainTotal);
+  document.getElementById('inv-total2').textContent=s+fmt(mainTotal);
   document.getElementById('inv-count').textContent=invTxs.length;
+  // Currency breakdown (if any foreign invest txs)
+  const byCode={};
+  invTxs.forEach(t=>{const c=t.currency||mainCode; byCode[c]=(byCode[c]||0)+t.amount;});
+  const byCurEl=document.getElementById('inv-by-currency');
+  if(byCurEl){
+    const codes=Object.keys(byCode);
+    if(codes.length>1){
+      byCurEl.style.display='';
+      byCurEl.innerHTML=codes.map(code=>{
+        const cur=CURRENCIES.find(c=>c.code===code)||{sym:code};
+        const isMain=code===mainCode;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 14px;background:var(--amd);border:1px solid rgba(245,166,35,.18);border-radius:10px;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--am);font-weight:500">${cur.flag||''}${cur.flag?' ':''}<span style="font-family:'DM Mono',monospace">${code}</span>${isMain?' <span style="font-size:10px;color:var(--mu)">(principal)</span>':''}</span>
+          <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--am)">${cur.sym}${fmt(byCode[code])}</span>
+        </div>`;
+      }).join('');
+    } else { byCurEl.style.display='none'; }
+  }
   const list=document.getElementById('inv-list'); list.innerHTML='';
   if(invTxs.length===0){ renderEmptyState(list,'📊','Sin inversiones registradas.'); return; }
   invTxs.forEach(tx=>{
     const cat=findCat('invest',tx.cat);
     const el=document.createElement('div'); el.className='inv-item';
-    const pct=total>0?Math.round(tx.amount/total*100):0;
+    const txCode=tx.currency||mainCode;
+    const txCur=CURRENCIES.find(c=>c.code===txCode)||{sym:txCode};
+    const pct=mainTotal>0&&txCode===mainCode?Math.round(tx.amount/mainTotal*100):0;
+    const amtStr=txCur.sym+fmt(tx.amount)+(txCode!==mainCode?' '+txCode:'');
     el.innerHTML=`
       <div class="inv-ico">${cat?cat.e:'📈'}</div>
       <div class="inv-info">
         <div class="inv-name">${tx.note||tx.cat||'Inversión'}</div>
         <div class="inv-sub">${tx.cat||''} · ${tx.date.slice(0,10)}</div>
-        <div class="inv-bar"><div class="inv-bar-fill" style="width:0%" data-pct="${pct}"></div></div>
+        ${txCode===mainCode?`<div class="inv-bar"><div class="inv-bar-fill" style="width:0%" data-pct="${pct}"></div></div>`:''}
       </div>
-      <div class="inv-r"><div class="inv-val">${s}${fmt(tx.amount)}</div></div>`;
+      <div class="inv-r"><div class="inv-val">${amtStr}</div></div>`;
     el.style.cursor='pointer';
     el.onclick=()=>openEdit(tx.id);
     list.appendChild(el);
-    setTimeout(()=>{ const f=el.querySelector('.inv-bar-fill'); if(f) f.style.width=f.dataset.pct+'%'; },150);
+    if(txCode===mainCode) setTimeout(()=>{ const f=el.querySelector('.inv-bar-fill'); if(f) f.style.width=f.dataset.pct+'%'; },150);
   });
 }
 
@@ -1450,7 +1473,7 @@ function renderCurrList(list){
   list.forEach(c=>{
     const it=document.createElement('div'); it.className='curr-item'+(c.code===S.currency.code?' sel':'');
     it.innerHTML=`<div class="curr-flag">${c.flag}</div><div class="curr-info"><div class="curr-name">${c.name}</div><div class="curr-code">${c.code} · ${c.sym}</div></div>${c.code===S.currency.code?'<div class="curr-check">✓</div>':''}`;
-    it.onclick=()=>{ S.currency=c; saveState(); updateCurrUI(); updateSecondaryCurrUI(); closeCurrModal(); refreshHome(); showToast(c.flag+' '+c.code); };
+    it.onclick=()=>{ S.currency=c; saveState(); updateCurrUI(); closeCurrModal(); refreshHome(); showToast(c.flag+' '+c.code); };
     el.appendChild(it);
   });
 }
@@ -1465,137 +1488,56 @@ function openCurrModal(){ renderCurrList(CURRENCIES); document.getElementById('c
 function closeCurrModal(){ document.getElementById('curr-modal').classList.add('hidden'); }
 function filterCurr(q){ renderCurrList(CURRENCIES.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||c.code.toLowerCase().includes(q.toLowerCase()))); }
 
-// ── Secondary Currency ──────────────────────────────────────────────────────
-const _NO_SECONDARY={code:'NONE',name:'Sin moneda secundaria',flag:'✕',sym:''};
 
-function _secCurrList(q){
-  const all=[_NO_SECONDARY,...CURRENCIES.filter(c=>c.code!==S.currency.code)];
-  if(!q) return all;
-  const lq=q.toLowerCase();
-  return all.filter(c=>c.name.toLowerCase().includes(lq)||c.code.toLowerCase().includes(lq));
-}
+// Fixed list of currencies shown as pills when adding an invest transaction
+const INVEST_PILL_CURRENCIES=['USD','EUR','GBP','BRL'];
 
-function renderSecondaryCurrList(list){
-  const el=document.getElementById('sec-curr-list'); if(!el) return;
-  el.innerHTML='';
-  list.forEach(c=>{
-    const isSel=c.code==='NONE'?!S.secondaryCurrency:S.secondaryCurrency?.code===c.code;
-    const it=document.createElement('div'); it.className='curr-item'+(isSel?' sel':'');
-    it.innerHTML=`<div class="curr-flag">${c.flag}</div><div class="curr-info"><div class="curr-name">${c.name}</div>${c.code!=='NONE'?`<div class="curr-code">${c.code} · ${c.sym}</div>`:''}</div>${isSel?'<div class="curr-check">✓</div>':''}`;
-    it.onclick=()=>{
-      S.secondaryCurrency=(c.code==='NONE'?null:c);
-      saveState(); updateSecondaryCurrUI(); closeSecondaryCurrModal();
-      refreshHome();
-      showToast(c.code==='NONE'?'Moneda secundaria desactivada':c.flag+' '+c.code+' activada');
-    };
-    el.appendChild(it);
-  });
-}
-
-function updateSecondaryCurrUI(){
-  const val=document.getElementById('sec-curr-val');
-  const sub=document.getElementById('sec-curr-sub');
-  if(S.secondaryCurrency){
-    if(val) val.textContent=S.secondaryCurrency.flag+' '+S.secondaryCurrency.code;
-    if(sub) sub.textContent=S.secondaryCurrency.name+' · '+S.secondaryCurrency.code;
-  } else {
-    if(val) val.textContent='—';
-    if(sub) sub.textContent='Sin moneda secundaria';
-  }
-  _updateTxCurrencyToggle();
-}
-
-function openSecondaryCurrModal(){
-  renderSecondaryCurrList(_secCurrList(''));
-  const inp=document.getElementById('sec-curr-search'); if(inp) inp.value='';
-  document.getElementById('sec-curr-modal').classList.remove('hidden');
-}
-function closeSecondaryCurrModal(){ document.getElementById('sec-curr-modal').classList.add('hidden'); }
-function filterSecondaryCurr(q){ renderSecondaryCurrList(_secCurrList(q)); }
-
-function setTxCurrency(which){
-  txCurrency=which;
+function setTxCurrency(code){
+  txCurrency=code; // now a currency code string, default = S.currency.code
   _updateTxCurrencyToggle();
 }
 
 function _updateTxCurrencyToggle(){
   const row=document.getElementById('tx-curr-row');
   if(!row) return;
-  if(!S.secondaryCurrency){ row.style.display='none'; return; }
+  // Only show for invest type
+  if(txType!=='invest'){ row.style.display='none'; return; }
   row.style.display='';
-  const pm=document.getElementById('tx-curr-pill-main');
-  const ps=document.getElementById('tx-curr-pill-sec');
-  if(pm){
-    pm.textContent=S.currency.flag+' '+S.currency.code;
-    pm.style.background=txCurrency==='main'?'var(--s2)':'transparent';
-    pm.style.color=txCurrency==='main'?'var(--tx)':'var(--mu)';
-    pm.style.fontWeight=txCurrency==='main'?'600':'400';
-  }
-  if(ps){
-    ps.textContent=S.secondaryCurrency.flag+' '+S.secondaryCurrency.code;
-    ps.style.background=txCurrency==='sec'?'var(--amd)':'transparent';
-    ps.style.color=txCurrency==='sec'?'var(--am)':'var(--mu)';
-    ps.style.fontWeight=txCurrency==='sec'?'600':'400';
-  }
+  const container=document.getElementById('tx-curr-pills');
+  if(!container) return;
+  container.innerHTML='';
+  const mainCode=S.currency.code;
+  const allCodes=[mainCode,...INVEST_PILL_CURRENCIES.filter(c=>c!==mainCode)];
+  allCodes.forEach(code=>{
+    const cur=CURRENCIES.find(c=>c.code===code)||{code,sym:code,flag:''};
+    const active=txCurrency===code;
+    const pill=document.createElement('div');
+    pill.style.cssText=`display:inline-block;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:${active?'600':'400'};cursor:pointer;border:1px solid ${active?'var(--am)':'var(--br)'};background:${active?'var(--amd)':'transparent'};color:${active?'var(--am)':'var(--mu)'};transition:all .15s;white-space:nowrap`;
+    pill.textContent=cur.flag?cur.flag+' '+code:code;
+    pill.onclick=()=>setTxCurrency(code);
+    container.appendChild(pill);
+  });
 }
 
 function _renderSecondaryRow(){
   const row=document.getElementById('h-secondary-row');
   if(!row) return;
-  if(!S.secondaryCurrency){ row.style.display='none'; return; }
-  const secCode=S.secondaryCurrency.code;
-  const secTxs=S.txs.filter(t=>t.currency===secCode);
-  if(!secTxs.length){ row.style.display='none'; return; }
-  const secIncome=secTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
-  const secExpense=secTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const secInvestForNet=secTxs.filter(t=>t.type==='invest'&&!t.excludeFromNet).reduce((a,t)=>a+t.amount,0);
-  const secNet=secIncome-secExpense-secInvestForNet;
-  const ss=S.secondaryCurrency.sym;
-  const lbl=document.getElementById('h-secondary-lbl');
+  const mainCode=S.currency.code;
+  // Find invest transactions with a non-main currency
+  const foreignInvest=S.txs.filter(t=>t.type==='invest'&&t.currency&&t.currency!==mainCode);
+  if(!foreignInvest.length){ row.style.display='none'; return; }
+  // Group totals by currency code
+  const byCode={};
+  foreignInvest.forEach(t=>{ byCode[t.currency]=(byCode[t.currency]||0)+t.amount; });
+  const parts=Object.entries(byCode).map(([code,total])=>{
+    const cur=CURRENCIES.find(c=>c.code===code)||{sym:code};
+    return cur.sym+fmt(total)+' '+code;
+  });
   const bal=document.getElementById('h-secondary-bal');
-  if(lbl) lbl.textContent=S.secondaryCurrency.flag+' '+secCode;
-  if(bal){
-    bal.textContent=(secNet>=0?'+':'-')+ss+fmtCompact(Math.abs(secNet));
-    bal.style.color=secNet<0?'var(--rd)':secNet===0?'var(--mu)':'var(--gr)';
-  }
+  if(bal) bal.textContent=parts.join(' · ');
   row.style.display='flex';
 }
 
-function renderSecondaryCurrencyDetail(){
-  if(!S.secondaryCurrency) return;
-  const code=S.secondaryCurrency.code;
-  const ss=S.secondaryCurrency.sym;
-  document.getElementById('sec-detail-title').textContent=S.secondaryCurrency.flag+' '+code;
-  const scroll=document.getElementById('sec-detail-scroll'); scroll.innerHTML='';
-  const secTxs=S.txs.filter(t=>t.currency===code);
-  const secIncome=secTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
-  const secExpense=secTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const secInvest=secTxs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
-  const secInvestForNet=secTxs.filter(t=>t.type==='invest'&&!t.excludeFromNet).reduce((a,t)=>a+t.amount,0);
-  const secNet=secIncome-secExpense-secInvestForNet;
-  // Balance card
-  const card=document.createElement('div'); card.className='bal-card au';
-  card.innerHTML=`
-    <div class="bal-lbl">Balance ${code}</div>
-    <div class="bal-num"><span class="bal-sym">${ss}</span><span style="transition:color .3s;color:${secNet<0?'var(--rd)':secNet===0?'var(--mu)':'var(--tx)'}">${fmt(Math.abs(secNet))}</span></div>
-    <div class="bal-stats">
-      <div class="bal-stat"><div class="bal-stat-lbl"><span style="color:var(--gr)">●</span> Ingresos</div><div class="bal-stat-val g">${ss}${fmtCompact(secIncome)}</div></div>
-      <div class="bal-stat"><div class="bal-stat-lbl"><span style="color:var(--rd)">●</span> Gastos</div><div class="bal-stat-val r">${ss}${fmtCompact(secExpense)}</div></div>
-      <div class="bal-stat"><div class="bal-stat-lbl"><span style="color:var(--bl)">●</span> Neto</div><div class="bal-stat-val b">${secNet>=0?'+':'-'}${ss}${fmtCompact(Math.abs(secNet))}</div></div>
-    </div>
-    ${secInvest>0?`<div class="invest-row" style="cursor:default"><div class="invest-row-l"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span class="invest-row-lbl">Invertido</span></div><div class="invest-row-r"><span class="invest-row-val">${ss}${fmt(secInvest)}</span></div></div>`:''}`;
-  scroll.appendChild(card);
-  // Transaction list
-  if(!secTxs.length){
-    scroll.innerHTML+='<div class="empty-state"><span class="big">💸</span>Sin movimientos en '+code+'.<br>Seleccioná '+code+' al agregar una transacción.</div>';
-    return;
-  }
-  const listHdr=document.createElement('div'); listHdr.className='sec-hdr'; listHdr.style.marginTop='18px';
-  listHdr.innerHTML='<span class="sec-ttl">Movimientos</span>';
-  scroll.appendChild(listHdr);
-  const listEl=document.createElement('div'); listEl.id='sec-tx-list'; scroll.appendChild(listEl);
-  renderTxList(secTxs,'sec-tx-list');
-}
 
 // ═══════════════════════════════════════════
 // SETTINGS
@@ -3159,7 +3101,6 @@ window.addEventListener('load',()=>{
   initAuth();
   if(S.accent) document.documentElement.style.setProperty('--gr',S.accent);
   updateCurrUI();
-  updateSecondaryCurrUI();
   renderAccentDots();
   const decKey=document.getElementById('dec-key'); if(decKey) decKey.textContent=getSep();
   const togCo=document.getElementById('tog-comma'); if(togCo&&!S.useComma) togCo.classList.remove('on');

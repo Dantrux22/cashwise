@@ -60,12 +60,12 @@
         </div>
       </div>
     </div>
-    <!-- Moneda secundaria (visible solo si hay saldo en otra moneda) -->
-    <div id="h-secondary-row" onclick="goTo('s-currency-detail')" style="display:none;margin:-4px 0 12px;padding:8px 14px;background:var(--s1);border:1px solid var(--br);border-radius:12px;display:none;align-items:center;justify-content:space-between;cursor:pointer">
-      <div style="font-size:12px;color:var(--mu)" id="h-secondary-lbl">USD</div>
+    <!-- Inversiones en otras monedas (visible si hay invest con currency extranjera) -->
+    <div id="h-secondary-row" onclick="goTo('s-invest')" style="display:none;margin:-4px 0 12px;padding:8px 14px;background:var(--amd);border:1px solid rgba(245,166,35,.2);border-radius:12px;align-items:center;justify-content:space-between;cursor:pointer">
+      <div style="font-size:12px;color:var(--am)">📈 Invertido en otras monedas</div>
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace" id="h-secondary-bal">+$0</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--am)" id="h-secondary-bal"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--am)"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
     <!-- Filtros -->
@@ -142,12 +142,9 @@
     <div class="tx-type-btn" id="btn-v" onclick="setType('invest')" data-i18n="typeInvest">Inversión</div>
   </div>
 
-  <!-- MONEDA (visible solo si hay moneda secundaria configurada) -->
-  <div id="tx-curr-row" style="display:none;padding:0 20px 4px">
-    <div style="display:flex;background:var(--s1);border:1px solid var(--br);border-radius:10px;overflow:hidden">
-      <div id="tx-curr-pill-main" onclick="setTxCurrency('main')" style="flex:1;text-align:center;padding:8px 0;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s"></div>
-      <div id="tx-curr-pill-sec" onclick="setTxCurrency('sec')" style="flex:1;text-align:center;padding:8px 0;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s"></div>
-    </div>
+  <!-- MONEDA (visible solo para tipo Inversión) -->
+  <div id="tx-curr-row" style="display:none;padding:0 20px 6px;overflow-x:auto;white-space:nowrap;scrollbar-width:none">
+    <div id="tx-curr-pills" style="display:inline-flex;gap:6px"></div>
   </div>
 
   <!-- DESCRIPCIÓN -->
@@ -287,16 +284,6 @@
   </div>
 </div>
 
-<!-- ══ SECONDARY CURRENCY DETAIL ══ -->
-<div class="screen hidden" id="s-currency-detail">
-  <div class="nav">
-    <div class="icon-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></div>
-    <div class="scr-title" id="sec-detail-title">USD</div>
-    <div style="width:44px"></div>
-  </div>
-  <div class="scroll" id="sec-detail-scroll"></div>
-</div>
-
 <!-- ══ INVESTMENTS ══ -->
 <div class="screen hidden" id="s-invest">
   <div class="nav">
@@ -315,6 +302,7 @@
         <div class="bal-stat"><div class="bal-stat-lbl"><span class="dot" style="background:var(--mu)"></span><span data-i18n="records">Registros</span></div><div class="bal-stat-val" id="inv-count" style="color:var(--mu)">0</div></div>
       </div>
     </div>
+    <div id="inv-by-currency" style="display:none;margin-bottom:12px"></div>
     <div style="background:var(--amd);border:1px solid rgba(245,166,35,.2);border-radius:13px;padding:10px 13px;margin-bottom:16px;font-size:12px;color:var(--am);line-height:1.6">
       💡 Las inversiones se descuentan del balance disponible. Solo registro.
     </div>
@@ -498,7 +486,6 @@
       <div class="set-sec-ttl" data-i18n="secCurrency">Moneda</div>
       <div class="set-card">
         <div class="set-row" onclick="openCurrModal()"><div><div class="set-lbl" data-i18n="rCurrency">Moneda principal</div><div class="set-sub" id="curr-sub">Peso Argentino · ARS</div></div><div style="display:flex;align-items:center;gap:8px"><div class="set-val" id="curr-val">🇦🇷 ARS</div><div class="set-arr">›</div></div></div>
-        <div class="set-row" onclick="openSecondaryCurrModal()"><div><div class="set-lbl">Moneda secundaria</div><div class="set-sub" id="sec-curr-sub">Sin moneda secundaria</div></div><div style="display:flex;align-items:center;gap:8px"><div class="set-val" id="sec-curr-val">—</div><div class="set-arr">›</div></div></div>
       </div>
     </div>
     <div class="set-sec">
@@ -650,17 +637,6 @@
     <div class="curr-title">Seleccionar moneda</div>
     <input class="curr-search" type="text" placeholder="Buscar..." id="curr-search" oninput="filterCurr(this.value)">
     <div class="curr-list" id="curr-list"></div>
-  </div>
-</div>
-
-<!-- Secondary Currency modal -->
-<div class="curr-modal hidden" id="sec-curr-modal">
-  <div class="curr-overlay" onclick="closeSecondaryCurrModal()"></div>
-  <div class="curr-sheet">
-    <div class="curr-handle"></div>
-    <div class="curr-title">Moneda secundaria</div>
-    <input class="curr-search" type="text" placeholder="Buscar..." id="sec-curr-search" oninput="filterSecondaryCurr(this.value)">
-    <div class="curr-list" id="sec-curr-list"></div>
   </div>
 </div>
 
