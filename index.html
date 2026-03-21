@@ -1340,6 +1340,9 @@ canvas.cv{width:100%;height:100%}
   <div class="nav">
     <div class="logo"><span style="font-size:17px;font-weight:600;color:var(--tx);letter-spacing:-.3px">Cash<span style="color:#34D48A;font-weight:300">Wise</span></span> <span style="font-size:11px;color:var(--bl);background:var(--bld);padding:2px 8px;border-radius:8px;margin-left:4px;font-weight:500">Split</span></div>
     <div class="nav-acts">
+      <div class="icon-btn" id="split-refresh-btn" onclick="showToast('Actualizando...');refreshSplitGroups();" title="Actualizar grupos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </div>
       <div class="icon-btn" onclick="goTo('s-split-settings')" title="Ajustes Split">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </div>
@@ -4945,8 +4948,7 @@ let splitAmtStr='0', splitMethod='equal', splitPayerId=null, splitSelCat=null;
 let splitMemberShares={}, splitParticipantIds=[];
 let editingGroupId=null, groupEmoji='👥', groupMembers=[];
 let settleData=null, _currentSplitExpId=null;
-let _splitListeners={}; // {groupId: unsubscribe function}
-let _splitCollectionListeners=[]; // collection-level onSnapshot unsubscribers
+// No persistent Firestore listeners — Split uses manual refresh (.get() only)
 
 // ── Emojis de grupo ──
 const GROUP_EMOJIS=['🏠','✈️','🎉','🍕','🎿','🏖️','💼','🎓','🤝','👥','🎮','🍺','🏕️','🚗','🎭','🌍','🏋️','🎪','🎸','💊'];
@@ -5332,6 +5334,8 @@ function initSplit(){
   if(!S.splitPrefs) S.splitPrefs={simplify:true,showSettled:true,autoPersonal:false,defaultMethod:'equal'};
   splitTabActive='groups';
   renderSplitContent();
+  // Refresh from Firestore every time the user opens the Split screen
+  refreshSplitGroups();
 }
 
 // ═══ RENDER SPLIT MAIN ════════════════════════════════
@@ -6089,7 +6093,7 @@ function saveGroup(){
           '| members:', firestoreDoc.members.map(m=>({name:m.name,uid:m.uid,email:m.email}))
         );
         _fbDb.collection('splitGroups').doc(g.id).set(firestoreDoc)
-          .then(()=>console.log('[Split] Group updated OK:', firestoreDoc.id))
+          .then(()=>{ console.log('[Split] Group updated OK:', firestoreDoc.id); refreshSplitGroups(); })
           .catch(e=>console.error('[Split] editGroup Firestore error:',e));
       }
     }
@@ -6116,7 +6120,7 @@ function saveGroup(){
         '| members:', firestoreDoc.members.map(m=>({name:m.name,uid:m.uid,email:m.email}))
       );
       _fbDb.collection('splitGroups').doc(newGroup.id).set(firestoreDoc)
-        .then(()=>{ console.log('[Split] Group saved OK:', firestoreDoc.id); showToast('☁️ Grupo sincronizado en la nube'); })
+        .then(()=>{ console.log('[Split] Group saved OK:', firestoreDoc.id); showToast('☁️ Grupo sincronizado en la nube'); refreshSplitGroups(); })
         .catch(e=>console.error('[Split] saveGroup Firestore error:',e));
     }
   }
@@ -6780,8 +6784,8 @@ async function onUserLoggedIn(user){
   }
   updateProfileUI(user);
   saveUserProfile(user);
-  // Set up real-time collection listeners for split groups (own + shared by uid + shared by email)
-  setupSplitGroupListeners(user);
+  // Load split groups from Firestore on login
+  refreshSplitGroups();
 }
 
 // ── Sync modal ──
@@ -6843,6 +6847,7 @@ async function addExpenseToFirestore(expense){
       updatedAt:new Date().toISOString(),
       updatedBy:_authUser.uid
     });
+    await refreshSplitGroups();
   }catch(e){ console.error('addExpenseToFirestore:',e); }
 }
 
@@ -6854,67 +6859,16 @@ async function removeExpenseFromFirestore(expense){
       updatedAt:new Date().toISOString(),
       updatedBy:_authUser.uid
     });
+    await refreshSplitGroups();
   }catch(e){ console.error('removeExpenseFromFirestore:',e); }
 }
 
-// ── Listeners en tiempo real para grupos Split ──
-function listenSplitGroup(groupId){
-  if(_splitListeners[groupId]) return;
-  if(!FIREBASE_ENABLED||!_fbDb||!_authUser) return;
-  const unsubscribe=_fbDb.collection('splitGroups').doc(groupId)
-    .onSnapshot(doc=>{
-      if(!doc.exists){
-        // Fix 1: doc was deleted — purge from local state
-        S.split.groups=S.split.groups.filter(g=>g.id!==groupId);
-        S.split.expenses=S.split.expenses.filter(e=>e.groupId!==groupId);
-        stopListenSplitGroup(groupId);
-        saveState(); renderSplitContent();
-        return;
-      }
-      const remoteGroup=doc.data();
-      const idx=S.split.groups.findIndex(g=>g.id===groupId);
-      if(idx!==-1){
-        // Fix 4: Firestore is source of truth — replace entirely, don't merge
-        S.split.groups[idx]={
-          ...remoteGroup,
-          members:(remoteGroup.members||[]).map(m=>({
-            ...m,
-            isMe:m.uid===_authUser.uid||(m.email&&m.email.toLowerCase()===_authUser.email?.toLowerCase())
-          }))
-        };
-        // Fix 2: sync expenses from group doc into S.split.expenses
-        if(Array.isArray(remoteGroup.expenses)){
-          S.split.expenses=S.split.expenses.filter(e=>e.groupId!==groupId);
-          S.split.expenses.push(...remoteGroup.expenses);
-        }
-        saveState();
-        const detail=document.getElementById('s-split-detail');
-        if(detail&&!detail.classList.contains('hidden')){
-          renderSplitDetail(groupId);
-        }
-        renderSplitContent();
-      }
-    },err=>{ console.error('listenSplitGroup error:',err); });
-  _splitListeners[groupId]=unsubscribe;
-}
-
-function stopListenSplitGroup(groupId){
-  if(_splitListeners[groupId]){
-    _splitListeners[groupId]();
-    delete _splitListeners[groupId];
-  }
-}
-
-function stopAllSplitListeners(){
-  Object.keys(_splitListeners).forEach(stopListenSplitGroup);
-}
-
-// ── Grupos Split compartidos — listeners en tiempo real ──
-
-function stopAllSplitCollectionListeners(){
-  _splitCollectionListeners.forEach(fn=>fn());
-  _splitCollectionListeners=[];
-}
+// ── Split: no persistent listeners — manual refresh only ──
+// These stubs exist so callers elsewhere don't break.
+function listenSplitGroup(groupId){ /* no-op: using manual refresh instead of onSnapshot */ }
+function stopListenSplitGroup(groupId){ /* no-op */ }
+function stopAllSplitListeners(){ /* no-op */ }
+function stopAllSplitCollectionListeners(){ /* no-op */ }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIRESTORE SECURITY RULES REQUIRED for splitGroups collection:
@@ -6941,140 +6895,78 @@ function stopAllSplitCollectionListeners(){
 // Without the delete rule, deleteGroup() will silently fail with "permission-denied".
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Handles a Firestore snapshot change for a shared/owned split group.
-// Merges the remote document into local state and starts a doc-level listener.
-function _handleSplitGroupChange(doc, user){
+// Merges one Firestore doc into S.split.groups (Firestore is source of truth).
+// Also backfills uid in Firestore if the member was added by email only.
+function _handleSplitGroupDoc(doc, user){
   if(!doc.exists) return;
   const remoteGroup=doc.data();
-  console.log('[Split] _handleSplitGroupChange — group:', remoteGroup.id, remoteGroup.name,
-    '| ownerUid:', remoteGroup.ownerUid,
-    '| sharedWith:', remoteGroup.sharedWith,
-    '| sharedWithEmails:', remoteGroup.sharedWithEmails,
-    '| members:', (remoteGroup.members||[]).map(m=>({name:m.name,uid:m.uid,email:m.email}))
-  );
   const members=(remoteGroup.members||[]).map(m=>{
     const isMe=m.uid===user.uid||(m.email&&m.email.toLowerCase()===user.email?.toLowerCase());
-    // Backfill uid on the local member entry so isMe stays stable
     return {...m,isMe,uid:(isMe&&!m.uid)?user.uid:m.uid};
   });
   const group={...remoteGroup,members};
   const idx=S.split.groups.findIndex(g=>g.id===group.id);
-  let isNew=false;
-  if(idx===-1){
-    S.split.groups.push(group);
-    isNew=true;
-    console.log('[Split] Added new group to local state:', group.name);
-  } else {
-    // Fix 4: Replace entirely with Firestore data — don't merge with local state
-    S.split.groups[idx]=group;
-    console.log('[Split] Replaced existing group with Firestore data:', group.name);
-  }
-  // Always check if this user's uid needs to be backfilled in Firestore —
-  // handles both first-login AND re-login with persisted localStorage state.
+  if(idx===-1) S.split.groups.push(group);
+  else S.split.groups[idx]=group;
+  // Backfill uid in Firestore if needed (handles re-login with persisted state)
   if(user.email){
-    const needsLink=remoteGroup.members?.find(
+    const needsLink=(remoteGroup.members||[]).find(
       m=>m.email&&m.email.toLowerCase()===user.email.toLowerCase()&&!m.uid
     );
-    if(needsLink){
-      console.log('[Split] Backfilling uid for email member:', user.email);
-      linkMemberUidInGroup(group.id,user.email,user.uid);
-    }
+    if(needsLink) linkMemberUidInGroup(group.id,user.email,user.uid);
   }
-  // Ensure doc-level listener is running for real-time expense/member updates
-  listenSplitGroup(group.id);
-  return isNew;
 }
 
-// Sets up three persistent onSnapshot collection listeners after login:
-//   1. Groups this user owns (covers new-device logins)
-//   2. Groups where their uid is in sharedWith (already-linked members)
-//   3. Groups where their email is in sharedWithEmails (pre-registration invites)
-// All three stay active so new shares are picked up in real time without a re-login.
-function setupSplitGroupListeners(user){
-  if(!FIREBASE_ENABLED||!_fbDb||!user) return;
-  stopAllSplitCollectionListeners();
-
-  console.group('[Split] setupSplitGroupListeners');
-  console.log('user.uid  :', user.uid);
-  console.log('user.email:', user.email);
-  console.log('email (lc):', user.email?.toLowerCase());
-  console.log('Queries:');
-  console.log('  [1] splitGroups where ownerUid ==', user.uid);
-  console.log('  [2] splitGroups where sharedWith array-contains', user.uid);
-  console.log('  [3] splitGroups where sharedWithEmails array-contains', user.email?.toLowerCase());
-  console.groupEnd();
-
-  const db=_fbDb.collection('splitGroups');
-
-  function makeErrHandler(label){
-    return e=>{
-      if(e.code==='permission-denied'){
-        console.error('[Split] PERMISSION DENIED on "'+label+'" listener.',
-          'Fix Firestore rules — allow read when auth.uid in sharedWith or email in sharedWithEmails.',
-          e.message
-        );
-      } else if(e.message&&e.message.includes('index')){
-        console.error('[Split] MISSING INDEX on "'+label+'" listener.',
-          'Create the index at the URL in the error:', e.message
-        );
-      } else {
-        console.error('[Split] Error on "'+label+'" listener:', e.code, e.message);
-      }
-    };
-  }
-
-  function makeHandler(label){
-    return snap=>{
-      console.log('[Split] Snapshot received from "'+label+'" — docs:', snap.size,
-        '| changes:', snap.docChanges().length);
-      snap.docs.forEach(d=>{
-        const data=d.data();
-        console.log('  doc:', d.id, '|', data.name,
-          '| ownerUid:', data.ownerUid,
-          '| sharedWith:', data.sharedWith,
-          '| sharedWithEmails:', data.sharedWithEmails
-        );
-      });
-      let anyNew=false;
-      snap.docChanges().forEach(change=>{
-        // Fix 1 & 5: handle removed — purge from local state, stop doc-level listener
-        if(change.type==='removed'){
-          const groupId=change.doc.id;
-          S.split.groups=S.split.groups.filter(g=>g.id!==groupId);
-          S.split.expenses=S.split.expenses.filter(e=>e.groupId!==groupId);
-          stopListenSplitGroup(groupId);
-          saveState(); renderSplitContent();
-          return;
-        }
-        if(_handleSplitGroupChange(change.doc,user)) anyNew=true;
-      });
-      if(anyNew){
-        saveState();
-        renderSplitContent();
-        showToast('✅ Grupo(s) compartido(s) cargado(s)');
-      }
-      console.log('[Split] S.split.groups after "'+label+'":', S.split.groups.map(g=>g.name));
-    };
-  }
-
-  // Listener 1: groups owned by this user
-  _splitCollectionListeners.push(
-    db.where('ownerUid','==',user.uid).onSnapshot(makeHandler('ownerUid'),makeErrHandler('ownerUid'))
-  );
-
-  // Listener 2: groups shared by uid
-  _splitCollectionListeners.push(
-    db.where('sharedWith','array-contains',user.uid).onSnapshot(makeHandler('sharedWith'),makeErrHandler('sharedWith'))
-  );
-
-  // Listener 3: groups shared by email (invited before registering)
-  if(user.email){
-    _splitCollectionListeners.push(
-      db.where('sharedWithEmails','array-contains',user.email.toLowerCase()).onSnapshot(makeHandler('sharedWithEmails'),makeErrHandler('sharedWithEmails'))
+// Fetches all split groups for the current user from Firestore (three queries,
+// deduplicated) and updates local state. Called on login, screen navigation,
+// and after any write operation.
+async function refreshSplitGroups(){
+  if(!FIREBASE_ENABLED||!_fbDb||!_authUser) return;
+  const user=_authUser;
+  const btn=document.getElementById('split-refresh-btn');
+  if(btn) btn.style.opacity='0.4';
+  try{
+    const db=_fbDb.collection('splitGroups');
+    const queries=[
+      db.where('ownerUid','==',user.uid).get(),
+      db.where('sharedWith','array-contains',user.uid).get(),
+    ];
+    if(user.email) queries.push(
+      db.where('sharedWithEmails','array-contains',user.email.toLowerCase()).get()
     );
+    const results=await Promise.all(queries);
+    // Deduplicate docs by id
+    const seen=new Set();
+    const docs=[];
+    results.forEach(snap=>snap.docs.forEach(d=>{
+      if(!seen.has(d.id)){ seen.add(d.id); docs.push(d); }
+    }));
+    // Remove groups that no longer exist in Firestore (deleted or access revoked)
+    // Keep local-only groups (no ownerUid) as they haven't been synced yet
+    const remoteIds=new Set(docs.map(d=>d.id));
+    S.split.groups=S.split.groups.filter(g=>!g.ownerUid||remoteIds.has(g.id));
+    // Process each doc: update group + expenses
+    docs.forEach(d=>{
+      _handleSplitGroupDoc(d,user);
+      // Sync expenses from the group doc field into S.split.expenses
+      const data=d.data();
+      if(Array.isArray(data.expenses)){
+        S.split.expenses=S.split.expenses.filter(e=>e.groupId!==d.id);
+        S.split.expenses.push(...data.expenses);
+      }
+    });
+    // Remove expenses for groups that no longer exist
+    const groupIds=new Set(S.split.groups.map(g=>g.id));
+    S.split.expenses=S.split.expenses.filter(e=>groupIds.has(e.groupId));
+    saveState();
+    renderSplitContent();
+  }catch(e){
+    console.error('[Split] refreshSplitGroups error:',e);
+    if(e.code==='permission-denied')
+      console.error('[Split] Check Firestore security rules for splitGroups collection');
+  }finally{
+    if(btn) btn.style.opacity='1';
   }
-
-  console.log('[Split] Total collection listeners set up:', _splitCollectionListeners.length);
 }
 
 // When a user logs in and was previously added by email (uid was null in the group doc),
@@ -7352,7 +7244,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260321041806')
+    navigator.serviceWorker.register('./sw.js?v=20260321045612')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
