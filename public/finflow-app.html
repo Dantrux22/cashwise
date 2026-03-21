@@ -4937,6 +4937,7 @@ let splitAmtStr='0', splitMethod='equal', splitPayerId=null, splitSelCat=null;
 let splitMemberShares={}, splitParticipantIds=[];
 let editingGroupId=null, groupEmoji='👥', groupMembers=[];
 let settleData=null, _currentSplitExpId=null;
+let _splitListeners={}; // {groupId: unsubscribe function}
 
 // ── Emojis de grupo ──
 const GROUP_EMOJIS=['🏠','✈️','🎉','🍕','🎿','🏖️','💼','🎓','🤝','👥','🎮','🍺','🏕️','🚗','🎭','🌍','🏋️','🎪','🎸','💊'];
@@ -5887,8 +5888,12 @@ function addSplitComment(expId){
 
 function deleteSplitExpense(expId){
   showConfirm('Eliminar gasto','¿Eliminar este gasto? Los balances del grupo se actualizarán.',()=>{
+    const exp=S.split.expenses.find(e=>e.id===expId);
+    const gid=exp?exp.groupId:null;
     S.split.expenses=S.split.expenses.filter(e=>e.id!==expId);
-    saveState(); goBack(); renderGroupDetail(); showToast('🗑️ Gasto eliminado');
+    saveState();
+    if(gid) syncSplitGroupToFirestore(gid);
+    goBack(); renderGroupDetail(); showToast('🗑️ Gasto eliminado');
   });
 }
 
@@ -6328,6 +6333,7 @@ function saveSplitExpense(){
     }
   }
   saveState();
+  syncSplitGroupToFirestore(curGroupId);
   showToast('✅ '+spSym()+spFmt(total)+' agregado al grupo');
   goBack(); renderGroupDetail();
 }
@@ -6390,6 +6396,7 @@ function confirmSettle(){
     }
   }
   saveState();
+  syncSplitGroupToFirestore(settleData.gid);
   closeSettleModal();
   renderGroupDetail(); renderSplitContent();
   showToast('✅ Pago de '+spSym()+spFmt(amt)+' registrado');
@@ -6740,6 +6747,8 @@ async function onUserLoggedIn(user){
   updateProfileUI(user);
   saveUserProfile(user);
   loadSharedSplitGroups(user);
+  // Activar listeners en tiempo real para todos los grupos Split
+  setTimeout(()=>{ S.split.groups.forEach(g=>listenSplitGroup(g.id)); }, 1000);
 }
 
 // ── Sync modal ──
@@ -6791,6 +6800,58 @@ async function findUserByEmail(email){
   }catch(e){ console.error('findUserByEmail:',e); return null; }
 }
 
+// ── Sincronización de gastos Split a Firestore ──
+async function syncSplitGroupToFirestore(groupId){
+  if(!FIREBASE_ENABLED||!_fbDb||!_authUser) return;
+  try{
+    const group=S.split.groups.find(g=>g.id===groupId);
+    if(!group) return;
+    const expenses=S.split.expenses.filter(e=>e.groupId===groupId);
+    await _fbDb.collection('splitGroups').doc(groupId).update({
+      expenses,
+      updatedAt:new Date().toISOString(),
+      updatedBy:_authUser.uid
+    });
+  }catch(e){ console.error('syncSplitGroupToFirestore:',e); }
+}
+
+// ── Listeners en tiempo real para grupos Split ──
+function listenSplitGroup(groupId){
+  if(_splitListeners[groupId]) return;
+  if(!FIREBASE_ENABLED||!_fbDb||!_authUser) return;
+  const unsubscribe=_fbDb.collection('splitGroups').doc(groupId)
+    .onSnapshot(doc=>{
+      if(!doc.exists) return;
+      const remoteGroup=doc.data();
+      const idx=S.split.groups.findIndex(g=>g.id===groupId);
+      if(idx!==-1){
+        S.split.groups[idx]={
+          ...S.split.groups[idx],
+          ...remoteGroup,
+          members:remoteGroup.members.map(m=>({...m,isMe:m.uid===_authUser.uid}))
+        };
+        saveState();
+        const detail=document.getElementById('s-split-detail');
+        if(detail&&!detail.classList.contains('hidden')){
+          renderSplitDetail(groupId);
+        }
+        renderSplitContent();
+      }
+    },err=>{ console.error('listenSplitGroup error:',err); });
+  _splitListeners[groupId]=unsubscribe;
+}
+
+function stopListenSplitGroup(groupId){
+  if(_splitListeners[groupId]){
+    _splitListeners[groupId]();
+    delete _splitListeners[groupId];
+  }
+}
+
+function stopAllSplitListeners(){
+  Object.keys(_splitListeners).forEach(stopListenSplitGroup);
+}
+
 // ── Grupos Split compartidos ──
 async function loadSharedSplitGroups(user){
   if(!FIREBASE_ENABLED||!_fbDb||!user) return;
@@ -6809,7 +6870,17 @@ async function loadSharedSplitGroups(user){
         added++;
       }
     });
-    if(added>0){ saveState(); showToast('✅ '+added+' grupo(s) compartido(s) cargado(s)'); }
+    if(added>0){
+      saveState();
+      S.split.groups.forEach(g=>{
+        if(g.ownerUid&&g.ownerUid!==user.uid) listenSplitGroup(g.id);
+      });
+      showToast('✅ '+added+' grupo(s) compartido(s) cargado(s)');
+    }
+    // Activar listeners para grupos propios también
+    S.split.groups.forEach(g=>{
+      if(g.ownerUid===user.uid) listenSplitGroup(g.id);
+    });
   }catch(e){ console.error('loadSharedSplitGroups:',e); }
 }
 
@@ -6866,6 +6937,7 @@ function mergeCloudData(data){
 // ── Logout ──
 async function authLogout(){
   showConfirm('Cerrar sesión','¿Querés cerrar sesión? Tus datos locales se mantienen.',async()=>{
+    stopAllSplitListeners();
     if(FIREBASE_ENABLED&&_fbAuth) try{ await _fbAuth.signOut(); }catch(_e){}
     _authUser=null;
     S.linkedAccount=null; S.skipAuth=false;
