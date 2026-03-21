@@ -294,9 +294,10 @@ function refreshHome(){
   const mainTxs=txs.filter(t=>!t.currency||t.currency===mainCode);
   const income=mainTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const expense=mainTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const invest=S.txs.filter(t=>t.type==='invest'&&(!t.currency||t.currency===mainCode)).reduce((a,t)=>a+t.amount,0);
+  // Net invest total (buy - sell) for main currency
+  const invest=S.txs.filter(t=>t.type==='invest'&&(!t.currency||t.currency===mainCode)).reduce((a,t)=>a+(t.investType==='sell'?-t.amount:t.amount),0);
   // Only invest txs without excludeFromNet reduce the net balance
-  const investForNet=mainTxs.filter(t=>t.type==='invest'&&!t.excludeFromNet).reduce((a,t)=>a+t.amount,0);
+  const investForNet=mainTxs.filter(t=>t.type==='invest'&&!t.excludeFromNet).reduce((a,t)=>a+(t.investType==='sell'?-t.amount:t.amount),0);
   const net=income-expense-investForNet;
   const s=sym();
 
@@ -600,7 +601,8 @@ function buildTxItem(tx){
 // ═══════════════════════════════════════════
 let txType='expense', amtStr='0', selCat=null, editingId=null;
 let txDate=new Date();
-let txCurrency='main'; // 'main' | 'sec'
+let txCurrency='ARS'; // currency code string, default = S.currency.code
+let txInvestType='buy'; // 'buy' | 'sell'
 
 function openAdd(forceType){
   editingId=null; editingTxId=null; amtStr='0'; selCat=null;
@@ -612,6 +614,7 @@ function openAdd(forceType){
   const enToggle=document.getElementById('exclude-net-toggle');
   if(enToggle) enToggle.classList.remove('on');
   txCurrency=S.currency.code;
+  txInvestType='buy';
   txDate=new Date(); updateDateLbl();
   setType(forceType||'expense');
   _updateTxCurrencyToggle();
@@ -651,6 +654,10 @@ function setType(txT){
   // Mostrar/ocultar toggle "Excluir del neto" solo para inversiones
   const enRow=document.getElementById('exclude-net-row');
   if(enRow) enRow.style.display=txT==='invest'?'':'none';
+  // Mostrar/ocultar invest-type-row (Compra/Venta) solo para inversiones
+  const itRow=document.getElementById('tx-invest-type-row');
+  if(itRow) itRow.style.display=txT==='invest'?'':'none';
+  if(txT==='invest') _updateInvestTypeToggle();
   // Mostrar/ocultar selector de moneda solo para inversiones
   _updateTxCurrencyToggle();
 }
@@ -698,7 +705,10 @@ function saveTx(){
   const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
   const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:(typeof txDate!=='undefined'?txDate:new Date()).toISOString()};
   if(excludeFromNet) tx.excludeFromNet=true;
-  if(txType==='invest'&&txCurrency&&txCurrency!==S.currency.code) tx.currency=txCurrency;
+  if(txType==='invest'){
+    if(txCurrency&&txCurrency!==S.currency.code) tx.currency=txCurrency;
+    if(txInvestType==='sell') tx.investType='sell';
+  }
   if(editingId){ const i=S.txs.findIndex(t=>t.id===editingId); if(i!==-1)S.txs[i]=tx; showToast('✅ Actualizado'); }
   else { S.txs.unshift(tx); showToast(`✅ ${txType==='income'?'+':'-'}${sym()}${fmt(amt)}`); }
   saveState();
@@ -744,9 +754,11 @@ function openEdit(id){
   // Restore "Excluir del neto" toggle from saved tx
   const enToggle=document.getElementById('exclude-net-toggle');
   if(enToggle){ enToggle.classList.remove('on'); if(tx.excludeFromNet) enToggle.classList.add('on'); }
-  // Restore currency selection (only meaningful for invest type)
+  // Restore currency and invest type (only meaningful for invest)
   txCurrency=(tx.type==='invest'&&tx.currency)?tx.currency:S.currency.code;
+  txInvestType=tx.investType||'buy';
   _updateTxCurrencyToggle();
+  _updateInvestTypeToggle();
   // Tacho en modo edición: borra el movimiento
   showDeleteBtn(true);
   hideNumpad();
@@ -798,51 +810,58 @@ function deleteTx(){
 function renderInvest(){
   const invTxs=S.txs.filter(t=>t.type==='invest').sort((a,b)=>new Date(b.date)-new Date(a.date));
   const mainCode=S.currency.code;
-  const mainTotal=invTxs.filter(t=>!t.currency||t.currency===mainCode).reduce((a,t)=>a+t.amount,0);
-  const s=sym();
-  document.getElementById('inv-sym').textContent=s;
-  document.getElementById('inv-total').textContent=fmt(mainTotal);
-  document.getElementById('inv-total2').textContent=s+fmt(mainTotal);
-  document.getElementById('inv-count').textContent=invTxs.length;
-  // Currency breakdown (if any foreign invest txs)
+  // Build net totals per currency (buy adds, sell subtracts)
   const byCode={};
-  invTxs.forEach(t=>{const c=t.currency||mainCode; byCode[c]=(byCode[c]||0)+t.amount;});
-  const byCurEl=document.getElementById('inv-by-currency');
-  if(byCurEl){
+  invTxs.forEach(t=>{
+    const c=t.currency||mainCode;
+    const sign=t.investType==='sell'?-1:1;
+    byCode[c]=(byCode[c]||0)+sign*t.amount;
+  });
+  // Populate multi-currency totals header
+  const totalsEl=document.getElementById('inv-totals-list');
+  if(totalsEl){
     const codes=Object.keys(byCode);
-    if(codes.length>1){
-      byCurEl.style.display='';
-      byCurEl.innerHTML=codes.map(code=>{
-        const cur=CURRENCIES.find(c=>c.code===code)||{sym:code};
-        const isMain=code===mainCode;
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 14px;background:var(--amd);border:1px solid rgba(245,166,35,.18);border-radius:10px;margin-bottom:6px">
-          <span style="font-size:12px;color:var(--am);font-weight:500">${cur.flag||''}${cur.flag?' ':''}<span style="font-family:'DM Mono',monospace">${code}</span>${isMain?' <span style="font-size:10px;color:var(--mu)">(principal)</span>':''}</span>
-          <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--am)">${cur.sym}${fmt(byCode[code])}</span>
-        </div>`;
+    if(codes.length===0){
+      totalsEl.innerHTML=`<div class="itv-line" style="font-size:38px;font-weight:300;font-family:'DM Mono',monospace;letter-spacing:-2px;color:var(--am)">${sym()}0</div>`;
+    } else {
+      totalsEl.innerHTML=codes.map(code=>{
+        const cur=CURRENCIES.find(c=>c.code===code)||{sym:code,code};
+        const total=byCode[code];
+        const color=total<0?'var(--rd)':'var(--am)';
+        const suffix=code!==mainCode?`<span style="font-size:16px;font-weight:400;letter-spacing:0;margin-left:3px">${code}</span>`:'';
+        return `<div class="itv-line" style="font-size:32px;font-weight:300;font-family:'DM Mono',monospace;letter-spacing:-1.5px;color:${color};line-height:1.25">${total<0?'-':''}${cur.sym}${fmt(Math.abs(total))}${suffix}</div>`;
       }).join('');
-    } else { byCurEl.style.display='none'; }
+    }
   }
+  // Hide old breakdown panel (header now shows all currencies)
+  const byCurEl=document.getElementById('inv-by-currency');
+  if(byCurEl) byCurEl.style.display='none';
+  document.getElementById('inv-count').textContent=invTxs.length;
+  if(S.hidden) applyHide(true);
   const list=document.getElementById('inv-list'); list.innerHTML='';
   if(invTxs.length===0){ renderEmptyState(list,'📊','Sin inversiones registradas.'); return; }
   invTxs.forEach(tx=>{
     const cat=findCat('invest',tx.cat);
     const el=document.createElement('div'); el.className='inv-item';
+    const isSell=tx.investType==='sell';
     const txCode=tx.currency||mainCode;
     const txCur=CURRENCIES.find(c=>c.code===txCode)||{sym:txCode};
-    const pct=mainTotal>0&&txCode===mainCode?Math.round(tx.amount/mainTotal*100):0;
-    const amtStr=txCur.sym+fmt(tx.amount)+(txCode!==mainCode?' '+txCode:'');
+    const mainNet=byCode[mainCode]||0;
+    const pct=mainNet>0&&!isSell&&txCode===mainCode?Math.round(tx.amount/mainNet*100):0;
+    const amtStr=(isSell?'-':'')+txCur.sym+fmt(tx.amount)+(txCode!==mainCode?' '+txCode:'');
+    const amtColor=isSell?'var(--rd)':'var(--am)';
     el.innerHTML=`
       <div class="inv-ico">${cat?cat.e:'📈'}</div>
       <div class="inv-info">
         <div class="inv-name">${tx.note||tx.cat||'Inversión'}</div>
-        <div class="inv-sub">${tx.cat||''} · ${tx.date.slice(0,10)}</div>
-        ${txCode===mainCode?`<div class="inv-bar"><div class="inv-bar-fill" style="width:0%" data-pct="${pct}"></div></div>`:''}
+        <div class="inv-sub">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${tx.date.slice(0,10)}</div>
+        ${!isSell&&txCode===mainCode?`<div class="inv-bar"><div class="inv-bar-fill" style="width:0%" data-pct="${pct}"></div></div>`:''}
       </div>
-      <div class="inv-r"><div class="inv-val">${amtStr}</div></div>`;
+      <div class="inv-r"><div class="inv-val" style="color:${amtColor}">${amtStr}</div></div>`;
     el.style.cursor='pointer';
     el.onclick=()=>openEdit(tx.id);
     list.appendChild(el);
-    if(txCode===mainCode) setTimeout(()=>{ const f=el.querySelector('.inv-bar-fill'); if(f) f.style.width=f.dataset.pct+'%'; },150);
+    if(!isSell&&txCode===mainCode) setTimeout(()=>{ const f=el.querySelector('.inv-bar-fill'); if(f) f.style.width=f.dataset.pct+'%'; },150);
   });
 }
 
@@ -1448,10 +1467,11 @@ function applyHide(hide){
     ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
     :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
   if(hide){
-    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net','inv-total','inv-total2'];
+    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(!el.dataset.real) el.dataset.real=el.textContent; el.textContent=MASK; });
+    document.querySelectorAll('.itv-line').forEach(el=>{ if(!el.dataset.real) el.dataset.real=el.textContent; el.textContent=MASK; });
   } else {
-    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net','inv-total','inv-total2'];
+    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; delete el.dataset.real; });
     refreshHome();
     if(curScreen==='s-invest') renderInvest();
@@ -1474,7 +1494,6 @@ function updateCurrUI(){
   document.getElementById('curr-val').textContent=S.currency.flag+' '+S.currency.code;
   document.getElementById('curr-sub').textContent=S.currency.name+' · '+S.currency.code;
   document.getElementById('add-curr-lbl').textContent=S.currency.code;
-  const is=document.getElementById('inv-sym'); if(is) is.textContent=S.currency.sym;
 }
 function openCurrModal(){ renderCurrList(CURRENCIES); document.getElementById('curr-search').value=''; document.getElementById('curr-modal').classList.remove('hidden'); }
 function closeCurrModal(){ document.getElementById('curr-modal').classList.add('hidden'); }
@@ -1485,8 +1504,22 @@ function filterCurr(q){ renderCurrList(CURRENCIES.filter(c=>c.name.toLowerCase()
 const INVEST_PILL_CURRENCIES=['USD','EUR','GBP','BRL'];
 
 function setTxCurrency(code){
-  txCurrency=code; // now a currency code string, default = S.currency.code
+  txCurrency=code;
   _updateTxCurrencyToggle();
+}
+
+function setInvestType(t){
+  txInvestType=t;
+  _updateInvestTypeToggle();
+}
+
+function _updateInvestTypeToggle(){
+  const isBuy=txInvestType!=='sell';
+  const btnBuy=document.getElementById('btn-buy');
+  const btnSell=document.getElementById('btn-sell');
+  const base='flex:1;padding:7px 4px;border-radius:50px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;';
+  if(btnBuy) btnBuy.style.cssText=base+(isBuy?'background:var(--s1);color:var(--am);box-shadow:0 1px 6px rgba(0,0,0,.3)':'color:var(--mu)');
+  if(btnSell) btnSell.style.cssText=base+(!isBuy?'background:var(--s1);color:var(--rd);box-shadow:0 1px 6px rgba(0,0,0,.3)':'color:var(--mu)');
 }
 
 function _updateTxCurrencyToggle(){
