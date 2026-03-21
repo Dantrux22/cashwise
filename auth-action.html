@@ -5,12 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CashWise — Verificando...</title>
 <style>
-  body { margin:0; background:#0f0f13; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'Helvetica Neue',sans-serif; }
-  .box { text-align:center; padding:40px 24px; color:#f0f0f8; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#0f0f13; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'Helvetica Neue',sans-serif; padding:24px; }
+  .box { text-align:center; padding:40px 24px; color:#f0f0f8; max-width:360px; width:100%; }
   .emoji { font-size:56px; margin-bottom:24px; }
   h2 { font-size:22px; font-weight:700; margin:0 0 12px; }
-  p { font-size:15px; color:#7878a0; line-height:1.6; margin:0 0 32px; }
-  .btn { display:inline-block; background:#34D48A; color:#0f0f13; padding:14px 32px; border-radius:50px; text-decoration:none; font-weight:700; font-size:15px; }
+  p { font-size:15px; color:#7878a0; line-height:1.6; margin:0 0 28px; }
+  .email { color:#34D48A; font-weight:600; }
+  .btn { display:block; background:#34D48A; color:#0f0f13; padding:16px 32px; border-radius:50px; text-decoration:none; font-weight:700; font-size:15px; margin:0 auto; }
+  .btn-secondary { display:block; background:transparent; color:#7878a0; padding:14px 32px; border-radius:50px; text-decoration:none; font-size:14px; margin:12px auto 0; border:1px solid #2a2a3a; }
   .spinner { width:40px; height:40px; border:3px solid #2a2a3a; border-top-color:#34D48A; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px; }
   @keyframes spin { to { transform:rotate(360deg); } }
 </style>
@@ -41,31 +44,86 @@ function showSuccess() {
     <div class="emoji">✅</div>
     <h2>¡Email verificado!</h2>
     <p>Tu cuenta de CashWise está activa.<br>Ya podés sincronizar tus datos en la nube.</p>
-    <a href="${APP_URL}"
-       onclick="window.location.href='${APP_URL}'"
-       class="btn">Abrir CashWise →</a>
-    <p style="font-size:12px;color:#7878a0;margin-top:16px">
-      Si tenés la app instalada, cerrá esta página y abrila desde tu pantalla de inicio.<br>
-      Luego tocá "Ya verifiqué mi email ✓"
+    <a href="${APP_URL}" class="btn">Ir a CashWise →</a>
+    <p style="font-size:12px;color:#4a4a6a;margin-top:20px;margin-bottom:0">
+      Si tenés la app instalada, cerrá esta página<br>y tocá "Ya verifiqué →" dentro de la app.
     </p>
   `;
 }
 
-function showError(msg) {
+function showAlreadyVerified() {
   document.getElementById('box').innerHTML = `
-    <div class="emoji">❌</div>
-    <h2>Link inválido</h2>
-    <p>${msg}<br>Pedí un nuevo link desde la app.</p>
-    <a href="${APP_URL}" class="btn">Volver a CashWise</a>
+    <div class="emoji">✅</div>
+    <h2>Tu email ya está verificado</h2>
+    <p>Tu cuenta de CashWise ya estaba activa.<br>Podés seguir usándola normalmente.</p>
+    <a href="${APP_URL}" class="btn">Ir a CashWise →</a>
   `;
 }
 
-if(mode === 'verifyEmail' && oobCode) {
+function showExpired() {
+  document.getElementById('box').innerHTML = `
+    <div class="emoji">⏰</div>
+    <h2>El link expiró</h2>
+    <p>Este link de verificación ya no es válido.<br>Pedí uno nuevo desde la app tocando "Reenviar email".</p>
+    <a href="${APP_URL}" class="btn">Ir a CashWise →</a>
+  `;
+}
+
+function showInvalid() {
+  document.getElementById('box').innerHTML = `
+    <div class="emoji">❌</div>
+    <h2>Link inválido</h2>
+    <p>Este link no es válido o ya fue utilizado.<br>Si ya verificaste tu cuenta, podés ingresar normalmente.</p>
+    <a href="${APP_URL}" class="btn">Ir a CashWise →</a>
+  `;
+}
+
+if (mode === 'verifyEmail' && oobCode) {
   auth.applyActionCode(oobCode)
-    .then(() => showSuccess())
-    .catch(e => showError('Este link ya fue usado o expiró.'));
+    .then(() => {
+      // Reload user to check if already verified before this call
+      const user = auth.currentUser;
+      if (user) {
+        user.reload().then(() => showSuccess()).catch(() => showSuccess());
+      } else {
+        showSuccess();
+      }
+    })
+    .catch(e => {
+      if (e.code === 'auth/expired-action-code') {
+        showExpired();
+      } else if (e.code === 'auth/invalid-action-code') {
+        // Could be already verified or genuinely invalid — check current user
+        const user = auth.currentUser;
+        if (user && user.emailVerified) {
+          showAlreadyVerified();
+        } else {
+          // Try reloading to get fresh verification status
+          auth.onAuthStateChanged(u => {
+            if (u) {
+              u.reload().then(() => {
+                if (u.emailVerified) showAlreadyVerified();
+                else showInvalid();
+              }).catch(() => showInvalid());
+            } else {
+              showInvalid();
+            }
+          });
+        }
+      } else {
+        showInvalid();
+      }
+    });
+} else if (mode === 'verifyEmail' && !oobCode) {
+  showInvalid();
 } else {
-  showError('Link inválido.');
+  // Unknown mode or no params — redirect to app
+  document.getElementById('box').innerHTML = `
+    <div class="emoji">🔗</div>
+    <h2>Accedé desde la app</h2>
+    <p>Este link debe abrirse desde el email de verificación de CashWise.</p>
+    <a href="${APP_URL}" class="btn">Ir a CashWise →</a>
+  `;
 }
 </script>
 </body>

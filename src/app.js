@@ -2829,20 +2829,18 @@ function showVerificationPending(user) {
   overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center';
   overlay.innerHTML = `
     <div style="font-size:56px;margin-bottom:24px">📧</div>
-    <div style="font-size:22px;font-weight:700;color:var(--tx);margin-bottom:12px">Verificá tu email</div>
-    <div style="font-size:15px;color:var(--mu);line-height:1.6;margin-bottom:8px">
-      Enviamos un link de verificación a
-    </div>
-    <div style="font-size:15px;font-weight:600;color:var(--gr);margin-bottom:32px">${user.email}</div>
-    <div style="font-size:13px;color:var(--mu);line-height:1.6;margin-bottom:32px">
-      Revisá tu bandeja de entrada y spam.<br>Tocá el link para activar tu cuenta.
+    <div style="font-size:22px;font-weight:700;color:var(--tx);margin-bottom:16px">Verificá tu email</div>
+    <div style="font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:32px">
+      Te enviamos un link a<br>
+      <span style="font-weight:600;color:var(--gr)">${user.email}</span><br>
+      Abrilo para activar tu cuenta.
     </div>
     <button onclick="checkEmailVerification()"
       style="width:100%;max-width:320px;padding:16px;border-radius:16px;background:var(--gr);border:none;color:#0f0f13;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:12px">
-      Ya verifiqué mi email ✓
+      Ya verifiqué →
     </button>
     <button onclick="resendVerificationEmail('${user.email}')"
-      style="width:100%;max-width:320px;padding:14px;border-radius:16px;background:var(--s2);border:1px solid var(--br);color:var(--mu);font-size:14px;cursor:pointer;margin-bottom:12px">
+      style="width:100%;max-width:320px;padding:14px;border-radius:16px;background:var(--s2);border:1px solid var(--br);color:var(--tx);font-size:14px;cursor:pointer;margin-bottom:12px">
       Reenviar email
     </button>
     <button onclick="logoutAndShowAuth()"
@@ -4649,8 +4647,14 @@ async function authEmailLogin(){
   const btn = document.getElementById('btn-email-login');
   btn.textContent='Iniciando...'; btn.disabled=true;
   try{
-    await _fbAuth.signInWithEmailAndPassword(email, pass);
+    const cred = await _fbAuth.signInWithEmailAndPassword(email, pass);
     clearAuthError();
+    if(cred.user && cred.user.email && !cred.user.emailVerified &&
+       !cred.user.providerData.find(p=>p.providerId==='google.com')) {
+      btn.textContent='Iniciar sesión'; btn.disabled=false;
+      document.getElementById('auth-overlay')?.classList.add('hidden');
+      showVerificationPending(cred.user);
+    }
   }catch(e){
     btn.textContent='Iniciar sesión'; btn.disabled=false;
     showAuthError(authErrorMsg(e.code));
@@ -4676,9 +4680,8 @@ async function authEmailRegister(){
     const cred = await _fbAuth.createUserWithEmailAndPassword(email, pass);
     await cred.user.updateProfile({ displayName: name });
     await cred.user.sendEmailVerification();
-    showToast('📧 Revisá tu email para verificar tu cuenta');
     clearAuthError();
-    showWelcome(name);
+    // onAuthStateChanged → onUserLoggedIn will show the verification pending screen
   }catch(e){
     btn.textContent='Crear cuenta'; btn.disabled=false;
     showAuthError(authErrorMsg(e.code));
