@@ -106,7 +106,7 @@
     <button class="tx-nav-pill save" id="save-btn" onclick="saveTx()" data-i18n="saveBtn">Guardar</button>
   </div>
 
-  <div id="s-add-scroll" style="flex:1;overflow-y:auto;scrollbar-width:none">
+  <div id="s-add-scroll" style="flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:80px">
   <!-- MONTO — toca para abrir teclado -->
   <div class="tx-amt-block" id="amt-tap-area" onclick="showNumpad()" style="cursor:pointer">
     <div style="font-size:13px;color:var(--mu);margin-bottom:4px" id="add-curr-lbl">ARS</div>
@@ -473,6 +473,7 @@
       <div class="set-sec-ttl" data-i18n="secCurrency">Moneda</div>
       <div class="set-card">
         <div class="set-row" onclick="openCurrModal()"><div><div class="set-lbl" data-i18n="rCurrency">Moneda principal</div><div class="set-sub" id="curr-sub">Peso Argentino · ARS</div></div><div style="display:flex;align-items:center;gap:8px"><div class="set-val" id="curr-val">🇦🇷 ARS</div><div class="set-arr">›</div></div></div>
+        <div class="set-row" onclick="openInvestCurrModal()" style="cursor:pointer"><div><div class="set-lbl">Monedas de inversión</div><div class="set-sub" id="invest-curr-sub">USD, EUR</div></div><div class="set-arr">›</div></div>
       </div>
     </div>
     <div class="set-sec">
@@ -624,6 +625,16 @@
     <div class="curr-title">Seleccionar moneda</div>
     <input class="curr-search" type="text" placeholder="Buscar..." id="curr-search" oninput="filterCurr(this.value)">
     <div class="curr-list" id="curr-list"></div>
+  </div>
+</div>
+
+<!-- Invest currencies modal -->
+<div class="curr-modal hidden" id="invest-curr-modal">
+  <div class="curr-overlay" onclick="closeInvestCurrModal()"></div>
+  <div class="curr-sheet">
+    <div class="curr-handle"></div>
+    <div class="curr-title">Monedas de inversión</div>
+    <div class="curr-list" id="invest-curr-list"></div>
   </div>
 </div>
 

@@ -135,6 +135,7 @@ if(!Array.isArray(S.goals)) S.goals=[];
 if(!Array.isArray(S.recurring)) S.recurring=[];
 if(!S.lang) S.lang='es';
 if(!S.accent) S.accent='#34d48a';
+if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
 if(typeof S.guestMode==='undefined') S.guestMode=false;
 if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
@@ -616,10 +617,8 @@ function openAdd(forceType){
   txCurrency=S.currency.code;
   txInvestType='buy';
   txDate=new Date(); updateDateLbl();
-  setType(forceType||'expense');
-  _updateTxCurrencyToggle();
+  setType(forceType||'expense'); // calls renderTxCatCircles internally
   updateAmt();
-  renderTxCatCircles('expense');
   // Tacho siempre visible: en modo nuevo limpia el formulario
   showDeleteBtn(false);
   hideNumpad();
@@ -1494,14 +1493,52 @@ function updateCurrUI(){
   document.getElementById('curr-val').textContent=S.currency.flag+' '+S.currency.code;
   document.getElementById('curr-sub').textContent=S.currency.name+' · '+S.currency.code;
   document.getElementById('add-curr-lbl').textContent=S.currency.code;
+  const sub=document.getElementById('invest-curr-sub');
+  if(sub) sub.textContent=(S.investCurrencies||INVEST_PILL_CURRENCIES).join(', ');
 }
 function openCurrModal(){ renderCurrList(CURRENCIES); document.getElementById('curr-search').value=''; document.getElementById('curr-modal').classList.remove('hidden'); }
 function closeCurrModal(){ document.getElementById('curr-modal').classList.add('hidden'); }
 function filterCurr(q){ renderCurrList(CURRENCIES.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||c.code.toLowerCase().includes(q.toLowerCase()))); }
 
+// ── Invest currencies modal ──────────────────────────────────────────────────
+const INVEST_CUR_OPTIONS=['USD','EUR','GBP','BRL','JPY','CHF','CAD','AUD'];
 
-// Fixed list of currencies shown as pills when adding an invest transaction
-const INVEST_PILL_CURRENCIES=['USD','EUR','GBP','BRL'];
+function openInvestCurrModal(){
+  _renderInvestCurrList();
+  document.getElementById('invest-curr-modal').classList.remove('hidden');
+}
+function closeInvestCurrModal(){
+  document.getElementById('invest-curr-modal').classList.add('hidden');
+}
+function _renderInvestCurrList(){
+  const list=document.getElementById('invest-curr-list'); if(!list) return;
+  const sel=S.investCurrencies||INVEST_PILL_CURRENCIES;
+  list.innerHTML=INVEST_CUR_OPTIONS.map(code=>{
+    const cur=CURRENCIES.find(c=>c.code===code)||{code,flag:'🌐',name:code};
+    const on=sel.includes(code);
+    return `<div class="set-row" onclick="toggleInvestCur('${code}')" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:20px">${cur.flag}</div>
+        <div><div class="set-lbl">${code}</div><div class="set-sub">${cur.name}</div></div>
+      </div>
+      <div id="icck-${code}" style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'var(--am)':'var(--br)'};background:${on?'var(--am)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${on?'✓':''}</div>
+    </div>`;
+  }).join('');
+}
+function toggleInvestCur(code){
+  if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
+  const i=S.investCurrencies.indexOf(code);
+  if(i===-1){ S.investCurrencies.push(code); }
+  else if(S.investCurrencies.length>1){ S.investCurrencies.splice(i,1); }
+  saveState();
+  _renderInvestCurrList();
+  _updateTxCurrencyToggle();
+  const sub=document.getElementById('invest-curr-sub');
+  if(sub) sub.textContent=(S.investCurrencies||[]).join(', ');
+}
+
+// Default invest currencies (overridden by S.investCurrencies)
+const INVEST_PILL_CURRENCIES=['USD','EUR'];
 
 function setTxCurrency(code){
   txCurrency=code;
@@ -1532,7 +1569,8 @@ function _updateTxCurrencyToggle(){
   if(!container) return;
   container.innerHTML='';
   const mainCode=S.currency.code;
-  const allCodes=[mainCode,...INVEST_PILL_CURRENCIES.filter(c=>c!==mainCode)];
+  const investCurs=Array.isArray(S.investCurrencies)&&S.investCurrencies.length?S.investCurrencies:INVEST_PILL_CURRENCIES;
+  const allCodes=[mainCode,...investCurs.filter(c=>c!==mainCode)];
   allCodes.forEach(code=>{
     const cur=CURRENCIES.find(c=>c.code===code)||{code,sym:code,flag:''};
     const active=txCurrency===code;

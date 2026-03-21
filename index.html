@@ -707,7 +707,7 @@ canvas.cv{width:100%;height:100%}
     <button class="tx-nav-pill save" id="save-btn" onclick="saveTx()" data-i18n="saveBtn">Guardar</button>
   </div>
 
-  <div id="s-add-scroll" style="flex:1;overflow-y:auto;scrollbar-width:none">
+  <div id="s-add-scroll" style="flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:80px">
   <!-- MONTO — toca para abrir teclado -->
   <div class="tx-amt-block" id="amt-tap-area" onclick="showNumpad()" style="cursor:pointer">
     <div style="font-size:13px;color:var(--mu);margin-bottom:4px" id="add-curr-lbl">ARS</div>
@@ -1074,6 +1074,7 @@ canvas.cv{width:100%;height:100%}
       <div class="set-sec-ttl" data-i18n="secCurrency">Moneda</div>
       <div class="set-card">
         <div class="set-row" onclick="openCurrModal()"><div><div class="set-lbl" data-i18n="rCurrency">Moneda principal</div><div class="set-sub" id="curr-sub">Peso Argentino · ARS</div></div><div style="display:flex;align-items:center;gap:8px"><div class="set-val" id="curr-val">🇦🇷 ARS</div><div class="set-arr">›</div></div></div>
+        <div class="set-row" onclick="openInvestCurrModal()" style="cursor:pointer"><div><div class="set-lbl">Monedas de inversión</div><div class="set-sub" id="invest-curr-sub">USD, EUR</div></div><div class="set-arr">›</div></div>
       </div>
     </div>
     <div class="set-sec">
@@ -1225,6 +1226,16 @@ canvas.cv{width:100%;height:100%}
     <div class="curr-title">Seleccionar moneda</div>
     <input class="curr-search" type="text" placeholder="Buscar..." id="curr-search" oninput="filterCurr(this.value)">
     <div class="curr-list" id="curr-list"></div>
+  </div>
+</div>
+
+<!-- Invest currencies modal -->
+<div class="curr-modal hidden" id="invest-curr-modal">
+  <div class="curr-overlay" onclick="closeInvestCurrModal()"></div>
+  <div class="curr-sheet">
+    <div class="curr-handle"></div>
+    <div class="curr-title">Monedas de inversión</div>
+    <div class="curr-list" id="invest-curr-list"></div>
   </div>
 </div>
 
@@ -2065,6 +2076,7 @@ if(!Array.isArray(S.goals)) S.goals=[];
 if(!Array.isArray(S.recurring)) S.recurring=[];
 if(!S.lang) S.lang='es';
 if(!S.accent) S.accent='#34d48a';
+if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
 if(typeof S.guestMode==='undefined') S.guestMode=false;
 if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
@@ -2546,10 +2558,8 @@ function openAdd(forceType){
   txCurrency=S.currency.code;
   txInvestType='buy';
   txDate=new Date(); updateDateLbl();
-  setType(forceType||'expense');
-  _updateTxCurrencyToggle();
+  setType(forceType||'expense'); // calls renderTxCatCircles internally
   updateAmt();
-  renderTxCatCircles('expense');
   // Tacho siempre visible: en modo nuevo limpia el formulario
   showDeleteBtn(false);
   hideNumpad();
@@ -3424,14 +3434,52 @@ function updateCurrUI(){
   document.getElementById('curr-val').textContent=S.currency.flag+' '+S.currency.code;
   document.getElementById('curr-sub').textContent=S.currency.name+' · '+S.currency.code;
   document.getElementById('add-curr-lbl').textContent=S.currency.code;
+  const sub=document.getElementById('invest-curr-sub');
+  if(sub) sub.textContent=(S.investCurrencies||INVEST_PILL_CURRENCIES).join(', ');
 }
 function openCurrModal(){ renderCurrList(CURRENCIES); document.getElementById('curr-search').value=''; document.getElementById('curr-modal').classList.remove('hidden'); }
 function closeCurrModal(){ document.getElementById('curr-modal').classList.add('hidden'); }
 function filterCurr(q){ renderCurrList(CURRENCIES.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||c.code.toLowerCase().includes(q.toLowerCase()))); }
 
+// ── Invest currencies modal ──────────────────────────────────────────────────
+const INVEST_CUR_OPTIONS=['USD','EUR','GBP','BRL','JPY','CHF','CAD','AUD'];
 
-// Fixed list of currencies shown as pills when adding an invest transaction
-const INVEST_PILL_CURRENCIES=['USD','EUR','GBP','BRL'];
+function openInvestCurrModal(){
+  _renderInvestCurrList();
+  document.getElementById('invest-curr-modal').classList.remove('hidden');
+}
+function closeInvestCurrModal(){
+  document.getElementById('invest-curr-modal').classList.add('hidden');
+}
+function _renderInvestCurrList(){
+  const list=document.getElementById('invest-curr-list'); if(!list) return;
+  const sel=S.investCurrencies||INVEST_PILL_CURRENCIES;
+  list.innerHTML=INVEST_CUR_OPTIONS.map(code=>{
+    const cur=CURRENCIES.find(c=>c.code===code)||{code,flag:'🌐',name:code};
+    const on=sel.includes(code);
+    return `<div class="set-row" onclick="toggleInvestCur('${code}')" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:20px">${cur.flag}</div>
+        <div><div class="set-lbl">${code}</div><div class="set-sub">${cur.name}</div></div>
+      </div>
+      <div id="icck-${code}" style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'var(--am)':'var(--br)'};background:${on?'var(--am)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${on?'✓':''}</div>
+    </div>`;
+  }).join('');
+}
+function toggleInvestCur(code){
+  if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
+  const i=S.investCurrencies.indexOf(code);
+  if(i===-1){ S.investCurrencies.push(code); }
+  else if(S.investCurrencies.length>1){ S.investCurrencies.splice(i,1); }
+  saveState();
+  _renderInvestCurrList();
+  _updateTxCurrencyToggle();
+  const sub=document.getElementById('invest-curr-sub');
+  if(sub) sub.textContent=(S.investCurrencies||[]).join(', ');
+}
+
+// Default invest currencies (overridden by S.investCurrencies)
+const INVEST_PILL_CURRENCIES=['USD','EUR'];
 
 function setTxCurrency(code){
   txCurrency=code;
@@ -3462,7 +3510,8 @@ function _updateTxCurrencyToggle(){
   if(!container) return;
   container.innerHTML='';
   const mainCode=S.currency.code;
-  const allCodes=[mainCode,...INVEST_PILL_CURRENCIES.filter(c=>c!==mainCode)];
+  const investCurs=Array.isArray(S.investCurrencies)&&S.investCurrencies.length?S.investCurrencies:INVEST_PILL_CURRENCIES;
+  const allCodes=[mainCode,...investCurs.filter(c=>c!==mainCode)];
   allCodes.forEach(code=>{
     const cur=CURRENCIES.find(c=>c.code===code)||{code,sym:code,flag:''};
     const active=txCurrency===code;
@@ -7387,7 +7436,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260321060659')
+    navigator.serviceWorker.register('./sw.js?v=20260321062016')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
