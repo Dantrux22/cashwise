@@ -4757,40 +4757,6 @@ function skipAuth(){
   showToast('💾 Usando sin cuenta — datos guardados en el dispositivo');
 }
 
-// ── Sync manual con Firestore ──
-async function syncWithFirestore(user) {
-  if(!_db || !user) return;
-  try {
-    const doc = await _db.collection('users').doc(user.uid).get();
-    if(doc.exists) {
-      const data = doc.data();
-      if(data.txs && data.txs.length > S.txs.length) {
-        if(confirm(`Encontramos ${data.txs.length} movimientos en la nube. ¿Cargarlos?`)) {
-          S.txs = data.txs;
-          S.cats = data.cats || S.cats;
-          S.budgets = data.budgets || S.budgets;
-          S.goals = data.goals || S.goals;
-          saveState(); refreshHome();
-          showToast('✅ Datos sincronizados desde la nube');
-        }
-      } else if(S.txs.length > 0) {
-        await _db.collection('users').doc(user.uid).set({
-          txs: S.txs, cats: S.cats, budgets: S.budgets,
-          goals: S.goals, updatedAt: new Date().toISOString()
-        });
-        showToast('✅ Datos subidos a la nube');
-      }
-    } else {
-      await _db.collection('users').doc(user.uid).set({
-        txs: S.txs, cats: S.cats, budgets: S.budgets,
-        goals: S.goals, updatedAt: new Date().toISOString()
-      });
-    }
-  } catch(e) {
-    console.error('Sync error:', e);
-  }
-}
-
 // ── Cuando se loguea ──
 async function onUserLoggedIn(user){
   // Bloquear si el email no está verificado
