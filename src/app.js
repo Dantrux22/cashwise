@@ -73,7 +73,7 @@ const COLORS = [
   '#FF6F91','#FF9671','#FFC75F','#C34A36','#926C00','#008F7A','#007A5E','#00B8A9',
   '#DEF7FF','#B0A8B9','#4B4453','#F8615A','#34d48a','#6b8cff',
 ];
-const ACCENTS = ['#34d48a','#6b8cff','#b57bee','#f5a623','#f0566a','#F4A7B9','#FF6B6B','#FF8E53','#FFD93D','#4D96FF','#845EC2','#D65DB1','#00C9A7'];
+const ACCENTS = ['#34d48a','#f4a7b9','#4d96ff','#845ec2','#ffd93d','#ff6b6b'];
 const GOAL_EMOJIS = ['🎯','✈️','🏠','🚗','💻','📱','🎓','💍','🏖️','🎿','🏋️','💰','🌍','🎪','🎁'];
 const CURRENCIES = [
   {code:'ARS',name:'Peso Argentino',flag:'🇦🇷',sym:'$'},
