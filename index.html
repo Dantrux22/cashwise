@@ -1109,19 +1109,7 @@ canvas.cv{width:100%;height:100%}
         <div class="set-row" onclick="toggleHideOnStart(this)"><div><div class="set-lbl" data-i18n="rHideBalance">Ocultar balance al abrir</div><div class="set-sub" data-i18n="rHideBalanceSub">El balance aparece tapado</div></div><div class="toggle" id="tog-hide-start"></div></div>
       </div>
     </div>
-    <div class="set-sec">
-      <div class="set-sec-ttl">GRÁFICO</div>
-      <div class="set-card">
-        <div class="set-row" onclick="setChartType('net')" style="cursor:pointer">
-          <div><div class="set-lbl">Neto acumulado</div><div class="set-sub">Una línea que sube cuando ahorrás y baja cuando gastás</div></div>
-          <div id="chart-type-net" style="color:var(--gr);font-size:18px"></div>
-        </div>
-        <div class="set-row" onclick="setChartType('dual')" style="cursor:pointer">
-          <div><div class="set-lbl">Ingresos y gastos</div><div class="set-sub">Dos líneas separadas — verde ingresos, rojo gastos</div></div>
-          <div id="chart-type-dual" style="color:var(--gr);font-size:18px"></div>
-        </div>
-      </div>
-    </div>
+
     <div class="set-sec">
       <div class="set-sec-ttl" data-i18n="secAppearance">Apariencia</div>
       <div class="set-card">
@@ -2120,7 +2108,7 @@ if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
 if(typeof S.useThousands==='undefined') S.useThousands=true;
 if(typeof S.darkMode==='undefined') S.darkMode=true;
-if(!S.chartType) S.chartType='dual';
+
 // No secondaryCurrency state — foreign currencies tracked per-invest-transaction only
 
 // ═══════════════════════════════════════════
@@ -2144,7 +2132,7 @@ function goTo(id){
     's-goals':renderGoals,
     's-recurring':renderRecurring,
     's-profile':renderProfile,
-    's-settings':renderChartTypeUI,
+    's-settings':renderAccentDots,
     's-allTx':renderAllTx,
     's-monthly':()=>{monthlyYear=new Date().getFullYear();monthlyMonth=new Date().getMonth();renderMonthly();},
     's-split':()=>initSplit(),
@@ -2313,9 +2301,7 @@ function setFilter(p,el){
 // CHARTS
 // ═══════════════════════════════════════════
 function drawCanvas(txs, period) {
-  const chartType = S.chartType || 'dual';
-  if(chartType === 'net') drawNetCanvas(txs, period);
-  else drawDualCanvas(txs, period);
+  drawDualCanvas(txs, period);
 }
 
 function _buildPeriodData(txs, period) {
@@ -2501,21 +2487,6 @@ function drawNetCanvas(txs, period) {
   drawNetLine(netAccum, netColor, netFill);
 }
 
-function setChartType(type) {
-  S.chartType = type;
-  saveState();
-  renderChartTypeUI();
-  refreshHome();
-  showToast(type === 'net' ? '📈 Neto acumulado' : '📊 Ingresos y gastos');
-}
-
-function renderChartTypeUI() {
-  const type = S.chartType;
-  const netEl = document.getElementById('chart-type-net');
-  const dualEl = document.getElementById('chart-type-dual');
-  if(netEl)  netEl.textContent  = type === 'net'  ? '✓' : '';
-  if(dualEl) dualEl.textContent = type === 'dual' ? '✓' : '';
-}
 
 function drawChart(txs){
   drawCanvas(txs, curPeriod);
@@ -5253,7 +5224,6 @@ window.addEventListener('load',()=>{
   const togDk=document.getElementById('tog-dark'); if(togDk&&!S.darkMode) togDk.classList.remove('on');
   applyDarkMode(S.darkMode);
   updateLangUI();
-  renderChartTypeUI();
   applyRecurring();
   refreshHome();
   if(S.hidden) applyHide(true);
@@ -7639,7 +7609,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260322074932')
+    navigator.serviceWorker.register('./sw.js?v=20260322075133')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {

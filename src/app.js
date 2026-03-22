@@ -145,7 +145,7 @@ if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
 if(typeof S.useThousands==='undefined') S.useThousands=true;
 if(typeof S.darkMode==='undefined') S.darkMode=true;
-if(!S.chartType) S.chartType='dual';
+
 // No secondaryCurrency state — foreign currencies tracked per-invest-transaction only
 
 // ═══════════════════════════════════════════
@@ -169,7 +169,7 @@ function goTo(id){
     's-goals':renderGoals,
     's-recurring':renderRecurring,
     's-profile':renderProfile,
-    's-settings':renderChartTypeUI,
+    's-settings':renderAccentDots,
     's-allTx':renderAllTx,
     's-monthly':()=>{monthlyYear=new Date().getFullYear();monthlyMonth=new Date().getMonth();renderMonthly();},
     's-split':()=>initSplit(),
@@ -338,9 +338,7 @@ function setFilter(p,el){
 // CHARTS
 // ═══════════════════════════════════════════
 function drawCanvas(txs, period) {
-  const chartType = S.chartType || 'dual';
-  if(chartType === 'net') drawNetCanvas(txs, period);
-  else drawDualCanvas(txs, period);
+  drawDualCanvas(txs, period);
 }
 
 function _buildPeriodData(txs, period) {
@@ -526,21 +524,6 @@ function drawNetCanvas(txs, period) {
   drawNetLine(netAccum, netColor, netFill);
 }
 
-function setChartType(type) {
-  S.chartType = type;
-  saveState();
-  renderChartTypeUI();
-  refreshHome();
-  showToast(type === 'net' ? '📈 Neto acumulado' : '📊 Ingresos y gastos');
-}
-
-function renderChartTypeUI() {
-  const type = S.chartType;
-  const netEl = document.getElementById('chart-type-net');
-  const dualEl = document.getElementById('chart-type-dual');
-  if(netEl)  netEl.textContent  = type === 'net'  ? '✓' : '';
-  if(dualEl) dualEl.textContent = type === 'dual' ? '✓' : '';
-}
 
 function drawChart(txs){
   drawCanvas(txs, curPeriod);
@@ -3278,7 +3261,6 @@ window.addEventListener('load',()=>{
   const togDk=document.getElementById('tog-dark'); if(togDk&&!S.darkMode) togDk.classList.remove('on');
   applyDarkMode(S.darkMode);
   updateLangUI();
-  renderChartTypeUI();
   applyRecurring();
   refreshHome();
   if(S.hidden) applyHide(true);
