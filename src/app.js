@@ -185,7 +185,7 @@ function goBack(){
   // Refresh on return
   const R={'s-home':refreshHome,'s-invest':renderInvest,'s-cats':renderCatLists,
            's-budgets':renderBudgets,'s-goals':renderGoals,'s-monthly':renderMonthly,
-           's-recurring':renderRecurring,'s-split-expense':buildSplitCatGrid};
+           's-allTx':renderAllTx,'s-recurring':renderRecurring,'s-split-expense':buildSplitCatGrid};
   if(R[prev]) R[prev]();
 
   // Ocultar tacho al salir de s-add
@@ -711,6 +711,9 @@ function saveTx(){
   if(editingId){ const i=S.txs.findIndex(t=>t.id===editingId); if(i!==-1)S.txs[i]=tx; showToast('✅ Actualizado'); }
   else { S.txs.unshift(tx); showToast(`✅ ${txType==='income'?'+':'-'}${sym()}${fmt(amt)}`); }
   saveState();
+  if(typeof _authUser!=='undefined'&&_authUser&&typeof FIREBASE_ENABLED!=='undefined'&&FIREBASE_ENABLED){
+    clearTimeout(_syncDebounce); uploadToCloud(_authUser.uid);
+  }
   checkBudgetAlerts(tx);
   const wasInvest=txType==='invest';
   amtStr='0'; selCat=null; editingId=null;
