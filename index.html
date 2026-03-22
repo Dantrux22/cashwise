@@ -1825,8 +1825,8 @@ canvas.cv{width:100%;height:100%}
       <div id="auth-form-login">
         <input class="auth-input" type="email" placeholder="Email" id="auth-email-login" autocomplete="email" inputmode="email">
         <div class="auth-pass-wrap">
-          <input class="auth-input" type="password" placeholder="Contraseña" id="auth-pass-login" autocomplete="current-password" onkeydown="if(event.key==='Enter')authEmailLogin()" oninput="authPassInput(this,event)">
-          <button type="button" class="auth-pass-toggle" id="auth-pass-login-eye" onclick="authTogglePass('auth-pass-login')" tabindex="-1" aria-label="Mostrar contraseña"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <input class="auth-input" type="password" placeholder="Contraseña" id="auth-pass-login" autocomplete="current-password" onkeydown="if(event.key==='Enter')authEmailLogin()">
+          <button type="button" class="auth-pass-toggle" id="auth-pass-login-eye" onclick="authTogglePass('auth-pass-login')" tabindex="-1" aria-label="Mostrar contraseña"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
         </div>
         <div style="text-align:right;margin-bottom:14px">
           <span style="font-size:12px;color:var(--bl);cursor:pointer" onclick="authForgotPassword()">¿Olvidaste tu contraseña?</span>
@@ -1838,8 +1838,8 @@ canvas.cv{width:100%;height:100%}
         <input class="auth-input" type="text" placeholder="Tu nombre" id="auth-name-register" autocomplete="name">
         <input class="auth-input" type="email" placeholder="Email" id="auth-email-register" autocomplete="email" inputmode="email">
         <div class="auth-pass-wrap">
-          <input class="auth-input" type="password" placeholder="Contraseña (mín. 6 caracteres)" id="auth-pass-register" autocomplete="new-password" oninput="authPassInput(this,event)">
-          <button type="button" class="auth-pass-toggle" id="auth-pass-register-eye" onclick="authTogglePass('auth-pass-register')" tabindex="-1" aria-label="Mostrar contraseña"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <input class="auth-input" type="password" placeholder="Contraseña (mín. 6 caracteres)" id="auth-pass-register" autocomplete="new-password">
+          <button type="button" class="auth-pass-toggle" id="auth-pass-register-eye" onclick="authTogglePass('auth-pass-register')" tabindex="-1" aria-label="Mostrar contraseña"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
         </div>
         <button class="auth-btn primary" onclick="authEmailRegister()" id="btn-email-register">Crear cuenta</button>
       </div>
@@ -6916,58 +6916,24 @@ function hideAuthOverlay(){
   if(el) el.classList.add('hidden');
 }
 
-// ── Password show/hide toggle + last-char bubble reveal ──
+// ── Password show/hide toggle ──
+// Eye-off = password hidden (initial state); Eye-on = password visible
 const _EYE_ON  = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 const _EYE_OFF = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-const _passCharTimers = {};
-function _getPassBubble(){
-  let b=document.getElementById('pass-char-bubble');
-  if(!b){
-    b=document.createElement('div');
-    b.id='pass-char-bubble';
-    b.style.cssText='display:none;position:fixed;background:var(--s1);border:1px solid var(--br);border-radius:10px;padding:8px 14px;font-size:22px;font-family:"DM Sans",sans-serif;color:var(--tx);box-shadow:0 4px 16px rgba(0,0,0,.35);z-index:9999;pointer-events:none;text-align:center;line-height:1.2';
-    document.body.appendChild(b);
-  }
-  return b;
-}
 function authTogglePass(id){
   const inp=document.getElementById(id);
   const btn=document.getElementById(id+'-eye');
   if(!inp||!btn) return;
-  // hide bubble when toggling
-  const bubble=document.getElementById('pass-char-bubble');
-  if(bubble) bubble.style.display='none';
-  if(_passCharTimers[id]){ clearTimeout(_passCharTimers[id]); delete _passCharTimers[id]; }
-  const showing=inp.dataset.showPass==='1';
-  if(showing){
-    inp.dataset.showPass='0';
-    inp.type='password';
-    btn.innerHTML=_EYE_ON;
-    btn.setAttribute('aria-label','Mostrar contraseña');
-  } else {
-    inp.dataset.showPass='1';
+  const hidden=inp.type==='password';
+  if(hidden){
     inp.type='text';
-    btn.innerHTML=_EYE_OFF;
+    btn.innerHTML=_EYE_ON;
     btn.setAttribute('aria-label','Ocultar contraseña');
+  } else {
+    inp.type='password';
+    btn.innerHTML=_EYE_OFF;
+    btn.setAttribute('aria-label','Mostrar contraseña');
   }
-}
-function authPassInput(inp,e){
-  // inp is the element itself (passed via oninput="authPassInput(this,event)")
-  if(!inp||inp.dataset.showPass==='1') return; // user toggled to visible — skip
-  // determine the last typed character
-  const lastChar=e&&e.data?e.data[e.data.length-1]:(inp.value.length>0?inp.value[inp.value.length-1]:null);
-  if(!lastChar) return; // deletion or paste with no data — skip
-  // show bubble above the input centered horizontally
-  const bubble=_getPassBubble();
-  bubble.textContent=lastChar;
-  bubble.style.display='block';
-  const bRect=bubble.getBoundingClientRect();
-  const iRect=inp.getBoundingClientRect();
-  bubble.style.left=Math.max(4,iRect.left+iRect.width/2-bRect.width/2)+'px';
-  bubble.style.top=(iRect.top-bRect.height-8)+'px';
-  const id=inp.id;
-  if(_passCharTimers[id]) clearTimeout(_passCharTimers[id]);
-  _passCharTimers[id]=setTimeout(()=>{ bubble.style.display='none'; delete _passCharTimers[id]; },800);
 }
 
 // ── Tabs ──
@@ -7656,7 +7622,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260322052638')
+    navigator.serviceWorker.register('./sw.js?v=20260322053200')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
