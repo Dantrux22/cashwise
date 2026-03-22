@@ -5599,7 +5599,7 @@ function buildCatCircle(cat, type, isFreq){
   const opacity=isSelected?'1':'0.75';
   el.innerHTML=`
     <div class="tx-cat-circle-icon" style="background:${bg};opacity:${opacity}">${cat.e||'📁'}</div>
-    <div class="tx-cat-circle-name">${cat.n.length>11?cat.n.slice(0,10)+'…':cat.n}</div>`;
+    <div class="tx-cat-circle-name">${cat.n}</div>`;
   el.onclick=()=>{
     selCat=isSelected?null:cat.n;
     renderTxCatCircles(txType);
