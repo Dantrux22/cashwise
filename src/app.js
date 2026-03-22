@@ -1350,19 +1350,20 @@ function renderMonthly(){
     donutWrap.innerHTML=`<svg width="120" height="120" viewBox="0 0 120 120" style="flex-shrink:0">${svgPaths}</svg>${legend}`;
     scroll.appendChild(donutWrap);
 
-    // ── Categoría estrella ──
-    const topCat=entries[0];
-    if(topCat){
-      const cd=findCat('expense',topCat[0]);
+    // ── Mayor gasto individual del mes ──
+    const topTx=txs.filter(t=>t.type==='expense').sort((a,b)=>b.amount-a.amount)[0];
+    if(topTx){
+      const cd=findCat('expense',topTx.cat);
       const starDiv=document.createElement('div');
       starDiv.style.cssText='background:var(--amd);border:1px solid rgba(245,166,35,.25);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px';
       starDiv.innerHTML=`
-        <div style="font-size:28px">${cd?cd.e:'📦'}</div>
+        <div style="font-size:28px">${cd?cd.e:'💸'}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:10px;color:var(--am);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">⭐ Mayor gasto del mes</div>
-          <div style="font-size:14px;font-weight:600">${topCat[0]}</div>
+          <div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${topTx.note||topTx.cat||'Sin descripción'}</div>
+          <div style="font-size:11px;color:var(--mu);margin-top:1px">${topTx.cat||''}</div>
         </div>
-        <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--rd)">${s}${fmt(topCat[1])}</div>`;
+        <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--rd);flex-shrink:0">${s}${fmt(topTx.amount)}</div>`;
       scroll.appendChild(starDiv);
     }
 
