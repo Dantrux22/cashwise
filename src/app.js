@@ -68,14 +68,12 @@ const EMOJI_GROUPS = [
 ];
 const EMOJIS = EMOJI_GROUPS.flatMap(g=>g.emojis);
 const COLORS = [
-  '#34d48a','#22c55e','#84cc16','#4ade80',
-  '#6b8cff','#38bdf8','#06b6d4','#3b82f6',
-  '#f0566a','#f43f5e','#fb7185','#fda4af',
-  '#f5a623','#fb923c','#f59e0b','#fbbf24',
-  '#b57bee','#a855f7','#8b5cf6','#c084fc',
-  '#94a3b8','#64748b','#6b7280','#78716c',
+  '#FF6B6B','#FF8E53','#FFA500','#FFD93D','#F9F871','#6BCB77','#00C9A7','#4FFBDF',
+  '#4D96FF','#0081CF','#2C73D2','#0089BA','#845EC2','#C9B1FF','#D65DB1','#F178B6',
+  '#FF6F91','#FF9671','#FFC75F','#C34A36','#926C00','#008F7A','#007A5E','#00B8A9',
+  '#DEF7FF','#B0A8B9','#4B4453','#F8615A','#34d48a','#6b8cff',
 ];
-const ACCENTS = ['#34d48a','#6b8cff','#b57bee','#f5a623','#f0566a','#F4A7B9'];
+const ACCENTS = ['#34d48a','#6b8cff','#b57bee','#f5a623','#f0566a','#F4A7B9','#FF6B6B','#FF8E53','#FFD93D','#4D96FF','#845EC2','#D65DB1','#00C9A7'];
 const GOAL_EMOJIS = ['🎯','✈️','🏠','🚗','💻','📱','🎓','💍','🏖️','🎿','🏋️','💰','🌍','🎪','🎁'];
 const CURRENCIES = [
   {code:'ARS',name:'Peso Argentino',flag:'🇦🇷',sym:'$'},
@@ -1228,22 +1226,6 @@ function renderColorPicker(){
     b.style.background=col; b.onclick=()=>{ newCatColor=col; renderColorPicker(); };
     el.appendChild(b);
   });
-  // Custom color swatch
-  const isCustom=!COLORS.includes(newCatColor);
-  const custom=document.createElement('div');
-  custom.className='co-opt co-custom'+(isCustom?' sel':'');
-  custom.style.background=isCustom?newCatColor:'var(--s2)';
-  custom.innerHTML='<span style="font-size:14px;line-height:1;pointer-events:none">🎨</span>';
-  custom.onclick=()=>{
-    const inp=document.createElement('input'); inp.type='color';
-    inp.value=isCustom?newCatColor:'#ff6b6b';
-    inp.style.cssText='position:fixed;opacity:0;pointer-events:none;top:0;left:0';
-    document.body.appendChild(inp);
-    inp.oninput=()=>{ newCatColor=inp.value; renderColorPicker(); };
-    inp.onchange=()=>{ newCatColor=inp.value; renderColorPicker(); document.body.removeChild(inp); };
-    inp.click();
-  };
-  el.appendChild(custom);
 }
 
 function saveCat(){
@@ -1878,26 +1860,6 @@ function renderAccentDots(){
     d.onclick=()=>{ S.accent=col; saveState(); document.documentElement.style.setProperty('--gr',col); renderAccentDots(); };
     el.appendChild(d);
   });
-  // Custom accent picker
-  const isCustom=!ACCENTS.includes(S.accent);
-  const custom=document.createElement('div');
-  custom.className='ac-dot ac-custom'+(isCustom?' sel':'');
-  custom.style.background=isCustom?S.accent:'var(--s2)';
-  custom.innerHTML='<span style="font-size:11px;line-height:1;pointer-events:none">🎨</span>';
-  custom.onclick=()=>{
-    const inp=document.createElement('input'); inp.type='color';
-    inp.value=isCustom?S.accent:'#34d48a';
-    inp.style.cssText='position:fixed;opacity:0;pointer-events:none;top:0;left:0';
-    document.body.appendChild(inp);
-    inp.oninput=()=>{ document.documentElement.style.setProperty('--gr',inp.value); };
-    inp.onchange=()=>{
-      S.accent=inp.value; saveState();
-      document.documentElement.style.setProperty('--gr',inp.value);
-      renderAccentDots(); document.body.removeChild(inp);
-    };
-    inp.click();
-  };
-  el.appendChild(custom);
 }
 
 // ═══════════════════════════════════════════

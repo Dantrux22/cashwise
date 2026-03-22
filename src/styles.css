@@ -324,11 +324,9 @@ canvas.cv{width:100%;height:100%}
 .em-group-row{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:2px}
 .em-opt{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;background:var(--s2);border:2px solid transparent;transition:all .14s}
 .em-opt.sel{border-color:var(--gr);background:var(--gd)}
-.color-picker{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin-bottom:18px}
-.co-opt{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .14s;display:flex;align-items:center;justify-content:center}
+.color-picker{display:grid;grid-template-columns:repeat(10,1fr);gap:7px;margin-bottom:18px}
+.co-opt{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .14s}
 .co-opt.sel{border-color:#fff;transform:scale(1.12)}
-.co-custom{background:var(--s2)}
-.ac-custom{display:flex;align-items:center;justify-content:center}
 
 /* CURRENCY */
 .curr-modal{position:absolute;inset:0;z-index:100;display:flex;align-items:flex-end}
