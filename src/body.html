@@ -1218,7 +1218,10 @@
       <!-- Login form -->
       <div id="auth-form-login">
         <input class="auth-input" type="email" placeholder="Email" id="auth-email-login" autocomplete="email" inputmode="email">
-        <input class="auth-input" type="password" placeholder="Contraseña" id="auth-pass-login" autocomplete="current-password" onkeydown="if(event.key==='Enter')authEmailLogin()">
+        <div class="auth-pass-wrap">
+          <input class="auth-input" type="password" placeholder="Contraseña" id="auth-pass-login" autocomplete="current-password" onkeydown="if(event.key==='Enter')authEmailLogin()" oninput="authPassInput('auth-pass-login')">
+          <button type="button" class="auth-pass-toggle" id="auth-pass-login-eye" onclick="authTogglePass('auth-pass-login')" tabindex="-1" aria-label="Mostrar contraseña"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
         <div style="text-align:right;margin-bottom:14px">
           <span style="font-size:12px;color:var(--bl);cursor:pointer" onclick="authForgotPassword()">¿Olvidaste tu contraseña?</span>
         </div>
@@ -1228,7 +1231,10 @@
       <div id="auth-form-register" style="display:none">
         <input class="auth-input" type="text" placeholder="Tu nombre" id="auth-name-register" autocomplete="name">
         <input class="auth-input" type="email" placeholder="Email" id="auth-email-register" autocomplete="email" inputmode="email">
-        <input class="auth-input" type="password" placeholder="Contraseña (mín. 6 caracteres)" id="auth-pass-register" autocomplete="new-password">
+        <div class="auth-pass-wrap">
+          <input class="auth-input" type="password" placeholder="Contraseña (mín. 6 caracteres)" id="auth-pass-register" autocomplete="new-password" oninput="authPassInput('auth-pass-register')">
+          <button type="button" class="auth-pass-toggle" id="auth-pass-register-eye" onclick="authTogglePass('auth-pass-register')" tabindex="-1" aria-label="Mostrar contraseña"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
         <button class="auth-btn primary" onclick="authEmailRegister()" id="btn-email-register">Crear cuenta</button>
       </div>
       <!-- Google -->

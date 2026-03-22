@@ -4943,6 +4943,37 @@ function hideAuthOverlay(){
   if(el) el.classList.add('hidden');
 }
 
+// ── Password show/hide toggle + brief-reveal on input ──
+const _EYE_ON  = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const _EYE_OFF = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+const _passRevealTimers = {};
+function authTogglePass(id){
+  const inp = document.getElementById(id);
+  const btn = document.getElementById(id+'-eye');
+  if(!inp||!btn) return;
+  const showing = inp.dataset.showPass==='1';
+  if(showing){
+    inp.dataset.showPass='0';
+    inp.type='password';
+    btn.innerHTML=_EYE_ON;
+    btn.setAttribute('aria-label','Mostrar contraseña');
+  } else {
+    // cancel any pending reveal timer before taking control
+    if(_passRevealTimers[id]){ clearTimeout(_passRevealTimers[id]); delete _passRevealTimers[id]; }
+    inp.dataset.showPass='1';
+    inp.type='text';
+    btn.innerHTML=_EYE_OFF;
+    btn.setAttribute('aria-label','Ocultar contraseña');
+  }
+}
+function authPassInput(id){
+  const inp = document.getElementById(id);
+  if(!inp||inp.dataset.showPass==='1') return; // user-toggled-show: skip flash
+  if(_passRevealTimers[id]){ clearTimeout(_passRevealTimers[id]); }
+  else { inp.type='text'; }
+  _passRevealTimers[id]=setTimeout(()=>{ inp.type='password'; delete _passRevealTimers[id]; },800);
+}
+
 // ── Tabs ──
 function switchAuthTab(tab){
   _authTab = tab;
