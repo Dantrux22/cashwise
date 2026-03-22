@@ -4943,35 +4943,58 @@ function hideAuthOverlay(){
   if(el) el.classList.add('hidden');
 }
 
-// ── Password show/hide toggle + brief-reveal on input ──
+// ── Password show/hide toggle + last-char bubble reveal ──
 const _EYE_ON  = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 const _EYE_OFF = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-const _passRevealTimers = {};
+const _passCharTimers = {};
+function _getPassBubble(){
+  let b=document.getElementById('pass-char-bubble');
+  if(!b){
+    b=document.createElement('div');
+    b.id='pass-char-bubble';
+    b.style.cssText='display:none;position:fixed;background:var(--s1);border:1px solid var(--br);border-radius:10px;padding:8px 14px;font-size:22px;font-family:"DM Sans",sans-serif;color:var(--tx);box-shadow:0 4px 16px rgba(0,0,0,.35);z-index:9999;pointer-events:none;text-align:center;line-height:1.2';
+    document.body.appendChild(b);
+  }
+  return b;
+}
 function authTogglePass(id){
-  const inp = document.getElementById(id);
-  const btn = document.getElementById(id+'-eye');
+  const inp=document.getElementById(id);
+  const btn=document.getElementById(id+'-eye');
   if(!inp||!btn) return;
-  const showing = inp.dataset.showPass==='1';
+  // hide bubble when toggling
+  const bubble=document.getElementById('pass-char-bubble');
+  if(bubble) bubble.style.display='none';
+  if(_passCharTimers[id]){ clearTimeout(_passCharTimers[id]); delete _passCharTimers[id]; }
+  const showing=inp.dataset.showPass==='1';
   if(showing){
     inp.dataset.showPass='0';
     inp.type='password';
     btn.innerHTML=_EYE_ON;
     btn.setAttribute('aria-label','Mostrar contraseña');
   } else {
-    // cancel any pending reveal timer before taking control
-    if(_passRevealTimers[id]){ clearTimeout(_passRevealTimers[id]); delete _passRevealTimers[id]; }
     inp.dataset.showPass='1';
     inp.type='text';
     btn.innerHTML=_EYE_OFF;
     btn.setAttribute('aria-label','Ocultar contraseña');
   }
 }
-function authPassInput(id){
-  const inp = document.getElementById(id);
-  if(!inp||inp.dataset.showPass==='1') return; // user-toggled-show: skip flash
-  if(_passRevealTimers[id]){ clearTimeout(_passRevealTimers[id]); }
-  else { inp.type='text'; }
-  _passRevealTimers[id]=setTimeout(()=>{ inp.type='password'; delete _passRevealTimers[id]; },800);
+function authPassInput(inp,e){
+  // inp is the element itself (passed via oninput="authPassInput(this,event)")
+  if(!inp||inp.dataset.showPass==='1') return; // user toggled to visible — skip
+  // determine the last typed character
+  const lastChar=e&&e.data?e.data[e.data.length-1]:(inp.value.length>0?inp.value[inp.value.length-1]:null);
+  if(!lastChar) return; // deletion or paste with no data — skip
+  // show bubble above the input centered horizontally
+  const bubble=_getPassBubble();
+  bubble.textContent=lastChar;
+  bubble.style.display='block';
+  const bRect=bubble.getBoundingClientRect();
+  const iRect=inp.getBoundingClientRect();
+  bubble.style.left=Math.max(4,iRect.left+iRect.width/2-bRect.width/2)+'px';
+  bubble.style.top=(iRect.top-bRect.height-8)+'px';
+  const id=inp.id;
+  if(_passCharTimers[id]) clearTimeout(_passCharTimers[id]);
+  _passCharTimers[id]=setTimeout(()=>{ bubble.style.display='none'; delete _passCharTimers[id]; },800);
 }
 
 // ── Tabs ──
