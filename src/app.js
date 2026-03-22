@@ -53,23 +53,29 @@ const DEFAULT_CATS = {
   ]
 };
 
-const EMOJIS = [
-  '🛒','🍽️','🚗','🏠','💊','🎬','👗','📱','☕','🍕','🚕','⛽','🛵','🚲','🚌',
-  '💼','💻','📈','📊','💰','🏦','💳','🧾','📋','🖥️','📞','✉️','🏧','💵','🤝',
-  '🎮','✈️','🎓','🎵','🎸','🎨','📚','🏋️','⚽','🎾','🏊','🧘','🎯','🎲','🎪',
-  '🌿','⚡','🐶','🐱','🏡','🌱','☀️','🌙','❄️','🔥','🌈','🍀','⭐','💫','🎉',
-  '🏥','💈','🧴','💄','🧹','🛁','💪','🧠','❤️','🎁','🛍️','✨','🔑','🏆','📦',
-  '🎪','🎭','🎊','🚀','🌍','🏖️','🎿','🎳','🏄','🚴','🤸','⛰️','🌋','🏕️','🎠',
+const EMOJI_GROUPS = [
+  {label:'🍕 Comida',     emojis:['🍕','🍔','🌮','🍜','🍣','🥗','🍷','🧃','🍺','🥤','🍦','🧁','☕','🫖']},
+  {label:'🏠 Hogar',      emojis:['🏠','🛋️','🪴','💡','🔧','🛁','🧹','🪣','🏡','🛏️']},
+  {label:'🚗 Transporte', emojis:['🚗','🚕','🚌','🚂','✈️','🛵','🚲','⛽','🅿️','🚦']},
+  {label:'💊 Salud',      emojis:['💊','🏥','🧬','💉','🩺','🏋️','🧘','🦷','👓']},
+  {label:'🎮 Entrete.',   emojis:['🎮','🎬','🎵','🎭','🎨','📚','🎲','🎯','🏆','🎪']},
+  {label:'👗 Ropa',       emojis:['👗','👟','👔','👜','🧢','💍','💄']},
+  {label:'💼 Trabajo',    emojis:['💼','📊','💻','🖥️','📱','⌨️','🖨️','📋']},
+  {label:'🐾 Mascotas',   emojis:['🐶','🐱','🐟','🐹','🐰','🦜']},
+  {label:'✈️ Viajes',     emojis:['✈️','🏖️','🏔️','🗺️','🧳','🏕️','🎡']},
+  {label:'💰 Finanzas',   emojis:['💰','💳','🏦','📈','💵','🪙']},
+  {label:'🎁 Otros',      emojis:['🎁','🎀','💝','🔑','🧸','🪆','⭐','🌟']},
 ];
+const EMOJIS = EMOJI_GROUPS.flatMap(g=>g.emojis);
 const COLORS = [
-  '#34d48a','#22c55e','#84cc16','#a3e635',
+  '#34d48a','#22c55e','#84cc16','#4ade80',
   '#6b8cff','#38bdf8','#06b6d4','#3b82f6',
-  '#f0566a','#f43f5e','#e879f9','#d946ef',
-  '#f5a623','#fb923c','#f59e0b','#eab308',
-  '#b57bee','#a855f7','#8b5cf6','#7c3aed',
+  '#f0566a','#f43f5e','#fb7185','#fda4af',
+  '#f5a623','#fb923c','#f59e0b','#fbbf24',
+  '#b57bee','#a855f7','#8b5cf6','#c084fc',
   '#94a3b8','#64748b','#6b7280','#78716c',
 ];
-const ACCENTS = ['#34d48a','#6b8cff','#b57bee','#f5a623','#f0566a'];
+const ACCENTS = ['#34d48a','#6b8cff','#b57bee','#f5a623','#f0566a','#F4A7B9'];
 const GOAL_EMOJIS = ['🎯','✈️','🏠','🚗','💻','📱','🎓','💍','🏖️','🎿','🏋️','💰','🌍','🎪','🎁'];
 const CURRENCIES = [
   {code:'ARS',name:'Peso Argentino',flag:'🇦🇷',sym:'$'},
@@ -1203,10 +1209,16 @@ function closeCatModal(){ document.getElementById('cat-modal').classList.add('hi
 
 function renderEmojiPicker(){
   const el=document.getElementById('emoji-picker'); el.innerHTML='';
-  EMOJIS.forEach(em=>{
-    const b=document.createElement('div'); b.className='em-opt'+(em===newCatEmoji?' sel':'');
-    b.textContent=em; b.onclick=()=>{ newCatEmoji=em; renderEmojiPicker(); };
-    el.appendChild(b);
+  EMOJI_GROUPS.forEach(group=>{
+    const lbl=document.createElement('div'); lbl.className='em-group-lbl';
+    lbl.textContent=group.label; el.appendChild(lbl);
+    const row=document.createElement('div'); row.className='em-group-row';
+    group.emojis.forEach(em=>{
+      const b=document.createElement('div'); b.className='em-opt'+(em===newCatEmoji?' sel':'');
+      b.textContent=em; b.onclick=()=>{ newCatEmoji=em; renderEmojiPicker(); };
+      row.appendChild(b);
+    });
+    el.appendChild(row);
   });
 }
 function renderColorPicker(){
@@ -1216,6 +1228,22 @@ function renderColorPicker(){
     b.style.background=col; b.onclick=()=>{ newCatColor=col; renderColorPicker(); };
     el.appendChild(b);
   });
+  // Custom color swatch
+  const isCustom=!COLORS.includes(newCatColor);
+  const custom=document.createElement('div');
+  custom.className='co-opt co-custom'+(isCustom?' sel':'');
+  custom.style.background=isCustom?newCatColor:'var(--s2)';
+  custom.innerHTML='<span style="font-size:14px;line-height:1;pointer-events:none">🎨</span>';
+  custom.onclick=()=>{
+    const inp=document.createElement('input'); inp.type='color';
+    inp.value=isCustom?newCatColor:'#ff6b6b';
+    inp.style.cssText='position:fixed;opacity:0;pointer-events:none;top:0;left:0';
+    document.body.appendChild(inp);
+    inp.oninput=()=>{ newCatColor=inp.value; renderColorPicker(); };
+    inp.onchange=()=>{ newCatColor=inp.value; renderColorPicker(); document.body.removeChild(inp); };
+    inp.click();
+  };
+  el.appendChild(custom);
 }
 
 function saveCat(){
@@ -1850,6 +1878,26 @@ function renderAccentDots(){
     d.onclick=()=>{ S.accent=col; saveState(); document.documentElement.style.setProperty('--gr',col); renderAccentDots(); };
     el.appendChild(d);
   });
+  // Custom accent picker
+  const isCustom=!ACCENTS.includes(S.accent);
+  const custom=document.createElement('div');
+  custom.className='ac-dot ac-custom'+(isCustom?' sel':'');
+  custom.style.background=isCustom?S.accent:'var(--s2)';
+  custom.innerHTML='<span style="font-size:11px;line-height:1;pointer-events:none">🎨</span>';
+  custom.onclick=()=>{
+    const inp=document.createElement('input'); inp.type='color';
+    inp.value=isCustom?S.accent:'#34d48a';
+    inp.style.cssText='position:fixed;opacity:0;pointer-events:none;top:0;left:0';
+    document.body.appendChild(inp);
+    inp.oninput=()=>{ document.documentElement.style.setProperty('--gr',inp.value); };
+    inp.onchange=()=>{
+      S.accent=inp.value; saveState();
+      document.documentElement.style.setProperty('--gr',inp.value);
+      renderAccentDots(); document.body.removeChild(inp);
+    };
+    inp.click();
+  };
+  el.appendChild(custom);
 }
 
 // ═══════════════════════════════════════════
