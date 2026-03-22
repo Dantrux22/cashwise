@@ -2431,61 +2431,6 @@ function drawDualCanvas(txs, period) {
   drawLine(incData, '#34D48A');
 }
 
-function drawNetCanvas(txs, period) {
-  const cv = _initCanvas('chart-cv'); if(!cv) return;
-  const { ctx, w, h } = cv;
-  const { incData, expData } = _buildPeriodData(txs, period);
-  if(!incData.length && !expData.length) return;
-
-  // Acumulados
-  let incCum = 0, netCum = 0;
-  const incAccum = incData.map(inc => { incCum += inc; return incCum; });
-  const netAccum = incData.map((inc, i) => { netCum += inc - (expData[i]||0); return netCum; });
-
-  const n = incAccum.length;
-  const minVal = Math.min(...netAccum, 0);
-  const maxVal = Math.max(...incAccum, ...netAccum, 1);
-  const range = maxVal - minVal || 1;
-  const PAD = {l:8, r:16, t:16, b:8};
-  const cw = w - PAD.l - PAD.r, ch = h - PAD.t - PAD.b;
-  const xp = i => PAD.l + (i/(n-1||1))*cw;
-  const yp = v => PAD.t + ch - ((v - minVal)/range)*ch;
-  const zero = yp(0);
-
-  function drawNetLine(data, color, fillColor) {
-    if(data.every(v=>v===0)) return;
-    ctx.beginPath();
-    ctx.moveTo(xp(0), zero);
-    ctx.lineTo(xp(0), yp(data[0]));
-    for(let i=1; i<n; i++) {
-      const cpx = (xp(i-1)+xp(i))/2;
-      ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
-    }
-    ctx.lineTo(xp(n-1), zero);
-    ctx.closePath();
-    ctx.fillStyle = fillColor; ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(xp(0), yp(data[0]));
-    for(let i=1; i<n; i++) {
-      const cpx = (xp(i-1)+xp(i))/2;
-      ctx.bezierCurveTo(cpx, yp(data[i-1]), cpx, yp(data[i]), xp(i), yp(data[i]));
-    }
-    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(xp(n-1), yp(data[n-1]), 5, 0, Math.PI*2);
-    ctx.fillStyle = color; ctx.fill();
-    ctx.beginPath();
-    ctx.arc(xp(n-1), yp(data[n-1]), 2.5, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(15,15,19,0.8)'; ctx.fill();
-  }
-
-  // Ingresos acumulados: siempre verde (siempre positivo)
-  drawNetLine(incAccum, 'rgba(52,212,138,0.5)', 'rgba(52,212,138,0.08)');
-  // Neto acumulado: verde si positivo, rojo si negativo
-  const netColor = netAccum[n-1] >= 0 ? '#34D48A' : '#f0566a';
-  const netFill  = netAccum[n-1] >= 0 ? 'rgba(52,212,138,0.08)' : 'rgba(240,86,106,0.08)';
-  drawNetLine(netAccum, netColor, netFill);
-}
 
 
 function drawChart(txs){
@@ -7609,7 +7554,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260322075133')
+    navigator.serviceWorker.register('./sw.js?v=20260322075539')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
