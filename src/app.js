@@ -145,6 +145,7 @@ if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
 if(typeof S.useThousands==='undefined') S.useThousands=true;
 if(typeof S.darkMode==='undefined') S.darkMode=true;
+if(!S.chartType) S.chartType='dual';
 // No secondaryCurrency state — foreign currencies tracked per-invest-transaction only
 
 // ═══════════════════════════════════════════
@@ -398,49 +399,13 @@ function _initCanvas(id) {
   return { canvas, ctx, w, h };
 }
 
-// Gráfico dual: bezier para semana/mes/año, líneas rectas para todo
+// Gráfico dual: ingresos y gastos por período (sin acumulado)
 function drawDualCanvas(txs, period) {
   const cv = _initCanvas('chart-cv'); if(!cv) return;
   const { ctx, w, h } = cv;
-  let { incData, expData } = _buildPeriodData(txs, period);
+  const { incData, expData } = _buildPeriodData(txs, period);
   if(!incData.length) return;
 
-  if(period === 'todo') {
-    let incCum = [], expCum = [], iSum = 0, eSum = 0;
-    for(let i = 0; i < incData.length; i++) {
-      iSum += incData[i]; incCum.push(iSum);
-      eSum += expData[i]; expCum.push(eSum);
-    }
-    incData = incCum; expData = expCum;
-    const maxVal = Math.max(...incData, ...expData, 1);
-    const PAD = {l:8, r:24, t:16, b:8};
-    const cw = w - PAD.l - PAD.r, ch = h - PAD.t - PAD.b;
-    const n = incData.length;
-    const xp = i => PAD.l + (i/(n-1||1))*cw;
-    const yp = v => PAD.t + ch - (v/maxVal)*ch;
-    function drawCleanLine(data, color) {
-      if(!data.length || data.every(v=>v===0)) return;
-      ctx.beginPath();
-      ctx.moveTo(xp(0), yp(0));
-      ctx.lineTo(xp(0), yp(data[0]));
-      for(let i=1; i<data.length; i++) ctx.lineTo(xp(i), yp(data[i]));
-      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(xp(data.length-1), yp(data[data.length-1]), 5, 0, Math.PI*2);
-      ctx.fillStyle = color; ctx.fill();
-      ctx.beginPath();
-      ctx.arc(xp(data.length-1), yp(data[data.length-1]), 2.5, 0, Math.PI*2);
-      ctx.fillStyle = '#0f0f13'; ctx.fill();
-    }
-    drawCleanLine(expData, '#f0566a');
-    drawCleanLine(incData, '#34D48A');
-    return;
-  }
-
-  // Semana / mes / año: acumulado con bezier
-  let iSum2 = 0, eSum2 = 0;
-  incData = incData.map(v => { iSum2 += v; return iSum2; });
-  expData = expData.map(v => { eSum2 += v; return eSum2; });
   const n = incData.length;
   const maxVal = Math.max(...incData, ...expData, 1);
   const PAD = {l:8, r:16, t:16, b:8};
@@ -458,10 +423,10 @@ function drawDualCanvas(txs, period) {
     }
     ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
     ctx.beginPath();
-    ctx.arc(xp(data.length-1), yp(data[data.length-1]), 5, 0, Math.PI*2);
+    ctx.arc(xp(n-1), yp(data[n-1]), 5, 0, Math.PI*2);
     ctx.fillStyle = color; ctx.fill();
     ctx.beginPath();
-    ctx.arc(xp(data.length-1), yp(data[data.length-1]), 2.5, 0, Math.PI*2);
+    ctx.arc(xp(n-1), yp(data[n-1]), 2.5, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(15,15,19,0.8)'; ctx.fill();
   }
 
@@ -534,10 +499,10 @@ function setChartType(type) {
 }
 
 function renderChartTypeUI() {
-  const type = S.chartType || 'dual';
+  const type = S.chartType;
   const netEl = document.getElementById('chart-type-net');
   const dualEl = document.getElementById('chart-type-dual');
-  if(netEl) netEl.textContent = type === 'net' ? '✓' : '';
+  if(netEl)  netEl.textContent  = type === 'net'  ? '✓' : '';
   if(dualEl) dualEl.textContent = type === 'dual' ? '✓' : '';
 }
 
