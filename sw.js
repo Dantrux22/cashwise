@@ -1,6 +1,6 @@
 // CashWise Service Worker
-// Cache version is injected by build.py at build time — never edit 20260322075539 manually.
-const CACHE_VERSION = '20260322075539';
+// Cache version is injected by build.py at build time — never edit 20260401221718 manually.
+const CACHE_VERSION = '20260401221718';
 const APP_CACHE    = 'cw-app-'    + CACHE_VERSION; // network-first (HTML/JS/CSS)
 const ASSET_CACHE  = 'cw-assets-' + CACHE_VERSION; // cache-first (icons, fonts)
 

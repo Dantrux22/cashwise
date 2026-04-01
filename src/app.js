@@ -227,9 +227,10 @@ function dayLabel(iso){
   const d=new Date(iso), now=new Date(), yes=new Date();
   yes.setDate(yes.getDate()-1);
   const M=MSHORT, D=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  if(d.toDateString()===now.toDateString()) return `Hoy — ${d.getDate()} ${M[d.getMonth()]}`;
-  if(d.toDateString()===yes.toDateString()) return `Ayer — ${d.getDate()} ${M[d.getMonth()]}`;
-  return `${D[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]}`;
+  const dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0');
+  if(d.toDateString()===now.toDateString()) return `Hoy — ${dd}/${mm}`;
+  if(d.toDateString()===yes.toDateString()) return `Ayer — ${dd}/${mm}`;
+  return `${D[d.getDay()]} ${dd}/${mm}`;
 }
 
 function sameWeek(a){
@@ -524,7 +525,7 @@ function buildTxItem(tx){
     </div>
     <div class="tx-r">
       <div class="tx-amt ${cls}">${isIn?'+':isV?'':'-'}${txSym}${fmt(tx.amount)}${amtSuffix}</div>
-      <div class="tx-dt">${tx.date.slice(5,10).replace('-','/')}</div>
+      <div class="tx-dt">${tx.date.slice(8,10)}/${tx.date.slice(5,7)}</div>
     </div>`;
   el.onclick=()=>openEdit(tx.id);
   return el;
@@ -787,7 +788,7 @@ function renderInvest(){
       <div class="inv-ico">${cat?cat.e:'📈'}</div>
       <div class="inv-info">
         <div class="inv-name">${tx.note||tx.cat||'Inversión'}</div>
-        <div class="inv-sub">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${tx.date.slice(0,10)}</div>
+        <div class="inv-sub">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${tx.date.slice(8,10)}/${tx.date.slice(5,7)}</div>
       </div>
       <div class="inv-r"><div class="inv-val" style="color:${amtColor}">${amtStr}</div></div>`;
     el.style.cursor='pointer';
@@ -1935,7 +1936,7 @@ function exportCSVNew(){
   const typeLabel={'income':'Ingreso','expense':'Gasto','invest':'Inversión'};
   S.txs.forEach(t=>{
     const d=new Date(t.date);
-    const fecha=d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+    const fecha=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
     rows.push([fecha, typeLabel[t.type]||t.type, t.amount, t.cat||'', t.note||'']);
   });
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
@@ -1957,7 +1958,7 @@ function exportXLSX(){
       'Category': t.cat || 'General',
       'Description': t.note || '',
       'Person': S.userName || 'Usuario',
-      'Date': new Date(t.date).toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'}),
+      'Date': (d=>{return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();})(new Date(t.date)),
       'Amount': t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
       'Recurring': t.recurringId ? 'Yes' : 'No',
       'Payment status': 'Settled'
@@ -1993,7 +1994,7 @@ async function exportPDF(){
     doc.text('fin\xB7flow',14,18);
     doc.setFontSize(10); doc.setTextColor(120,120,160);
     const now=new Date();
-    doc.text('Historial exportado '+now.toLocaleDateString('es-AR'),14,25);
+    doc.text('Historial exportado '+String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear(),14,25);
     // Totales
     const totIncome=S.txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
     const totExpense=S.txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
@@ -2004,7 +2005,7 @@ async function exportPDF(){
     const typeLabel={'income':'Ingreso','expense':'Gasto','invest':'Inversión'};
     const rows=S.txs.map(t=>{
       const d=new Date(t.date);
-      return [d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear(), typeLabel[t.type]||t.type, sym()+fmt(t.amount), t.cat||'', t.note||''];
+      return [String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(), typeLabel[t.type]||t.type, sym()+fmt(t.amount), t.cat||'', t.note||''];
     });
     doc.autoTable({
       startY:37,
@@ -2316,7 +2317,7 @@ function showImportPreview(){
   rows.innerHTML='';
   _pendingImportTxs.slice(0,5).forEach(t=>{
     const d=new Date(t.date);
-    const fecha=d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+    const fecha=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
     const row=document.createElement('div');
     row.className='import-preview-row';
     row.innerHTML='<span style="flex:1;color:var(--mu)">'+fecha+'</span>'
@@ -2407,8 +2408,7 @@ function renderProfile(){
   const spent = S.txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
   const catCount = [...new Set(S.txs.map(t=>t.cat))].length;
   const since = S.txs.length > 0
-    ? new Date([...S.txs].sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date)
-        .toLocaleDateString('es',{month:'short',year:'numeric'})
+    ? (d=>{return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();})(new Date([...S.txs].sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date))
     : '—';
 
   const statTxs = document.getElementById('stat-txs');
@@ -2454,7 +2454,7 @@ function renderProfile(){
         <div class="set-row" onclick="forceSync()" style="cursor:pointer">
           <div>
             <div class="set-lbl">Sincronizar ahora</div>
-            <div class="set-sub">${S.lastSync?'Última: '+new Date(S.lastSync).toLocaleString('es',{timeStyle:'short',dateStyle:'short'}):'Sincronización automática activa'}</div>
+            <div class="set-sub">${S.lastSync?'Última: '+(d=>{return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})(new Date(S.lastSync)):'Sincronización automática activa'}</div>
           </div>
           <div style="color:var(--bl)">↑</div>
         </div>
@@ -2774,7 +2774,7 @@ function openGoalHistory(id){
       el.innerHTML=`
         <div>
           <div style="font-size:13px;font-weight:500">${sym()}${fmt(d.amount)}</div>
-          <div style="font-size:11px;color:var(--mu)">${new Date(d.date).toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'})}</div>
+          <div style="font-size:11px;color:var(--mu)">${(dt=>{return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');})(new Date(d.date))}</div>
         </div>
         <button onclick="undoGoalDeposit('${id}',${deposits.length-1-i})" style="background:var(--rdd);border:none;color:var(--rd);padding:6px 12px;border-radius:9px;font-size:12px;cursor:pointer">Deshacer</button>`;
       list.appendChild(el);
@@ -3794,7 +3794,7 @@ function renderSplitActivity(container){
         <div class="sp-exp-icon">${exp.emoji||'💸'}</div>
         <div style="flex:1;min-width:0">
           <div class="sp-exp-desc">${exp.desc||'Gasto'}</div>
-          <div class="sp-exp-meta">Pagó ${payer} · ${g?g.name:''} · ${exp.date.slice(0,10)}</div>
+          <div class="sp-exp-meta">Pagó ${payer} · ${g?g.name:''} · ${exp.date.slice(8,10)}/${exp.date.slice(5,7)}/${exp.date.slice(0,4)}</div>
         </div>
         <div class="sp-exp-amt">${spSym()}${spFmt(exp.amount)}</div>
       </div>`;
@@ -3860,7 +3860,7 @@ function renderGroupExpenses(container){
         <div class="sp-exp-icon">${exp.isSettlement?'✅':(exp.emoji||'💸')}</div>
         <div style="flex:1;min-width:0">
           <div class="sp-exp-desc">${exp.desc||'Gasto'}${exp.isSettlement?' <span style="font-size:10px;color:var(--mu)">(pago)</span>':''}</div>
-          <div class="sp-exp-meta">Pagó ${payer} · ${exp.date.slice(5,10).replace('-','/')}</div>
+          <div class="sp-exp-meta">Pagó ${payer} · ${exp.date.slice(8,10)}/${exp.date.slice(5,7)}</div>
         </div>
         <div style="text-align:right">
           <div class="sp-exp-amt">${spSym()}${spFmt(exp.amount)}</div>
@@ -3952,7 +3952,7 @@ function renderGroupBalances(container){
         el.style.cssText='background:var(--gd);border:1px solid rgba(52,212,138,.15);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:7px';
         el.innerHTML=`<div style="font-size:18px">✅</div>
           <div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--gr)">${fromN} le pagó a ${toN}</div>
-          <div style="font-size:10px;color:var(--mu);margin-top:1px">${s.date.slice(0,10)}</div></div>
+          <div style="font-size:10px;color:var(--mu);margin-top:1px">${s.date.slice(8,10)}/${s.date.slice(5,7)}</div></div>
           <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--gr)">${spSym()}${spFmt(s.amount)}</div>`;
         container.appendChild(el);
       });
@@ -4120,7 +4120,7 @@ function openSplitExpDetail(expId){
     <div style="font-size:38px;margin-bottom:10px">${exp.isSettlement?'✅':(exp.emoji||'💸')}</div>
     <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--bl)">${spSym()}${spFmt(exp.amount)}</div>
     <div style="font-size:15px;font-weight:500;margin-top:6px">${exp.desc||'Gasto'}</div>
-    <div style="font-size:11px;color:var(--mu);margin-top:4px">${g?g.name:''} · ${exp.date.slice(0,10)} · Pagó <strong>${getMemberName(exp.groupId,exp.payerId)}</strong></div>`;
+    <div style="font-size:11px;color:var(--mu);margin-top:4px">${g?g.name:''} · ${exp.date.slice(8,10)}/${exp.date.slice(5,7)}/${exp.date.slice(0,4)} · Pagó <strong>${getMemberName(exp.groupId,exp.payerId)}</strong></div>`;
   scroll.appendChild(hdr);
 
   // División
@@ -4162,7 +4162,7 @@ function openSplitExpDetail(expId){
     exp.comments.forEach(cm=>{
       const el=document.createElement('div');
       el.style.cssText='background:var(--s2);border-radius:10px;padding:9px 12px;margin-bottom:6px';
-      el.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--bl)">${cm.author}</div><div style="font-size:12px;line-height:1.5;margin-top:2px">${cm.text}</div><div style="font-size:10px;color:var(--mu);margin-top:2px">${cm.date.slice(0,10)}</div>`;
+      el.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--bl)">${cm.author}</div><div style="font-size:12px;line-height:1.5;margin-top:2px">${cm.text}</div><div style="font-size:10px;color:var(--mu);margin-top:2px">${cm.date.slice(8,10)}/${cm.date.slice(5,7)}</div>`;
       scroll.appendChild(el);
     });
   }
@@ -5568,7 +5568,7 @@ function updateDateLbl(){
   const diff=Math.round((d-today)/(1000*60*60*24));
   if(diff===0) el.textContent='Hoy';
   else if(diff===-1) el.textContent='Ayer';
-  else el.textContent=txDate.toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+  else el.textContent=String(txDate.getDate()).padStart(2,'0')+'/'+String(txDate.getMonth()+1).padStart(2,'0')+'/'+txDate.getFullYear();
 }
 
 function setupKeyboardHandlers(){
