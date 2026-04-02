@@ -546,7 +546,7 @@ function openAdd(forceType){
   if(enToggle) enToggle.classList.remove('on');
   txCurrency=S.currency.code;
   txInvestType='buy';
-  txDate=new Date(); updateDateLbl(); syncDateInput();
+  txDate=new Date(); updateDateLbl();
   setType(forceType||'expense'); // calls renderTxCatCircles internally
   updateAmt();
   // Tacho siempre visible: en modo nuevo limpia el formulario
@@ -685,7 +685,7 @@ function openEdit(id){
   const titleEl=document.getElementById('add-title');
   if(titleEl) titleEl.textContent='Editar movimiento';
   txDate=tx.date?new Date(tx.date):new Date();
-  updateDateLbl(); syncDateInput();
+  updateDateLbl();
   setType(tx.type);
   updateAmt();
   renderTxCatCircles(tx.type);
@@ -5525,16 +5525,20 @@ function buildCatCircle(cat, type, isFreq){
   return el;
 }
 
-// ── Sincroniza el input[type=date] estático con txDate ──
-function syncDateInput(){
-  const inp=document.getElementById('date-input'); if(!inp) return;
+// ── Modal de selección de fecha ──
+function openDateModal(){
+  const inp=document.getElementById('date-modal-input'); if(!inp) return;
   const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
   inp.value=`${ly}-${lm}-${ld}`;
+  document.getElementById('date-modal').classList.remove('hidden');
 }
-function onDateInputChange(val){
-  if(!val) return;
-  txDate=new Date(val+'T12:00:00');
-  updateDateLbl();
+function closeDateModal(){
+  document.getElementById('date-modal').classList.add('hidden');
+}
+function applyDateModal(){
+  const val=document.getElementById('date-modal-input').value;
+  if(val){ txDate=new Date(val+'T12:00:00'); updateDateLbl(); }
+  closeDateModal();
 }
 function updateDateLbl(){
   const el=document.getElementById('date-lbl');
