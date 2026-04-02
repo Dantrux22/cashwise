@@ -547,7 +547,7 @@ function openAdd(forceType){
   if(enToggle) enToggle.classList.remove('on');
   txCurrency=S.currency.code;
   txInvestType='buy';
-  txDate=new Date(); updateDateLbl();
+  txDate=new Date(); updateDateLbl(); syncDateInput();
   setType(forceType||'expense'); // calls renderTxCatCircles internally
   updateAmt();
   // Tacho siempre visible: en modo nuevo limpia el formulario
@@ -686,7 +686,7 @@ function openEdit(id){
   const titleEl=document.getElementById('add-title');
   if(titleEl) titleEl.textContent='Editar movimiento';
   txDate=tx.date?new Date(tx.date):new Date();
-  updateDateLbl();
+  updateDateLbl(); syncDateInput();
   setType(tx.type);
   updateAmt();
   renderTxCatCircles(tx.type);
@@ -5540,31 +5540,16 @@ function buildCatCircle(cat, type, isFreq){
   return el;
 }
 
-// ── Selector de fecha simple ──
-function pickDate(){
-  // Limpiar cualquier picker anterior que quedó en el DOM
-  document.querySelectorAll('input[data-date-picker]').forEach(el=>el.remove());
-  const input=document.createElement('input');
-  input.type='date';
-  input.dataset.datePicker='1';
-  // Usar fecha LOCAL (no UTC) para que el picker muestre el día correcto
+// ── Sincroniza el input[type=date] estático con txDate ──
+function syncDateInput(){
+  const inp=document.getElementById('date-input'); if(!inp) return;
   const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
-  input.value=`${ly}-${lm}-${ld}`;
-  input.style.cssText='position:fixed;opacity:0;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%);width:1px;height:1px';
-  document.body.appendChild(input);
-  // Restablecer pointer-events brevemente para que showPicker/click funcione
-  input.style.pointerEvents='auto';
-  let dateChanged=false;
-  const cleanup=()=>{ if(input.isConnected) input.remove(); };
-  input.addEventListener('change',()=>{
-    dateChanged=true;
-    txDate=new Date(input.value+'T12:00:00');
-    updateDateLbl();
-    cleanup();
-  });
-  input.addEventListener('blur',()=>{ if(!dateChanged) setTimeout(cleanup,500); });
-  // Abrir el picker: showPicker() con fallback a click()
-  try { input.showPicker(); } catch(e) { input.click(); }
+  inp.value=`${ly}-${lm}-${ld}`;
+}
+function onDateInputChange(val){
+  if(!val) return;
+  txDate=new Date(val+'T12:00:00');
+  updateDateLbl();
 }
 function updateDateLbl(){
   const el=document.getElementById('date-lbl');
