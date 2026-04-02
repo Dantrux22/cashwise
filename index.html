@@ -1125,12 +1125,12 @@ canvas.cv{width:100%;height:100%}
   <div class="modal-sheet" style="padding-bottom:32px">
     <div class="modal-handle"></div>
     <div class="modal-hdr">
-      <div class="modal-title">Seleccionar fecha</div>
+      <div class="modal-title" data-i18n="selectDate">Seleccionar fecha</div>
       <button class="modal-x" onclick="closeDateModal()">✕</button>
     </div>
     <input type="date" id="date-modal-input" class="modal-inp" style="font-size:16px;text-align:center;padding:14px;margin-bottom:6px">
-    <button class="modal-btn" onclick="applyDateModal()">Aplicar</button>
-    <button class="modal-btn secondary" onclick="closeDateModal()">Cancelar</button>
+    <button class="modal-btn" onclick="applyDateModal()" data-i18n="applyDate">Aplicar</button>
+    <button class="modal-btn secondary" onclick="closeDateModal()" data-i18n="cancelBtn">Cancelar</button>
   </div>
 </div>
 
@@ -2598,7 +2598,7 @@ function updateAmt(){
 
 function saveTx(){
   const amt=normAmt(amtStr);
-  if(amt<=0){ showToast('⚠️ Ingresá un monto'); return; }
+  if(amt<=0){ showToast(t('tEnterAmt')); return; }
   const note=document.getElementById('note-inp').value.trim();
   const enToggle=document.getElementById('exclude-net-toggle');
   const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
@@ -2613,7 +2613,7 @@ function saveTx(){
     if(original&&original.recurringId) tx.recurringId=original.recurringId;
     const i=S.txs.findIndex(t=>t.id===editingId);
     if(i!==-1)S.txs[i]=tx;
-    showToast('✅ Actualizado');
+    showToast(t('tUpdated'));
   }
   else { S.txs.unshift(tx); showToast(`✅ ${txType==='income'?'+':'-'}${sym()}${fmt(amt)}`); }
   saveState();
@@ -2653,7 +2653,7 @@ function openEdit(id){
   const noteEl=document.getElementById('note-inp');
   if(noteEl) noteEl.value=tx.note||'';
   const titleEl=document.getElementById('add-title');
-  if(titleEl) titleEl.textContent='Editar movimiento';
+  if(titleEl) titleEl.textContent=t('editTx');
   txDate=tx.date?new Date(tx.date):new Date();
   updateDateLbl();
   setType(tx.type);
@@ -2695,19 +2695,19 @@ function updateEditAmt(){
 function saveEdit(){
   const tx=S.txs.find(t=>t.id===editingTxId); if(!tx){ closeEdit(); return; }
   const amt=normAmt(editAmtStr);
-  if(amt<=0){ showToast('⚠️ Monto inválido'); return; }
+  if(amt<=0){ showToast(t('tInvalidAmt')); return; }
   tx.amount=amt; tx.note=document.getElementById('edit-note-inp').value.trim();
   if(editSelCat) tx.cat=editSelCat;
-  saveState(); showToast('✅ Cambios guardados'); closeEdit();
+  saveState(); showToast(t('tSaved')); closeEdit();
   setTimeout(()=>{ if(curScreen==='s-home') refreshHome(); if(curScreen==='s-invest') renderInvest(); },50);
 }
 
 function deleteTx(){
   if(!editingTxId) return;
-  showConfirm('Eliminar','¿Eliminar este movimiento?',()=>{
+  showConfirm(t('cDeleteTx'),t('cDeleteTxMsg'),()=>{
     const wasInvest=S.txs.find(t=>t.id===editingTxId)?.type==='invest';
     S.txs=S.txs.filter(t=>t.id!==editingTxId);
-    saveState(); closeEdit(); showToast('🗑️ Eliminado');
+    saveState(); closeEdit(); showToast(t('tDeleted'));
     setTimeout(()=>{ refreshHome(); if(wasInvest) renderInvest(); },50);
   });
 }
@@ -2813,7 +2813,7 @@ function renderBudgets(){
 function openBudgetModal(id){
   editingBudgetId=id; budgetSelCat=null;
   const existing=id?S.budgets.find(b=>b.id===id):null;
-  document.getElementById('budget-modal-title').textContent=id?'Editar presupuesto':'Nuevo presupuesto';
+  document.getElementById('budget-modal-title').textContent=id?t('editBudget'):t('newBudget');
   document.getElementById('budget-limit-inp').value=existing?existing.limit:'';
   document.getElementById('budget-del-btn').style.display=id?'block':'none';
   buildCatGrid('budget-cat-grid','expense',existing?existing.cat:null,cn=>{budgetSelCat=cn;});
@@ -2823,23 +2823,23 @@ function openBudgetModal(id){
 function closeBudgetModal(){ document.getElementById('budget-modal').classList.add('hidden'); editingBudgetId=null; }
 
 function saveBudget(){
-  if(!budgetSelCat){ showToast('⚠️ Elegí una categoría'); return; }
+  if(!budgetSelCat){ showToast(t('tSelectCat')); return; }
   const limit=parseFloat(document.getElementById('budget-limit-inp').value)||0;
-  if(limit<=0){ showToast('⚠️ Ingresá un límite'); return; }
+  if(limit<=0){ showToast(t('tEnterLimit')); return; }
   if(editingBudgetId){
     const b=S.budgets.find(x=>x.id===editingBudgetId);
     if(b){ b.cat=budgetSelCat; b.limit=limit; }
   } else {
-    if(S.budgets.find(b=>b.cat===budgetSelCat)){ showToast('⚠️ Ya existe un presupuesto para esa categoría'); return; }
+    if(S.budgets.find(b=>b.cat===budgetSelCat)){ showToast(t('tBudgetExists')); return; }
     S.budgets.push({id:uid(),cat:budgetSelCat,limit});
   }
-  saveState(); closeBudgetModal(); renderBudgets(); showToast('✅ Presupuesto guardado');
+  saveState(); closeBudgetModal(); renderBudgets(); showToast(t('tBudgetSaved'));
 }
 function deleteBudget(){
   if(!editingBudgetId) return;
-  showConfirm('Eliminar presupuesto','¿Eliminar este presupuesto?',()=>{
+  showConfirm(t('cDeleteBudget'),t('cDeleteBudgetMsg'),()=>{
     S.budgets=S.budgets.filter(b=>b.id!==editingBudgetId);
-    saveState(); closeBudgetModal(); renderBudgets(); showToast('🗑️ Eliminado');
+    saveState(); closeBudgetModal(); renderBudgets(); showToast(t('tDeleted'));
   });
 }
 
@@ -2920,7 +2920,7 @@ function quickAddToGoal(id){
 function confirmQuickAddGoal(id){
   const inp=document.getElementById('quick-goal-inp');
   const amt=parseFloat(inp?.value)||0;
-  if(amt<=0){ showToast('⚠️ Ingresá un monto'); return; }
+  if(amt<=0){ showToast(t('tEnterAmt')); return; }
   const g=S.goals.find(x=>x.id===id); if(!g) return;
   g.saved=Math.min(g.saved+amt, g.target);
   if(!g.deposits) g.deposits=[];
@@ -2938,7 +2938,7 @@ function openGoalModal(id){
   editingGoalId=id;
   const g=id?S.goals.find(x=>x.id===id):null;
   goalEmoji=g?g.emoji||'🎯':'🎯';
-  document.getElementById('goal-modal-title').textContent=id?'Editar meta':'Nueva meta';
+  document.getElementById('goal-modal-title').textContent=id?t('editGoal'):t('newGoal');
   document.getElementById('goal-name-inp').value=g?g.name:'';
   document.getElementById('goal-target-inp').value=g?g.target:'';
   document.getElementById('goal-saved-inp').value=g?g.saved:'';
@@ -2966,15 +2966,15 @@ function saveGoal(){
   const target=parseFloat(document.getElementById('goal-target-inp').value)||0;
   const savedVal=document.getElementById('goal-saved-inp').value;
   const saved=savedVal===''?0:parseFloat(savedVal)||0;
-  if(!name){ showToast('⚠️ Ingresá un nombre'); return; }
-  if(target<=0){ showToast('⚠️ Ingresá un monto objetivo'); return; }
+  if(!name){ showToast(t('tEnterName')); return; }
+  if(target<=0){ showToast(t('tEnterTarget')); return; }
   if(editingGoalId){
     const g=S.goals.find(x=>x.id===editingGoalId);
     if(g){ g.name=name; g.target=target; g.saved=saved; g.emoji=goalEmoji; }
   } else {
     S.goals.push({id:uid(),name,target,saved,emoji:goalEmoji});
   }
-  saveState(); closeGoalModal(); renderGoals(); showToast('✅ Meta guardada');
+  saveState(); closeGoalModal(); renderGoals(); showToast(t('tGoalSaved'));
 }
 
 function addToGoal(){
@@ -2986,9 +2986,9 @@ function addToGoal(){
 
 function deleteGoal(){
   if(!editingGoalId) return;
-  showConfirm('Eliminar meta','¿Eliminar esta meta de ahorro?',()=>{
+  showConfirm(t('cDeleteGoal'),t('cDeleteGoalMsg'),()=>{
     S.goals=S.goals.filter(g=>g.id!==editingGoalId);
-    saveState(); closeGoalModal(); renderGoals(); showToast('🗑️ Meta eliminada');
+    saveState(); closeGoalModal(); renderGoals(); showToast(t('tGoalDeleted'));
   });
 }
 
@@ -3008,7 +3008,7 @@ function renderRecurring(){
       <div class="tx-ico" style="background:${isIn?'var(--gd)':'var(--s2)'}">${cat?cat.e:isIn?'💰':'💸'}</div>
       <div class="tx-info">
         <div class="tx-name">${r.name}</div>
-        <div class="tx-cat">${r.cat||''} · Día ${r.day} de cada mes</div>
+        <div class="tx-cat">${r.cat||''} · ${t('dayOfMonth').replace('{n}',r.day)}</div>
       </div>
       <div class="tx-r">
         <div class="tx-amt ${isIn?'g':'r'}">${isIn?'+':'-'}${sym()}${fmt(r.amount)}</div>
@@ -3021,7 +3021,7 @@ function renderRecurring(){
 function openRecModal(id){
   editingRecId=id; recSelCat=null;
   const r=id?S.recurring.find(x=>x.id===id):null;
-  document.getElementById('rec-modal-title').textContent=id?'Editar recurrente':'Nuevo recurrente';
+  document.getElementById('rec-modal-title').textContent=id?t('editRec'):t('newRec');
   document.getElementById('rec-name-inp').value=r?r.name:'';
   document.getElementById('rec-amt-inp').value=r?r.amount:'';
   document.getElementById('rec-day-inp').value=r?r.day:'';
@@ -3044,22 +3044,22 @@ function saveRec(){
   const name=document.getElementById('rec-name-inp').value.trim();
   const amount=parseFloat(document.getElementById('rec-amt-inp').value)||0;
   const day=parseInt(document.getElementById('rec-day-inp').value)||1;
-  if(!name){ showToast('⚠️ Ingresá un nombre'); return; }
-  if(amount<=0){ showToast('⚠️ Ingresá un monto'); return; }
-  if(!recSelCat){ showToast('⚠️ Elegí una categoría'); return; }
+  if(!name){ showToast(t('tEnterName')); return; }
+  if(amount<=0){ showToast(t('tEnterAmt')); return; }
+  if(!recSelCat){ showToast(t('tSelectCat')); return; }
   if(editingRecId){
     const r=S.recurring.find(x=>x.id===editingRecId);
     if(r){ r.name=name; r.amount=amount; r.day=day; r.type=recType; r.cat=recSelCat; }
   } else {
     S.recurring.push({id:uid(),name,amount,day,type:recType,cat:recSelCat});
   }
-  saveState(); closeRecModal(); renderRecurring(); showToast('✅ Recurrente guardado');
+  saveState(); closeRecModal(); renderRecurring(); showToast(t('tRecurringSaved'));
 }
 function deleteRec(){
   if(!editingRecId) return;
-  showConfirm('Eliminar recurrente','¿Eliminar este recurrente?',()=>{
+  showConfirm(t('cDeleteRec'),t('cDeleteRecMsg'),()=>{
     S.recurring=S.recurring.filter(r=>r.id!==editingRecId);
-    saveState(); closeRecModal(); renderRecurring(); showToast('🗑️ Eliminado');
+    saveState(); closeRecModal(); renderRecurring(); showToast(t('tDeleted'));
   });
 }
 
@@ -3075,20 +3075,19 @@ function renderCatSec(type, cid){
   const el=document.getElementById(cid); if(!el) return; el.innerHTML='';
   S.cats[type].forEach(c=>{
     const d=document.createElement('div'); d.className='cat-mgr-item';
-    d.innerHTML=`<div class="cat-mgr-ico" style="background:${c.c}20;border:1.5px solid ${c.c}55">${c.e}</div><div class="cat-mgr-name">${c.n}</div><div class="cat-mgr-edit" style="color:${c.c}">Editar ›</div>`;
+    d.innerHTML=`<div class="cat-mgr-ico" style="background:${c.c}20;border:1.5px solid ${c.c}55">${c.e}</div><div class="cat-mgr-name">${c.n}</div><div class="cat-mgr-edit" style="color:${c.c}">${t('editItem')}</div>`;
     d.onclick=()=>openEditCat(type,c.id);
     el.appendChild(d);
   });
   const add=document.createElement('div'); add.className='cat-add-btn';
-  add.innerHTML=`<div class="cat-mgr-ico" style="background:var(--s2)">➕</div><div style="font-size:13px;color:var(--mu)">Nueva categoría</div>`;
+  add.innerHTML=`<div class="cat-mgr-ico" style="background:var(--s2)">➕</div><div style="font-size:13px;color:var(--mu)">${t('newCat')}</div>`;
   add.onclick=()=>openNewCat(type);
   el.appendChild(add);
 }
 
 function openNewCat(type='expense'){
   editingCatType=type; editingCatId=null;
-  const L={expense:'gasto',income:'ingreso',invest:'inversión'};
-  document.getElementById('cat-modal-title').textContent=`Nueva cat. de ${L[type]}`;
+  document.getElementById('cat-modal-title').textContent=t('newCat');
   document.getElementById('cat-name-inp').value='';
   document.getElementById('cat-del-btn').style.display='none';
   newCatEmoji=EMOJIS[0]; newCatColor=COLORS[0];
@@ -3098,7 +3097,7 @@ function openNewCat(type='expense'){
 function openEditCat(type,id){
   const cat=S.cats[type].find(c=>c.id===id); if(!cat) return;
   editingCatType=type; editingCatId=id;
-  document.getElementById('cat-modal-title').textContent='Editar categoría';
+  document.getElementById('cat-modal-title').textContent=t('editCat');
   document.getElementById('cat-name-inp').value=cat.n;
   document.getElementById('cat-del-btn').style.display='block';
   newCatEmoji=cat.e; newCatColor=cat.c;
@@ -3132,21 +3131,21 @@ function renderColorPicker(){
 
 function saveCat(){
   const name=document.getElementById('cat-name-inp').value.trim();
-  if(!name){ showToast('⚠️ Escribí un nombre'); return; }
+  if(!name){ showToast(t('tWriteName')); return; }
   if(editingCatId){
     const cat=S.cats[editingCatType].find(c=>c.id===editingCatId);
     if(cat){ cat.e=newCatEmoji; cat.n=name; cat.c=newCatColor; }
-    showToast('✅ Categoría actualizada');
+    showToast(t('tCatUpdated'));
   } else {
     S.cats[editingCatType].push({id:'c_'+uid(),e:newCatEmoji,n:name,c:newCatColor});
-    showToast(`✅ "${name}" creada`);
+    showToast(t('tSaved'));
   }
   saveState(); closeCatModal(); renderCatLists();
   if(document.getElementById('split-cat-grid')) buildSplitCatGrid();
 }
 function deleteCat(){
   if(!editingCatId) return;
-  showConfirm('Eliminar categoría','Los movimientos con esta categoría no se borran.',()=>{
+  showConfirm(t('cDeleteCat'),t('cDeleteCatMsg'),()=>{
     S.cats[editingCatType]=S.cats[editingCatType].filter(c=>c.id!==editingCatId);
     if(editingCatType==='expense' && splitSelCat){
       if(!S.cats.expense.some(c=>c.n===splitSelCat)){
@@ -3155,7 +3154,7 @@ function deleteCat(){
         if(icon) icon.textContent='💸';
       }
     }
-    saveState(); closeCatModal(); renderCatLists(); showToast('🗑️ Categoría eliminada');
+    saveState(); closeCatModal(); renderCatLists(); showToast(t('tCatDeleted'));
     if(document.getElementById('split-cat-grid')) buildSplitCatGrid();
   });
 }
@@ -3612,6 +3611,53 @@ const T = {
     newGroup:'Nuevo grupo', splitSettings:'Ajustes de Split',
     expDetail:'Detalle del gasto',
     grpExpenses:'Gastos', grpDebts:'Deudas', grpStats:'Stats',
+    // Toasts
+    tEnterAmt:'⚠️ Ingresá un monto', tInvalidAmt:'⚠️ Monto inválido',
+    tUpdated:'✅ Actualizado', tSaved:'✅ Guardado', tDeleted:'🗑️ Eliminado',
+    tSelectCat:'⚠️ Seleccioná una categoría',
+    tEnterLimit:'⚠️ Ingresá un límite', tBudgetExists:'⚠️ Ya existe un presupuesto para esa categoría',
+    tBudgetSaved:'✅ Presupuesto guardado',
+    tEnterName:'⚠️ Ingresá un nombre', tEnterTarget:'⚠️ Ingresá el objetivo',
+    tGoalSaved:'✅ Meta guardada', tGoalDeleted:'🗑️ Meta eliminada',
+    tEditGoalAmt:'⚠️ Monto inválido',
+    tRecurringSaved:'✅ Recurrente guardado',
+    tCatUpdated:'✅ Categoría actualizada', tCatDeleted:'🗑️ Categoría eliminada',
+    tNoExport:'⚠️ Sin datos para exportar',
+    tCSVExported:'✅ CSV exportado', tExcelExported:'✅ Excel exportado', tPDFExported:'✅ PDF exportado',
+    tDataDeleted:'🗑️ Datos eliminados', tDataRestored:'✅ Datos restaurados', tInvalidFile:'⚠️ Archivo inválido',
+    tDepositUndone:'↩️ Depósito deshecho', tPaymentReceived:'✅ Pago marcado como recibido',
+    tSynced:'✅ Sincronizado', tSyncing:'☁️ Sincronizando...', tWriteName:'⚠️ Escribí un nombre',
+    tGroupUpdated:'✅ Grupo actualizado', tGroupDeleted:'🗑️ Grupo eliminado',
+    // Confirm dialogs
+    cDeleteTx:'Eliminar movimiento', cDeleteTxMsg:'¿Seguro que querés eliminar este movimiento?',
+    cDeleteBudget:'Eliminar presupuesto', cDeleteBudgetMsg:'¿Seguro que querés eliminar este presupuesto?',
+    cDeleteGoal:'Eliminar meta', cDeleteGoalMsg:'¿Seguro que querés eliminar esta meta?',
+    cDeleteRec:'Eliminar recurrente', cDeleteRecMsg:'¿Seguro que querés eliminar este recurrente?',
+    cDeleteCat:'Eliminar categoría', cDeleteCatMsg:'¿Seguro que querés eliminar esta categoría?',
+    cDeleteAll:'Borrar todos los datos', cDeleteAllMsg:'Esta acción no se puede deshacer. ¿Continuar?',
+    cRestoreBackup:'Restaurar backup', cRestoreBackupMsg:'Se reemplazarán todos los datos actuales. ¿Continuar?',
+    cLogout:'Cerrar sesión', cLogoutMsg:'¿Cerrar sesión?',
+    // Modal titles
+    newBudget:'Nuevo presupuesto', editBudget:'Editar presupuesto',
+    newGoal:'Nueva meta', editGoal:'Editar meta',
+    newRec:'Nuevo recurrente', editRec:'Editar recurrente',
+    editCat:'Editar categoría', newCat:'Nueva categoría',
+    // Empty states
+    emptyTxs:'Sin movimientos', emptyBudgets:'Sin presupuestos aún',
+    emptyGoals:'Sin metas aún', emptyRec:'Sin recurrentes aún',
+    emptyTxMonth:'Sin movimientos este mes', emptyTxCat:'Sin movimientos en esta categoría',
+    // Date modal
+    selectDate:'Seleccionar fecha', applyDate:'Aplicar',
+    // Recurring day label
+    dayOfMonth:'Día {n} de cada mes',
+    // Misc UI
+    noDescription:'Sin descripción', noCat:'Sin categoría', editItem:'Editar ›',
+    // Auth errors
+    authUserNotFound:'Usuario no encontrado', authWrongPassword:'Contraseña incorrecta',
+    authEmailInUse:'El email ya está en uso', authWeakPassword:'Contraseña muy débil (mínimo 6 caracteres)',
+    authInvalidEmail:'Email inválido', authTooMany:'Demasiados intentos. Intentá más tarde.',
+    authNoInternet:'Sin conexión a internet', authPopupBlocked:'Popup bloqueado por el navegador',
+    authInvalidCred:'Credenciales inválidas', authCancelled:'Inicio de sesión cancelado',
     // Legacy
     saveExpense:'Guardar gasto', saveIncome:'Guardar ingreso', saveInvest:'Guardar inversión',
     investments:'Inversiones', categories:'Categorías',
@@ -3677,6 +3723,53 @@ const T = {
     newGroup:'New group', splitSettings:'Split settings',
     expDetail:'Expense detail',
     grpExpenses:'Expenses', grpDebts:'Debts', grpStats:'Stats',
+    // Toasts
+    tEnterAmt:'⚠️ Enter an amount', tInvalidAmt:'⚠️ Invalid amount',
+    tUpdated:'✅ Updated', tSaved:'✅ Saved', tDeleted:'🗑️ Deleted',
+    tSelectCat:'⚠️ Select a category',
+    tEnterLimit:'⚠️ Enter a limit', tBudgetExists:'⚠️ A budget already exists for that category',
+    tBudgetSaved:'✅ Budget saved',
+    tEnterName:'⚠️ Enter a name', tEnterTarget:'⚠️ Enter a target amount',
+    tGoalSaved:'✅ Goal saved', tGoalDeleted:'🗑️ Goal deleted',
+    tEditGoalAmt:'⚠️ Invalid amount',
+    tRecurringSaved:'✅ Recurring saved',
+    tCatUpdated:'✅ Category updated', tCatDeleted:'🗑️ Category deleted',
+    tNoExport:'⚠️ No data to export',
+    tCSVExported:'✅ CSV exported', tExcelExported:'✅ Excel exported', tPDFExported:'✅ PDF exported',
+    tDataDeleted:'🗑️ Data deleted', tDataRestored:'✅ Data restored', tInvalidFile:'⚠️ Invalid file',
+    tDepositUndone:'↩️ Deposit undone', tPaymentReceived:'✅ Payment marked as received',
+    tSynced:'✅ Synced', tSyncing:'☁️ Syncing...', tWriteName:'⚠️ Enter a name',
+    tGroupUpdated:'✅ Group updated', tGroupDeleted:'🗑️ Group deleted',
+    // Confirm dialogs
+    cDeleteTx:'Delete transaction', cDeleteTxMsg:'Are you sure you want to delete this transaction?',
+    cDeleteBudget:'Delete budget', cDeleteBudgetMsg:'Are you sure you want to delete this budget?',
+    cDeleteGoal:'Delete goal', cDeleteGoalMsg:'Are you sure you want to delete this goal?',
+    cDeleteRec:'Delete recurring', cDeleteRecMsg:'Are you sure you want to delete this recurring item?',
+    cDeleteCat:'Delete category', cDeleteCatMsg:'Are you sure you want to delete this category?',
+    cDeleteAll:'Delete all data', cDeleteAllMsg:'This action cannot be undone. Continue?',
+    cRestoreBackup:'Restore backup', cRestoreBackupMsg:'All current data will be replaced. Continue?',
+    cLogout:'Log out', cLogoutMsg:'Log out?',
+    // Modal titles
+    newBudget:'New budget', editBudget:'Edit budget',
+    newGoal:'New goal', editGoal:'Edit goal',
+    newRec:'New recurring', editRec:'Edit recurring',
+    editCat:'Edit category', newCat:'New category',
+    // Empty states
+    emptyTxs:'No transactions', emptyBudgets:'No budgets yet',
+    emptyGoals:'No goals yet', emptyRec:'No recurring items yet',
+    emptyTxMonth:'No transactions this month', emptyTxCat:'No transactions in this category',
+    // Date modal
+    selectDate:'Select date', applyDate:'Apply',
+    // Recurring day label
+    dayOfMonth:'Day {n} of each month',
+    // Misc UI
+    noDescription:'No description', noCat:'No category', editItem:'Edit ›',
+    // Auth errors
+    authUserNotFound:'User not found', authWrongPassword:'Wrong password',
+    authEmailInUse:'Email already in use', authWeakPassword:'Password too weak (min 6 characters)',
+    authInvalidEmail:'Invalid email', authTooMany:'Too many attempts. Try again later.',
+    authNoInternet:'No internet connection', authPopupBlocked:'Popup blocked by browser',
+    authInvalidCred:'Invalid credentials', authCancelled:'Sign-in cancelled',
     // Legacy
     saveExpense:'Save expense', saveIncome:'Save income', saveInvest:'Save investment',
     investments:'Investments', categories:'Categories',
@@ -3720,6 +3813,16 @@ function updateLangUI(){
     else if(type==='invest') acl.textContent=t('allCatsInvest');
     else acl.textContent=t('allCatsExpense');
   }
+  // 7. Re-render current dynamic screen so JS-generated text updates
+  const scr=typeof curScreen!=='undefined'?curScreen:'';
+  if(scr==='s-home') refreshHome();
+  else if(scr==='s-budgets') renderBudgets();
+  else if(scr==='s-goals') renderGoals();
+  else if(scr==='s-recurring') renderRecurring();
+  else if(scr==='s-cats') renderCatLists();
+  else if(scr==='s-invest') renderInvest();
+  else if(scr==='s-monthly') renderMonthly();
+  else if(scr==='s-alltx') renderAllTx();
 }
 
 function openLangModal(){
@@ -3806,7 +3909,7 @@ function handleImportJSON(inp){
       const parsed=JSON.parse(e.target.result);
       // v2 wraps data under .data; v1 (legacy) is the raw S object
       const data=parsed.version>=2?parsed.data:parsed;
-      showConfirm('Restaurar backup','Esto reemplazará todos tus datos actuales.',()=>{
+      showConfirm(t('cRestoreBackup'),t('cRestoreBackupMsg'),()=>{
         // Step 1: apply imported data (shallow — arrays/objects replaced by reference)
         Object.assign(S,data);
 
@@ -3851,9 +3954,9 @@ function handleImportJSON(inp){
           uploadToCloud(_authUser.uid);
         }
         updateCurrUI(); refreshHome(); renderInvest();
-        showToast('✅ Datos restaurados correctamente');
+        showToast(t('tDataRestored'));
       });
-    }catch(_e){ showToast('❌ Archivo inválido'); }
+    }catch(_e){ showToast(t('tInvalidFile')); }
   };
   reader.readAsText(file); inp.value='';
 }
@@ -3888,7 +3991,7 @@ function switchDataTab(tab){
 // EXPORT — CSV (mejorado)
 // ═══════════════════════════════════════════
 function exportCSVNew(){
-  if(!S.txs.length){ showToast('⚠️ Sin movimientos para exportar'); return; }
+  if(!S.txs.length){ showToast(t('tNoExport')); return; }
   const rows=[['Fecha','Tipo','Monto','Categoría','Nota']];
   const typeLabel={'income':'Ingreso','expense':'Gasto','invest':'Inversión'};
   S.txs.forEach(t=>{
@@ -3898,7 +4001,7 @@ function exportCSVNew(){
   });
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   download('cashwise-historial.csv','data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv));
-  showToast('📥 CSV exportado');
+  showToast(t('tCSVExported'));
 }
 
 // ═══════════════════════════════════════════
@@ -3906,7 +4009,7 @@ function exportCSVNew(){
 // ═══════════════════════════════════════════
 function exportXLSX(){
   if(typeof XLSX === 'undefined'){ showToast('⚠️ Cargando...'); return; }
-  if(!S.txs.length){ showToast('⚠️ Sin movimientos para exportar'); return; }
+  if(!S.txs.length){ showToast(t('tNoExport')); return; }
 
   const rows = S.txs
     .sort((a,b) => new Date(b.date) - new Date(a.date))
@@ -3932,14 +4035,14 @@ function exportXLSX(){
 
   const date = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `cashwise-export-${date}.xlsx`);
-  showToast('✅ Excel exportado');
+  showToast(t('tExcelExported'));
 }
 
 // ═══════════════════════════════════════════
 // EXPORT — PDF
 // ═══════════════════════════════════════════
 async function exportPDF(){
-  if(!S.txs.length){ showToast('⚠️ Sin movimientos para exportar'); return; }
+  if(!S.txs.length){ showToast(t('tNoExport')); return; }
   showToast('⏳ Generando PDF...');
   try{
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -3981,7 +4084,7 @@ async function exportPDF(){
       }
     });
     doc.save('cashwise-historial.pdf');
-    showToast('📑 PDF exportado');
+    showToast(t('tPDFExported'));
   }catch(e){ showToast('❌ Error al generar PDF'); console.error(e); }
 }
 
@@ -3990,7 +4093,7 @@ async function exportPDF(){
 // ═══════════════════════════════════════════
 let _sankeySVGContent='';
 function exportSankey(){
-  if(!S.txs.length){ showToast('⚠️ Sin movimientos para exportar'); return; }
+  if(!S.txs.length){ showToast(t('tNoExport')); return; }
   const svg=buildSankeySVG();
   _sankeySVGContent=svg;
   const wrap=document.getElementById('sankey-preview-wrap');
@@ -4313,9 +4416,9 @@ function confirmImport(){
 }
 
 function clearAll(){
-  showConfirm('Borrar todos los datos','Elimina TODAS las transacciones, presupuestos y metas. No se puede deshacer.',()=>{
+  showConfirm(t('cDeleteAll'),t('cDeleteAllMsg'),()=>{
     S.txs=[]; S.budgets=[]; S.goals=[]; S.recurring=[];
-    saveState(); refreshHome(); showToast('🗑️ Datos eliminados');
+    saveState(); refreshHome(); showToast(t('tDataDeleted'));
   });
 }
 
@@ -4752,7 +4855,7 @@ function undoGoalDeposit(goalId, idx){
     saveState();
     openGoalHistory(goalId);
     renderGoals();
-    showToast('✅ Abono deshecho');
+    showToast(t('tDepositUndone'));
   });
 }
 
@@ -4785,7 +4888,7 @@ function confirmWithdraw(goalId){
   const inp=document.getElementById('withdraw-inp');
   const amt=parseFloat(inp?.value)||0;
   const g=S.goals.find(x=>x.id===goalId); if(!g) return;
-  if(amt<=0||amt>g.saved){ showToast('⚠️ Monto inválido'); return; }
+  if(amt<=0||amt>g.saved){ showToast(t('tInvalidAmt')); return; }
   g.saved=parseFloat((g.saved-amt).toFixed(2));
   if(!g.deposits) g.deposits=[];
   g.deposits.push({amount:-amt,date:new Date().toISOString(),type:'withdraw'});
@@ -4812,7 +4915,7 @@ function markDebtReceived(gid, fromId, toId, amount){
         comments:[], isSettlement:true,
       });
       saveState(); renderGroupDetail(); renderSplitContent();
-      showToast('✅ Pago registrado como recibido');
+      showToast(t('tPaymentReceived'));
     }
   );
 }
@@ -7365,7 +7468,7 @@ async function forceSync(){
   if(!_authUser){ showToast('⚠️ Iniciá sesión primero'); return; }
   showToast('⏳ Sincronizando...');
   await uploadToCloud(_authUser.uid);
-  showToast('✅ Sincronizado');
+  showToast(t('tSynced'));
   renderProfile();
 }
 
@@ -7386,16 +7489,16 @@ function updateProfileUI(user){
 // ── Errores Firebase en español ──
 function authErrorMsg(code){
   const m={
-    'auth/user-not-found':'No existe una cuenta con ese email',
-    'auth/wrong-password':'Contraseña incorrecta',
-    'auth/email-already-in-use':'Ya existe una cuenta con ese email',
-    'auth/weak-password':'La contraseña debe tener al menos 6 caracteres',
-    'auth/invalid-email':'El email no es válido',
-    'auth/too-many-requests':'Demasiados intentos. Esperá unos minutos.',
-    'auth/network-request-failed':'Sin conexión a internet',
-    'auth/popup-blocked':'El popup fue bloqueado. Permitilo en tu navegador.',
-    'auth/invalid-credential':'Email o contraseña incorrectos',
-    'auth/cancelled-popup-request':'Operación cancelada',
+    'auth/user-not-found':t('authUserNotFound'),
+    'auth/wrong-password':t('authWrongPassword'),
+    'auth/email-already-in-use':t('authEmailInUse'),
+    'auth/weak-password':t('authWeakPassword'),
+    'auth/invalid-email':t('authInvalidEmail'),
+    'auth/too-many-requests':t('authTooMany'),
+    'auth/network-request-failed':t('authNoInternet'),
+    'auth/popup-blocked':t('authPopupBlocked'),
+    'auth/invalid-credential':t('authInvalidCred'),
+    'auth/cancelled-popup-request':t('authCancelled'),
   };
   return m[code]||'Error ('+code+')';
 }
@@ -7541,7 +7644,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260402014828')
+    navigator.serviceWorker.register('./sw.js?v=20260402020351')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
