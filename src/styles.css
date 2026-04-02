@@ -367,6 +367,8 @@ canvas.cv{width:100%;height:100%}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .au{animation:fadeUp .28s ease both}
+@keyframes _qsFlash{0%{transform:scale(1)}35%{transform:scale(1.1)}70%{transform:scale(.97)}100%{transform:scale(1)}}
+._qs-flash{animation:_qsFlash .35s cubic-bezier(.4,0,.2,1)}
 
 /* ═══════════════════════════════════════════
    SPLIT CSS — rediseño completo

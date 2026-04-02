@@ -553,8 +553,8 @@ function openAdd(forceType){
   updateAmt();
   // Tacho siempre visible: en modo nuevo limpia el formulario
   showDeleteBtn(false);
-  hideNumpad();
   goTo('s-add');
+  setTimeout(showNumpad, 60); // auto-open numpad al entrar a nueva tx
 }
 
 function toggleExtras(){
@@ -5757,10 +5757,23 @@ function buildCatCircle(cat, type, isFreq){
     <div class="tx-cat-circle-icon" style="background:${bg};opacity:${opacity}">${cat.e||'📁'}</div>
     <div class="tx-cat-circle-name">${cat.n}</div>`;
   el.onclick=()=>{
-    selCat=isSelected?null:cat.n;
+    const wasSelected=isSelected;
+    selCat=wasSelected?null:cat.n;
     renderTxCatCircles(txType);
+    // Quick-save: categoría seleccionada + monto ya ingresado
+    if(!wasSelected && normAmt(amtStr)>0){
+      _quickSaveTx();
+    }
   };
   return el;
+}
+
+// Guardado rápido al seleccionar categoría con monto ya ingresado
+function _quickSaveTx(){
+  if(navigator.vibrate) navigator.vibrate(55);
+  const disp=document.getElementById('amt-display');
+  if(disp){ disp.classList.add('_qs-flash'); setTimeout(()=>disp.classList.remove('_qs-flash'),400); }
+  setTimeout(()=>saveTx(), 200);
 }
 
 // ═══════════════════════════════════════════
