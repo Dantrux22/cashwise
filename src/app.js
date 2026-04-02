@@ -3324,6 +3324,14 @@ let editingGroupId=null, groupEmoji='👥', groupMembers=[];
 let settleData=null, _currentSplitExpId=null;
 // No persistent Firestore listeners — Split uses manual refresh (.get() only)
 
+// ── Caché de balances y paginación de gastos ──
+// balancesCache: { [gid]: { version: lastExpId|'empty', data: {balances} } }
+// Invalidar al agregar/eliminar gastos o refrescar desde Firestore.
+const _balancesCache={};
+// _expShowCount: { [gid]: number } — cuántos gastos mostrar por grupo.
+// Se resetea al entrar a un grupo nuevo.
+const _expShowCount={};
+
 // ── Emojis de grupo ──
 const GROUP_EMOJIS=['🏠','✈️','🎉','🍕','🎿','🏖️','💼','🎓','🤝','👥','🎮','🍺','🏕️','🚗','🎭','🌍','🏋️','🎪','🎸','💊'];
 
@@ -3353,7 +3361,7 @@ function spFmt(n){
 function ME_NAME(){ return (S.linkedAccount&&S.linkedAccount.name)||'Yo'; }
 
 // ── Calcular balances ──
-function calcBalances(gid){
+function _calcBalancesRaw(gid){
   const g=getGroup(gid); if(!g) return {};
   const bal={};
   g.members.forEach(m=>{ bal[m.id]={net:0,paid:0,share:0}; });
@@ -3365,10 +3373,22 @@ function calcBalances(gid){
       bal[sh.memberId].share+=sh.amount;
     });
   });
-  Object.keys(bal).forEach(id=>{
-    bal[id].net=bal[id].paid-bal[id].share;
-  });
+  Object.keys(bal).forEach(id=>{ bal[id].net=bal[id].paid-bal[id].share; });
   return bal;
+}
+
+function calcBalances(gid){
+  const exps=getGroupExpenses(gid);
+  const version=exps.length>0?exps[exps.length-1].id:'empty';
+  const cached=_balancesCache[gid];
+  if(cached&&cached.version===version) return cached.data;
+  const data=_calcBalancesRaw(gid);
+  _balancesCache[gid]={version,data};
+  return data;
+}
+
+function _invalidateBalancesCache(gid){
+  delete _balancesCache[gid];
 }
 
 // ── Simplificar deudas (algoritmo greedy) ──
@@ -3767,7 +3787,7 @@ function renderSplitGroups(container){
         </div>
       </div>
       <div class="sp-members-row">${avatarsHtml}</div>`;
-    card.onclick=()=>{ curGroupId=g.id; grpTabActive='expenses'; goTo('s-split-group'); };
+    card.onclick=()=>{ curGroupId=g.id; grpTabActive='expenses'; _resetExpPage(g.id); goTo('s-split-group'); };
     container.appendChild(card);
   });
 }
@@ -3920,6 +3940,40 @@ function renderGroupDetail(){
   else renderGroupStats(scroll);
 }
 
+const _EXPS_PAGE_SIZE=30;
+
+function _buildExpenseEl(exp,g){
+  const payer=getMemberName(curGroupId,exp.payerId);
+  const isPayer=getMemberIsMe(exp.payerId,g);
+  const myShare=exp.shares.find(sh=>getMemberIsMe(sh.memberId,g));
+  const el=document.createElement('div'); el.className='sp-exp-item';
+  const sharesHtml=exp.shares.map(sh=>{
+    const isMe=getMemberIsMe(sh.memberId,g);
+    const isPayerChip=sh.memberId===exp.payerId;
+    const cls=isPayerChip?'payer':isMe?'me':'';
+    return `<div class="sp-share-chip ${cls}">${getMemberName(curGroupId,sh.memberId)}: ${spSym()}${spFmt(sh.amount)}</div>`;
+  }).join('');
+  let statusBadge='';
+  if(isPayer) statusBadge=`<span style="font-size:10px;background:var(--gd);color:var(--gr);padding:2px 7px;border-radius:6px;font-weight:500">Vos pagaste</span>`;
+  else if(myShare) statusBadge=`<span style="font-size:10px;background:var(--rdd);color:var(--rd);padding:2px 7px;border-radius:6px;font-weight:500">Tu parte: ${spSym()}${spFmt(myShare.amount)}</span>`;
+  el.innerHTML=`
+    <div class="sp-exp-head">
+      <div class="sp-exp-icon">${exp.isSettlement?'✅':(exp.emoji||'💸')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="sp-exp-desc">${exp.desc||'Gasto'}${exp.isSettlement?' <span style="font-size:10px;color:var(--mu)">(pago)</span>':''}</div>
+        <div class="sp-exp-meta">Pagó ${payer} · ${exp.date.slice(8,10)}/${exp.date.slice(5,7)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="sp-exp-amt">${spSym()}${spFmt(exp.amount)}</div>
+      </div>
+    </div>
+    ${statusBadge?`<div style="margin-bottom:6px">${statusBadge}</div>`:''}
+    <div class="sp-exp-shares">${sharesHtml}</div>
+    ${exp.note?`<div style="font-size:11px;color:var(--mu);margin-top:6px;padding-top:6px;border-top:1px solid var(--br)">💬 ${exp.note}</div>`:''}`;
+  el.onclick=()=>openSplitExpDetail(exp.id);
+  return el;
+}
+
 function renderGroupExpenses(container){
   const g=getGroup(curGroupId); if(!g) return;
   const exps=getGroupExpenses(curGroupId).sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -3927,39 +3981,24 @@ function renderGroupExpenses(container){
     container.innerHTML='<div class="empty-state"><span class="big">💸</span>Sin gastos.<br>Tocá + para agregar el primero.</div>';
     return;
   }
-  exps.forEach(exp=>{
-    const payer=getMemberName(curGroupId,exp.payerId);
-    const isPayer=getMemberIsMe(exp.payerId,g);
-    const myShare=exp.shares.find(sh=>getMemberIsMe(sh.memberId,g));
-    const el=document.createElement('div'); el.className='sp-exp-item';
-    const sharesHtml=exp.shares.map(sh=>{
-      const isMe=getMemberIsMe(sh.memberId,g);
-      const isPayerChip=sh.memberId===exp.payerId;
-      const cls=isPayerChip?'payer':isMe?'me':'';
-      return `<div class="sp-share-chip ${cls}">${getMemberName(curGroupId,sh.memberId)}: ${spSym()}${spFmt(sh.amount)}</div>`;
-    }).join('');
-    // Badge "vos pagaste" o "te deben X"
-    let statusBadge='';
-    if(isPayer) statusBadge=`<span style="font-size:10px;background:var(--gd);color:var(--gr);padding:2px 7px;border-radius:6px;font-weight:500">Vos pagaste</span>`;
-    else if(myShare) statusBadge=`<span style="font-size:10px;background:var(--rdd);color:var(--rd);padding:2px 7px;border-radius:6px;font-weight:500">Tu parte: ${spSym()}${spFmt(myShare.amount)}</span>`;
-    el.innerHTML=`
-      <div class="sp-exp-head">
-        <div class="sp-exp-icon">${exp.isSettlement?'✅':(exp.emoji||'💸')}</div>
-        <div style="flex:1;min-width:0">
-          <div class="sp-exp-desc">${exp.desc||'Gasto'}${exp.isSettlement?' <span style="font-size:10px;color:var(--mu)">(pago)</span>':''}</div>
-          <div class="sp-exp-meta">Pagó ${payer} · ${exp.date.slice(8,10)}/${exp.date.slice(5,7)}</div>
-        </div>
-        <div style="text-align:right">
-          <div class="sp-exp-amt">${spSym()}${spFmt(exp.amount)}</div>
-        </div>
-      </div>
-      ${statusBadge?`<div style="margin-bottom:6px">${statusBadge}</div>`:''}
-      <div class="sp-exp-shares">${sharesHtml}</div>
-      ${exp.note?`<div style="font-size:11px;color:var(--mu);margin-top:6px;padding-top:6px;border-top:1px solid var(--br)">💬 ${exp.note}</div>`:''}`;
-    el.onclick=()=>openSplitExpDetail(exp.id);
-    container.appendChild(el);
-  });
+  // Paginación: mostrar los primeros N (más recientes primero)
+  if(!_expShowCount[curGroupId]) _expShowCount[curGroupId]=_EXPS_PAGE_SIZE;
+  const showing=Math.min(_expShowCount[curGroupId], exps.length);
+  const visible=exps.slice(0, showing);
+  visible.forEach(exp=>container.appendChild(_buildExpenseEl(exp,g)));
+  // Botón "Ver más gastos anteriores"
+  if(showing<exps.length){
+    const remaining=exps.length-showing;
+    const btn=document.createElement('button');
+    btn.className='modal-btn secondary';
+    btn.style.cssText='margin:12px auto;display:block;width:auto;padding:10px 24px;font-size:13px';
+    btn.textContent=`Ver ${Math.min(_EXPS_PAGE_SIZE, remaining)} gastos anteriores (${remaining} restantes)`;
+    btn.onclick=()=>{ _expShowCount[curGroupId]+=_EXPS_PAGE_SIZE; renderGroupDetail(); };
+    container.appendChild(btn);
+  }
 }
+
+function _resetExpPage(gid){ _expShowCount[gid]=_EXPS_PAGE_SIZE; }
 
 function renderGroupBalances(container){
   const g=getGroup(curGroupId); if(!g) return;
@@ -4287,6 +4326,7 @@ function deleteSplitExpense(expId){
   showConfirm('Eliminar gasto','¿Eliminar este gasto? Los balances del grupo se actualizarán.',()=>{
     const exp=S.split.expenses.find(e=>e.id===expId);
     S.split.expenses=S.split.expenses.filter(e=>e.id!==expId);
+    if(exp) _invalidateBalancesCache(exp.groupId);
     saveState();
     if(exp) removeExpenseFromFirestore(exp);
     goBack(); renderGroupDetail(); showToast('🗑️ Gasto eliminado');
@@ -4758,6 +4798,7 @@ function saveSplitExpense(){
     emoji:catData?catData.e:'💸', comments:[], isSettlement:false,
   };
   S.split.expenses.push(exp);
+  _invalidateBalancesCache(curGroupId);
   // Agregar al historial personal
   if(toPersonal){
     const me=g.members.find(m=>m.isMe);
@@ -4825,6 +4866,7 @@ function confirmSettle(){
     comments:[], isSettlement:true,
   };
   S.split.expenses.push(settleExp);
+  _invalidateBalancesCache(settleData.gid);
   // Al historial personal
   if(toPersonal&&g){
     const isMe=g.members.find(m=>m.id===settleData.fromId&&m.isMe);
@@ -5377,6 +5419,8 @@ async function refreshSplitGroups(){
     // Remove expenses for groups that no longer exist
     const groupIds=new Set(S.split.groups.map(g=>g.id));
     S.split.expenses=S.split.expenses.filter(e=>groupIds.has(e.groupId));
+    // Invalidar toda la caché de balances (los datos cambiaron desde Firestore)
+    Object.keys(_balancesCache).forEach(k=>delete _balancesCache[k]);
     saveState();
     renderSplitContent();
   }catch(e){
