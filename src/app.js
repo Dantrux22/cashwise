@@ -1,5 +1,6 @@
 let _authUser = null;
 let _syncDebounce = null;
+let _pendingUpload = false; // true cuando hay cambios locales no subidos aún
 
 // ═══════════════════════════════════════════════════════
 // FIREBASE CONFIG
@@ -112,6 +113,7 @@ function loadState(){
 }
 function saveState(){
   try{ localStorage.setItem(SK,JSON.stringify(S)); }catch(_e){}
+  _pendingUpload=true;
   // Auto-sync a Firebase si hay usuario logueado
   if(typeof _authUser !== 'undefined' && _authUser && typeof FIREBASE_ENABLED !== 'undefined' && FIREBASE_ENABLED){
     clearTimeout(_syncDebounce);
@@ -2543,10 +2545,10 @@ function renderProfile(){
       authSection.innerHTML = `
         <div class="set-row" onclick="forceSync()" style="cursor:pointer">
           <div>
-            <div class="set-lbl">Sincronizar ahora</div>
+            <div class="set-lbl">Sincronizar ahora <span id="sync-status-chip"></span></div>
             <div class="set-sub">${S.lastSync?'Última: '+(d=>{return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})(new Date(S.lastSync)):'Sincronización automática activa'}</div>
           </div>
-          <div style="color:var(--bl)">↑</div>
+          <div style="color:var(--bl)">↑↓</div>
         </div>
         <div class="set-row" onclick="authLogout()" style="cursor:pointer">
           <div>
@@ -2573,6 +2575,8 @@ function renderProfile(){
         </div>`;
     }
   }
+  // Actualizar chip de estado después de renderizar
+  setTimeout(_updateSyncChip, 0);
 }
 
 
@@ -2708,12 +2712,32 @@ function filterAllTx(){
   // Fechas
   if(allTxDateFrom) txs=txs.filter(t=>new Date(t.date)>=new Date(allTxDateFrom));
   if(allTxDateTo) txs=txs.filter(t=>new Date(t.date)<=new Date(allTxDateTo+'T23:59:59'));
-  // Búsqueda texto
-  if(q) txs=txs.filter(t=>(t.note||'').toLowerCase().includes(q)||(t.cat||'').toLowerCase().includes(q));
-  // Info
+  // Búsqueda texto: nota, categoría Y monto
+  if(q) txs=txs.filter(t=>
+    (t.note||'').toLowerCase().includes(q)||
+    (t.cat||'').toLowerCase().includes(q)||
+    String(t.amount).includes(q)
+  );
+  // Info bar — totales por tipo de los resultados filtrados
   const info=document.getElementById('alltx-info');
-  const totalAmt=txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  if(info) info.textContent=txs.length+' movimiento'+(txs.length!==1?'s':'')+(allTxTypeFilter==='expense'?' · Total: '+sym()+fmt(totalAmt):'');
+  if(info){
+    const expTotal=txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+    const incTotal=txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+    const invTotal=txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
+    const hasFilters=q||allTxTypeFilter!=='all'||allTxCatFilter||allTxDateFrom||allTxDateTo;
+    let parts=[txs.length+' movimiento'+(txs.length!==1?'s':'')];
+    if(expTotal>0) parts.push('Gastos: '+sym()+fmt(expTotal));
+    if(incTotal>0) parts.push('Ingresos: +'+sym()+fmt(incTotal));
+    if(invTotal>0) parts.push('Inv: '+sym()+fmt(invTotal));
+    info.textContent=parts.join(' · ');
+    info.style.display=hasFilters?'block':'none';
+  }
+  // Botón limpiar-todo: visible cuando hay algún filtro activo
+  const clrAll=document.getElementById('alltx-clear-all');
+  if(clrAll){
+    const anyFilter=allTxTypeFilter!=='all'||allTxCatFilter||allTxDateFrom||allTxDateTo;
+    clrAll.style.display=anyFilter?'inline-flex':'none';
+  }
   renderTxList(txs,'all-tx-list');
 }
 
@@ -2770,6 +2794,46 @@ function clearAllTxDateFilter(){
   document.getElementById('alltx-date-to').value='';
   document.getElementById('alltx-date-modal').classList.add('hidden');
   document.getElementById('chip-date').classList.remove('active');
+  filterAllTx();
+}
+
+// Limpiar TODOS los filtros (tipo + categoría + fechas + texto) de un tiro
+function clearAllTxFilters(){
+  allTxTypeFilter='all'; allTxCatFilter=null; allTxDateFrom=null; allTxDateTo=null;
+  const inp=document.getElementById('alltx-search'); if(inp) inp.value='';
+  const df=document.getElementById('alltx-date-from'); if(df) df.value='';
+  const dt=document.getElementById('alltx-date-to'); if(dt) dt.value='';
+  ['all','expense','income','invest','cat','date'].forEach(t=>{
+    const el=document.getElementById('chip-'+t);
+    if(el) el.classList.toggle('active',t==='all');
+  });
+  filterAllTx();
+}
+
+// Chips de fecha rápida — seleccionan rango sin abrir el modal
+function quickAllTxDate(period){
+  const now=new Date();
+  let from,to;
+  if(period==='month'){
+    from=new Date(now.getFullYear(),now.getMonth(),1);
+    to=new Date(now.getFullYear(),now.getMonth()+1,0);
+  } else if(period==='lastmonth'){
+    from=new Date(now.getFullYear(),now.getMonth()-1,1);
+    to=new Date(now.getFullYear(),now.getMonth(),0);
+  } else if(period==='year'){
+    from=new Date(now.getFullYear(),0,1);
+    to=new Date(now.getFullYear(),11,31);
+  }
+  const pad=n=>String(n).padStart(2,'0');
+  const toISO=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  allTxDateFrom=toISO(from); allTxDateTo=toISO(to);
+  const df=document.getElementById('alltx-date-from'); if(df) df.value=allTxDateFrom;
+  const dt=document.getElementById('alltx-date-to'); if(dt) dt.value=allTxDateTo;
+  // Marcar chip de fecha como activo y desmarcar los de período rápido del anterior
+  document.getElementById('chip-date')?.classList.add('active');
+  ['chip-qmonth','chip-qlastmonth','chip-qyear'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.toggle('active',id==='chip-q'+period);
+  });
   filterAllTx();
 }
 
@@ -5221,11 +5285,18 @@ async function onUserLoggedIn(user){
   console.log('[Sync] cloud updatedAt ms:', cloudMs, '| local lastSync ms:', localMs);
 
   if(cloudMs>localMs){
-    // Firestore is newer → download (another device made changes after our last sync)
-    console.log('[Sync] → downloading cloud data (cloud is newer)');
-    mergeCloudData(cloudData);
-    saveState(); updateCurrUI(); refreshHome(); renderInvest();
-    showToast('☁️ Datos actualizados desde tu cuenta');
+    // Firestore is newer — check if local also has unsaved changes to avoid silent overwrite
+    if(_pendingUpload && (S.txs.length>0||S.split.groups.length>0)){
+      // Both sides changed: let user decide
+      console.log('[Sync] → CONFLICT: cloud newer but local has pending changes');
+      showSyncModal();
+    } else {
+      // Local is clean: safe to download
+      console.log('[Sync] → downloading cloud data (cloud is newer, local clean)');
+      mergeCloudData(cloudData);
+      saveState(); updateCurrUI(); refreshHome(); renderInvest();
+      showToast('☁️ Datos actualizados desde tu cuenta');
+    }
   } else if(localMs>0){
     // Local is newer or equal → upload
     console.log('[Sync] → uploading local data (local is newer or equal)');
@@ -5484,9 +5555,14 @@ async function uploadToCloud(uid){
       _isEmpty: false,
     },{merge:true});
     S.lastSync=new Date().toISOString();
+    _pendingUpload=false;
     // No llamar saveState() aquí para evitar loop infinito
     try{ localStorage.setItem(SK, JSON.stringify(S)); }catch(_e){}
-  }catch(e){ console.warn('[CashWise] Error sync:', e.message); }
+    _updateSyncChip();
+  }catch(e){
+    console.warn('[CashWise] Error sync:', e.message);
+    _updateSyncChip();
+  }
 }
 
 // ── Firestore: descargar ──
@@ -5540,8 +5616,23 @@ async function authLogout(){
 // ── Force sync ──
 async function forceSync(){
   if(!_authUser){ showToast('⚠️ Iniciá sesión primero'); return; }
-  showToast('⏳ Sincronizando...');
+  showToast(t('tSyncing'));
+  // 1. Subir cambios locales
   await uploadToCloud(_authUser.uid);
+  // 2. Bajar si la nube (otro dispositivo) actualizó después del upload
+  try{
+    const cloudData=await loadFromCloud(_authUser.uid);
+    if(cloudData&&!cloudData._isEmpty){
+      const _tsToMs=ts=>{ if(!ts) return 0; if(ts.seconds) return ts.seconds*1000; if(ts.toDate) return ts.toDate().getTime(); return new Date(ts).getTime(); };
+      const cloudMs=_tsToMs(cloudData.updatedAt);
+      const localMs=S.lastSync?new Date(S.lastSync).getTime():0;
+      if(cloudMs>localMs){
+        mergeCloudData(cloudData); saveState(); updateCurrUI(); refreshHome(); renderInvest();
+        showToast('☁️ Datos actualizados desde otro dispositivo');
+        renderProfile(); return;
+      }
+    }
+  }catch(_e){}
   showToast(t('tSynced'));
   renderProfile();
 }
@@ -5672,6 +5763,85 @@ function buildCatCircle(cat, type, isFreq){
   return el;
 }
 
+// ═══════════════════════════════════════════
+// PWA — Install prompt & Shortcuts
+// ═══════════════════════════════════════════
+
+let _pwaInstallEvent=null;
+
+// Capturar el evento beforeinstallprompt para usarlo con el botón propio.
+// El navegador lo dispara cuando la app es instalable y aún no está instalada.
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  _pwaInstallEvent=e;
+  // No mostrar si el usuario ya descartó el banner en esta sesión o antes
+  if(localStorage.getItem('pwa-install-dismissed')==='true') return;
+  // Mostrar banner después de 20 segundos (no molestar al entrar)
+  setTimeout(()=>{ if(_pwaInstallEvent) _showPWABanner(); }, 20000);
+});
+
+// La app ya está instalada (standalone): limpiar flag para que pueda aparecer
+// el banner si alguna vez se reinstala desde el navegador.
+window.addEventListener('appinstalled', ()=>{
+  _pwaInstallEvent=null;
+  localStorage.removeItem('pwa-install-dismissed');
+});
+
+function _showPWABanner(){
+  if(document.getElementById('pwa-install-banner')) return;
+  const banner=document.createElement('div');
+  banner.id='pwa-install-banner';
+  banner.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a22;border-top:1px solid #34D48A44;padding:14px 16px;z-index:9999;display:flex;align-items:center;gap:12px;animation:_pwaSlideUp .25s ease-out';
+  banner.innerHTML=`
+    <img src="cashwise_icon_192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0" alt="">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14px;font-weight:600;color:#f0f0f8">Instalá CashWise</div>
+      <div style="font-size:12px;color:#7878a0;margin-top:1px">Acceso rápido · funciona sin internet</div>
+    </div>
+    <button onclick="_installPWA()" style="background:#34D48A;color:#0f0f13;border:none;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Instalar</button>
+    <button onclick="_dismissPWABanner()" style="background:transparent;color:#7878a0;border:none;padding:9px;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0">✕</button>`;
+  // Inyectar keyframe si no existe aún
+  if(!document.getElementById('_pwa-style')){
+    const s=document.createElement('style');
+    s.id='_pwa-style';
+    s.textContent='@keyframes _pwaSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}';
+    document.head.appendChild(s);
+  }
+  document.body.appendChild(banner);
+}
+
+async function _installPWA(){
+  if(!_pwaInstallEvent) return;
+  _pwaInstallEvent.prompt();
+  const {outcome}=await _pwaInstallEvent.userChoice;
+  _pwaInstallEvent=null;
+  const banner=document.getElementById('pwa-install-banner');
+  if(banner) banner.remove();
+  if(outcome==='accepted') showToast('✅ CashWise instalada');
+}
+
+function _dismissPWABanner(){
+  localStorage.setItem('pwa-install-dismissed','true');
+  const banner=document.getElementById('pwa-install-banner');
+  if(banner){ banner.style.animation=''; banner.style.transition='transform .25s ease-in'; banner.style.transform='translateY(100%)'; setTimeout(()=>banner.remove(),260); }
+}
+
+// ── Shortcut handler: detectar ?action= al inicio ──
+// Se ejecuta cuando el DOM y el estado S ya están listos (el script corre inline).
+// Usamos un pequeño delay para que renderHome/refreshHome terminen primero.
+(function _handlePWAShortcut(){
+  const params=new URLSearchParams(window.location.search);
+  const action=params.get('action');
+  if(!action) return;
+  // Limpiar la URL inmediatamente para no repetir la acción en recargas
+  window.history.replaceState({},'',window.location.pathname);
+  // Esperar a que la UI esté renderizada antes de navegar
+  setTimeout(()=>{
+    if(action==='add-expense') openAdd('expense');
+    else if(action==='add-income') openAdd('income');
+  }, 400);
+})();
+
 // ── Modal de selección de fecha ──
 function openDateModal(){
   const inp=document.getElementById('date-modal-input'); if(!inp) return;
@@ -5713,3 +5883,40 @@ function setupKeyboardHandlers(){
     });
   });
 }
+
+// ═══════════════════════════════════════════
+// SYNC — Indicador de estado y auto-retry
+// ═══════════════════════════════════════════
+
+// Actualiza el chip visual de sync en el perfil (si está visible).
+// Estados: online/offline, pendiente o al día.
+function _updateSyncChip(){
+  const chip=document.getElementById('sync-status-chip');
+  if(!chip) return;
+  const online=navigator.onLine;
+  const pending=_pendingUpload&&!!_authUser;
+  if(!online){
+    chip.textContent='📡 Sin conexión';
+    chip.style.cssText='display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(245,166,35,.15);color:var(--am);font-weight:600';
+  } else if(pending){
+    chip.textContent='↑ Sincronizando...';
+    chip.style.cssText='display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;background:var(--bld);color:var(--bl);font-weight:600';
+  } else {
+    chip.textContent='☁ Sincronizado';
+    chip.style.cssText='display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;background:var(--gd);color:var(--gr);font-weight:600';
+  }
+}
+
+// Subir cambios pendientes automáticamente al recuperar conexión.
+// Si el usuario hizo cambios mientras estaba offline, se suben en cuanto hay red.
+window.addEventListener('online', ()=>{
+  _updateSyncChip();
+  if(_pendingUpload&&_authUser&&FIREBASE_ENABLED){
+    clearTimeout(_syncDebounce);
+    uploadToCloud(_authUser.uid);
+  }
+});
+
+window.addEventListener('offline', ()=>{
+  _updateSyncChip();
+});
