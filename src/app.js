@@ -143,7 +143,6 @@ if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
 if(typeof S.guestMode==='undefined') S.guestMode=false;
 if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
-if(typeof S.useThousands==='undefined') S.useThousands=true;
 if(typeof S.darkMode==='undefined') S.darkMode=true;
 
 // No secondaryCurrency state — foreign currencies tracked per-invest-transaction only
@@ -209,9 +208,7 @@ function uid(){ return 'x'+(++_uid).toString(36); }
 
 function fmt(n){
   const a=Math.abs(n);
-  const grp=typeof S!=='undefined'?S.useThousands!==false:true;
-  const opts={minimumFractionDigits:0,maximumFractionDigits:2,useGrouping:grp};
-  return a.toLocaleString('es-AR',opts);
+  return a.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2,useGrouping:true});
 }
 function fmtShort(n){ if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return fmt(n); }
 function fmtCompact(n){ if(Math.abs(n)>=100000) return (n/1000).toFixed(0).replace('.',getSep())+'k'; if(Math.abs(n)>=10000) return (n/1000).toFixed(1).replace('.',getSep())+'k'; return fmt(n); }
@@ -1558,11 +1555,7 @@ function toggleComma(row){
   document.getElementById('comma-sub').textContent=S.useComma?'Activo: 1.250,50':'Activo: 1,250.50';
   showToast(S.useComma?'Decimal: coma (,)':'Decimal: punto (.)');
 }
-function toggleThousands(row){
-  const tog=row.querySelector('.toggle'); tog.classList.toggle('on');
-  S.useThousands=tog.classList.contains('on'); saveState();
-  showToast(S.useThousands?'Separador de miles activado':'Separador de miles desactivado');
-}
+
 function toggleBudgetAlerts(row){
   const tog=row.querySelector('.toggle'); tog.classList.toggle('on');
   S.budgetAlerts=tog.classList.contains('on'); saveState();
@@ -1642,7 +1635,7 @@ const T = {
     rRecurring:'Recurrentes', rRecurringSub:'Gastos e ingresos automáticos',
     rMonthly:'Resumen mensual', rMonthlySub:'Gastos por categoría',
     rLang:'Idioma de la app', rCurrency:'Moneda principal',
-    rDecimal:'Coma decimal', rThousands:'Separador de miles', rThousandsSub:'Ej: 1.250 vs 1250',
+    rDecimal:'Coma decimal',
     rData:'Gestionar datos', rDataSub:'Exportar e importar historial',
     rBudgetAlerts:'Alertas de presupuesto', rBudgetAlertsSub:'Avisa al 80% y 100% del límite',
     rHideBalance:'Ocultar balance al abrir', rHideBalanceSub:'El balance aparece tapado',
@@ -1708,7 +1701,7 @@ const T = {
     rRecurring:'Recurring', rRecurringSub:'Automatic expenses and income',
     rMonthly:'Monthly summary', rMonthlySub:'Expenses by category',
     rLang:'App language', rCurrency:'Main currency',
-    rDecimal:'Decimal comma', rThousands:'Thousands separator', rThousandsSub:'E.g.: 1,250 vs 1250',
+    rDecimal:'Decimal comma',
     rData:'Manage data', rDataSub:'Export and import history',
     rBudgetAlerts:'Budget alerts', rBudgetAlertsSub:'Alerts at 80% and 100% of limit',
     rHideBalance:'Hide balance on open', rHideBalanceSub:'Balance appears hidden',
@@ -1877,7 +1870,6 @@ function handleImportJSON(inp){
         if(!S.currency||!S.currency.sym) S.currency=CURRENCIES[0];
         if(typeof S.useComma==='undefined') S.useComma=true;
         if(typeof S.hidden==='undefined') S.hidden=false;
-        if(typeof S.useThousands==='undefined') S.useThousands=true;
         if(typeof S.darkMode==='undefined') S.darkMode=true;
         if(typeof S.guestMode==='undefined') S.guestMode=false;
         if(!S.lang) S.lang='es';
@@ -3206,8 +3198,7 @@ window.addEventListener('load',()=>{
   renderAccentDots();
   const decKey=document.getElementById('dec-key'); if(decKey) decKey.textContent=getSep();
   const togCo=document.getElementById('tog-comma'); if(togCo&&!S.useComma) togCo.classList.remove('on');
-  const togTh=document.getElementById('tog-thousands'); if(togTh&&!S.useThousands) togTh.classList.remove('on');
-  const togBa=document.getElementById('tog-budget'); if(togBa&&!S.budgetAlerts) togBa.classList.remove('on');
+const togBa=document.getElementById('tog-budget'); if(togBa&&!S.budgetAlerts) togBa.classList.remove('on');
   const togHs=document.getElementById('tog-hide-start'); if(togHs&&S.hidden) togHs.classList.add('on');
   const togDk=document.getElementById('tog-dark'); if(togDk&&!S.darkMode) togDk.classList.remove('on');
   applyDarkMode(S.darkMode);
@@ -5349,7 +5340,6 @@ async function uploadToCloud(uid){
       recurring: S.recurring||[],
       currency: S.currency,
       useComma: S.useComma,
-      useThousands: S.useThousands!==false,
       darkMode: S.darkMode!==false,
       accent: S.accent||'#34d48a',
       lang: S.lang||'es',
@@ -5389,7 +5379,6 @@ function mergeCloudData(data){
   }
   if(data.split&&Array.isArray(data.split.groups)) S.split=data.split;
   if(typeof data.useComma!=='undefined') S.useComma=data.useComma;
-  if(typeof data.useThousands!=='undefined') S.useThousands=data.useThousands;
   if(typeof data.darkMode!=='undefined') S.darkMode=data.darkMode;
   if(data.accent) S.accent=data.accent;
   if(data.lang) S.lang=data.lang;
