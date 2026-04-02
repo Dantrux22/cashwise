@@ -2599,13 +2599,19 @@ function saveTx(){
   const note=document.getElementById('note-inp').value.trim();
   const enToggle=document.getElementById('exclude-net-toggle');
   const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
-  const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:(typeof txDate!=='undefined'?txDate:new Date()).toISOString()};
+  const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:txDate.toISOString()};
   if(excludeFromNet) tx.excludeFromNet=true;
   if(txType==='invest'){
     if(txCurrency&&txCurrency!==S.currency.code) tx.currency=txCurrency;
     if(txInvestType==='sell') tx.investType='sell';
   }
-  if(editingId){ const i=S.txs.findIndex(t=>t.id===editingId); if(i!==-1)S.txs[i]=tx; showToast('✅ Actualizado'); }
+  if(editingId){
+    const original=S.txs.find(t=>t.id===editingId);
+    if(original&&original.recurringId) tx.recurringId=original.recurringId;
+    const i=S.txs.findIndex(t=>t.id===editingId);
+    if(i!==-1)S.txs[i]=tx;
+    showToast('✅ Actualizado');
+  }
   else { S.txs.unshift(tx); showToast(`✅ ${txType==='income'?'+':'-'}${sym()}${fmt(amt)}`); }
   saveState();
   if(typeof _authUser!=='undefined'&&_authUser&&typeof FIREBASE_ENABLED!=='undefined'&&FIREBASE_ENABLED){
@@ -7515,13 +7521,24 @@ function pickDate(){
   const input=document.createElement('input');
   input.type='date';
   input.dataset.datePicker='1';
-  input.value=txDate.toISOString().slice(0,10);
-  input.style.cssText='position:fixed;opacity:0;top:50%;left:50%;transform:translate(-50%,-50%)';
+  // Usar fecha LOCAL (no UTC) para que el picker muestre el día correcto
+  const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
+  input.value=`${ly}-${lm}-${ld}`;
+  input.style.cssText='position:fixed;opacity:0;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%);width:1px;height:1px';
   document.body.appendChild(input);
-  input.showPicker?.();
+  // Restablecer pointer-events brevemente para que showPicker/click funcione
+  input.style.pointerEvents='auto';
+  let dateChanged=false;
   const cleanup=()=>{ if(input.isConnected) input.remove(); };
-  input.addEventListener('change',()=>{ txDate=new Date(input.value+'T12:00:00'); updateDateLbl(); cleanup(); });
-  input.addEventListener('blur',()=>setTimeout(cleanup,200));
+  input.addEventListener('change',()=>{
+    dateChanged=true;
+    txDate=new Date(input.value+'T12:00:00');
+    updateDateLbl();
+    cleanup();
+  });
+  input.addEventListener('blur',()=>{ if(!dateChanged) setTimeout(cleanup,500); });
+  // Abrir el picker: showPicker() con fallback a click()
+  try { input.showPicker(); } catch(e) { input.click(); }
 }
 function updateDateLbl(){
   const el=document.getElementById('date-lbl');
@@ -7554,7 +7571,7 @@ function setupKeyboardHandlers(){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260401221718')
+    navigator.serviceWorker.register('./sw.js?v=20260402013026')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
