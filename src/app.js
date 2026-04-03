@@ -172,9 +172,9 @@ function goTo(id){
     's-settings':renderAccentDots,
     's-allTx':renderAllTx,
     's-monthly':()=>{monthlyYear=new Date().getFullYear();monthlyMonth=new Date().getMonth();renderMonthly();},
-    's-split':()=>initSplit(),
-    's-split-group':()=>renderGroupDetail(),
-    's-split-settings':()=>renderSplitSettings(),
+    's-split':()=>SplitModule.init(),
+    's-split-group':()=>SplitModule.renderGroupDetail(),
+    's-split-settings':()=>SplitModule.renderSettings(),
     's-data':()=>{ switchDataTab('export'); document.getElementById('import-preview').style.display='none'; document.getElementById('sankey-preview-wrap').style.display='none'; _pendingImportTxs=[]; },
   };
   if(R[id]) R[id]();
@@ -190,7 +190,7 @@ function goBack(){
   // Refresh on return
   const R={'s-home':refreshHome,'s-invest':renderInvest,'s-cats':renderCatLists,
            's-budgets':renderBudgets,'s-goals':renderGoals,'s-monthly':renderMonthly,
-           's-allTx':renderAllTx,'s-recurring':renderRecurring,'s-split-expense':buildSplitCatGrid};
+           's-allTx':renderAllTx,'s-recurring':renderRecurring,'s-split-expense':()=>SplitModule.buildCatGrid()};
   if(R[prev]) R[prev]();
 
   // Ocultar tacho al salir de s-add
@@ -829,13 +829,13 @@ function renderBudgets(){
         </div>
       </div>
       <div class="budget-bar-wrap">
-        <div class="budget-bar-fill" style="width:0%;background:${color}" data-pct="${Math.round(pct*100)}"></div>
+        <div class="budget-bar-fill" style="background:${color}" data-pct="${Math.round(pct*100)}"></div>
       </div>`;
     el.onclick=()=>openBudgetModal(b.id);
     list.appendChild(el);
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const f=el.querySelector('.budget-bar-fill');
-    if(f) f.style.width=f.dataset.pct+'%';
+    if(f) f.style.transform='scaleX('+f.dataset.pct/100+')';
   }));
   });
 }
@@ -900,7 +900,7 @@ function renderGoals(){
         </div>
       </div>
       <div class="goal-bar-wrap" style="margin-bottom:8px">
-        <div class="goal-bar-fill" style="width:0%;background:${done?'var(--gr)':'var(--bl)'}" data-pct="${Math.round(pct*100)}"></div>
+        <div class="goal-bar-fill" style="background:${done?'var(--gr)':'var(--bl)'}" data-pct="${Math.round(pct*100)}"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="goal-pct">${Math.round(pct*100)}% completado</div>
@@ -915,7 +915,7 @@ function renderGoals(){
     list.appendChild(el);
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       const f=el.querySelector('.goal-bar-fill');
-      if(f) f.style.width=f.dataset.pct+'%';
+      if(f) f.style.transform='scaleX('+f.dataset.pct/100+')';
     }));
   });
 }
@@ -1173,7 +1173,7 @@ function saveCat(){
     showToast(t('tSaved'));
   }
   saveState(); closeCatModal(); renderCatLists();
-  if(document.getElementById('split-cat-grid')) buildSplitCatGrid();
+  if(document.getElementById('split-cat-grid')) SplitModule.buildCatGrid();
 }
 function deleteCat(){
   if(!editingCatId) return;
@@ -1187,7 +1187,7 @@ function deleteCat(){
       }
     }
     saveState(); closeCatModal(); renderCatLists(); showToast(t('tCatDeleted'));
-    if(document.getElementById('split-cat-grid')) buildSplitCatGrid();
+    if(document.getElementById('split-cat-grid')) SplitModule.buildCatGrid();
   });
 }
 
@@ -2594,7 +2594,7 @@ function showNumpad(){
   if(hint){ hint.style.display = 'none'; }
   // Subir el tacho para que no quede tapado por el numpad
   const del = document.getElementById('tx-delete-btn');
-  if(del && del.style.display !== 'none'){ del.style.bottom = '244px'; del.style.transition='bottom .25s'; }
+  if(del && del.style.display !== 'none'){ del.style.transform='translateY(-220px)'; del.style.transition='transform .25s,opacity .2s'; }
   updateNumpadPreview();
 }
 
@@ -2606,7 +2606,7 @@ function hideNumpad(){
   if(spacer){ spacer.style.height = '0'; }
   // Volver el tacho a su posición original
   const del = document.getElementById('tx-delete-btn');
-  if(del && del.style.display !== 'none'){ del.style.bottom = '24px'; del.style.transition='bottom .25s'; }
+  if(del && del.style.display !== 'none'){ del.style.transform='translateY(0)'; del.style.transition='transform .25s,opacity .2s'; }
 }
 
 function updateNumpadPreview(){
@@ -2659,7 +2659,7 @@ function showDeleteBtn(isEdit){
   btn.style.display = 'flex';
   btn.style.opacity = '1';
   btn.style.transform = 'scale(1)';
-  btn.style.transition = 'transform .2s, opacity .2s, bottom .3s';
+  btn.style.transition = 'transform .25s, opacity .2s';
   if(isEdit){
     // Modo edición: borrar movimiento
     btn.title = 'Eliminar movimiento';
@@ -3370,8 +3370,39 @@ window.addEventListener('load',()=>{
 
 
 // ═══════════════════════════════════════════════════════
-// SPLIT — Módulo completo rediseñado
+// SPLIT MODULE — Inicio
 // ═══════════════════════════════════════════════════════
+/*
+ * CODE SPLITTING ROADMAP
+ *
+ * Para separar Split en archivo aparte (split.js) en el futuro:
+ *
+ * PASO 1 — Crear src/split.js con el contenido de esta sección.
+ * PASO 2 — Modificar build.py para:
+ *   - Compilar src/split.js → public/split.js (separado del bundle principal)
+ *   - No incluir el código de Split en public/index.html
+ * PASO 3 — En index.html agregar, antes de </body>:
+ *     <script src="split.js" defer></script>
+ * PASO 4 — Para lazy loading completo (máximo beneficio):
+ *     // En goTo(), cuando se navega a Split:
+ *     if (!window.SplitModule) {
+ *       await import('./split.js');
+ *     }
+ *     SplitModule.init();
+ *
+ * Ganancia estimada al separar:
+ *   index.html: ~248KB (hoy ~388KB) — 36% más rápido en primera carga
+ *   split.js:   ~140KB (carga solo cuando el usuario entra a Split)
+ *
+ * NOTA PARA LA EXTRACCIÓN:
+ *   - Las funciones llamadas desde onclick= en el HTML deben mantenerse
+ *     accesibles en window: Object.assign(window, SplitModule._internal)
+ *   - Las variables de estado (curGroupId, splitTabActive, etc.) deben
+ *     pasarse a variables locales del módulo
+ *   - Las dependencias del módulo principal son: S, saveState, showToast,
+ *     showConfirm, goTo, goBack, sym, fmt, formatDate, uid, t, _authUser,
+ *     _fb, uploadToCloud (deben pasarse como parámetros o inyectarse)
+ */
 
 // ── Estado Split ──
 if(!S.split) S.split={groups:[],expenses:[]};
@@ -4242,7 +4273,7 @@ function renderGroupStats(container){
       <div class="sp-stat-val">${spSym()}${spFmt(amt)}</div>`;
     container.appendChild(el);
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      const f=el.querySelector('.sp-stat-fill'); if(f) f.style.width=f.dataset.pct+'%';
+      const f=el.querySelector('.sp-stat-fill'); if(f) f.style.transform='scaleX('+f.dataset.pct/100+')';
     }));
   });
 
@@ -4261,7 +4292,7 @@ function renderGroupStats(container){
       <div class="sp-stat-val">${spSym()}${spFmt(amt)}</div>`;
     container.appendChild(el);
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      const f=el.querySelector('.sp-stat-fill'); if(f) f.style.width=f.dataset.pct+'%';
+      const f=el.querySelector('.sp-stat-fill'); if(f) f.style.transform='scaleX('+f.dataset.pct/100+')';
     }));
   });
 
@@ -4286,7 +4317,7 @@ function renderGroupStats(container){
         <div class="sp-stat-val">${spSym()}${spFmt(amt)}</div>`;
       container.appendChild(el);
       requestAnimationFrame(()=>requestAnimationFrame(()=>{
-        const f=el.querySelector('.sp-stat-fill'); if(f) f.style.width=f.dataset.pct+'%';
+        const f=el.querySelector('.sp-stat-fill'); if(f) f.style.transform='scaleX('+f.dataset.pct/100+')';
       }));
     });
   }
@@ -4996,6 +5027,41 @@ function promptJoinGroup(){
   if(code) showToast('✉️ Invitaciones por código: próximamente');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SPLIT MODULE — API Pública
+// Punto de entrada para todo el código de Split desde el resto de la app.
+// Las llamadas a Split deben pasar por este objeto para facilitar la futura
+// extracción a split.js. Las funciones con onclick= en HTML siguen siendo
+// globales (requerimiento del navegador), pero el código JS las llama aquí.
+// ─────────────────────────────────────────────────────────────────────────────
+const SplitModule = {
+  // ── Navegación (llamadas desde goTo / goBack) ──
+  init:              ()=>initSplit(),
+  renderGroupDetail: ()=>renderGroupDetail(),
+  renderSettings:    ()=>renderSplitSettings(),
+  buildCatGrid:      ()=>buildSplitCatGrid(),
+  // ── Contenido principal ──
+  renderContent:     ()=>renderSplitContent(),
+  renderGroups:      (c)=>renderSplitGroups(c),
+  renderActivity:    (c)=>renderSplitActivity(c),
+  // ── Grupos ──
+  openNewGroup:      ()=>openNewGroup(),
+  saveGroup:         ()=>saveGroup(),
+  deleteGroup:       ()=>deleteGroup(),
+  refresh:           ()=>refreshSplitGroups(),
+  // ── Gastos ──
+  openAddExpense:    ()=>openAddSplitExpense(),
+  saveExpense:       ()=>saveSplitExpense(),
+  deleteExpense:     (id)=>deleteSplitExpense(id),
+  // ── Deudas / Liquidar ──
+  confirmSettle:     ()=>confirmSettle(),
+  // ── Preferencias ──
+  togglePref:        (key)=>toggleSplitPref(key),
+  clearAllData:      ()=>clearAllSplitData(),
+};
+// ═══════════════════════════════════════════════════════
+// SPLIT MODULE — Fin
+// ═══════════════════════════════════════════════════════
 
 function initAuth(){
   if(!FIREBASE_ENABLED){
