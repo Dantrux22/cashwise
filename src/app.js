@@ -3384,7 +3384,7 @@ window.addEventListener('load',()=>{
  *   - Compilar src/split.js → public/split.js (separado del bundle principal)
  *   - No incluir el código de Split en public/index.html
  * PASO 3 — En index.html agregar, antes de </body>:
- *     <script src="split.js" defer></script>
+ *     <script src="split.js" defer><\/script>
  * PASO 4 — Para lazy loading completo (máximo beneficio):
  *     // En goTo(), cuando se navega a Split:
  *     if (!window.SplitModule) {
