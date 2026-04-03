@@ -230,6 +230,11 @@ function dayLabel(iso){
   if(d.toDateString()===yes.toDateString()) return `Ayer — ${dd}/${mm}`;
   return `${D[d.getDay()]} ${dd}/${mm}`;
 }
+// Returns "YYYY-MM-DD" in LOCAL timezone — avoids UTC/local mismatch near midnight
+function localDateKey(isoStr){
+  const d=new Date(isoStr);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 
 function sameWeek(a){
   const d=new Date(a),now=new Date();
@@ -493,7 +498,7 @@ function renderTxList(txs, containerId, limit){
   const show=limit?sorted.slice(0,limit):sorted;
   if(show.length===0){ renderEmptyState(list,'💸','Sin movimientos todavía.<br>Tocá + para agregar el primero.'); return; }
   const groups={};
-  show.forEach(tx=>{ const dk=tx.date.slice(0,10); if(!groups[dk])groups[dk]=[]; groups[dk].push(tx); });
+  show.forEach(tx=>{ const dk=localDateKey(tx.date); if(!groups[dk])groups[dk]=[]; groups[dk].push(tx); });
   Object.entries(groups).forEach(([dk,items])=>{
     const hdr=document.createElement('div'); hdr.className='day-hdr';
     const total=items.filter(t=>t.type!=='invest').reduce((a,t)=>a+(t.type==='income'?t.amount:-t.amount),0);
@@ -523,7 +528,7 @@ function buildTxItem(tx){
     </div>
     <div class="tx-r">
       <div class="tx-amt ${cls}">${isIn?'+':isV?'':'-'}${txSym}${fmt(tx.amount)}${amtSuffix}</div>
-      <div class="tx-dt">${tx.date.slice(8,10)}/${tx.date.slice(5,7)}</div>
+      <div class="tx-dt">${localDateKey(tx.date).slice(8,10)}/${localDateKey(tx.date).slice(5,7)}</div>
     </div>`;
   el.onclick=()=>openEdit(tx.id);
   return el;
@@ -794,7 +799,7 @@ function renderInvest(){
       <div class="inv-ico">${cat?cat.e:'📈'}</div>
       <div class="inv-info">
         <div class="inv-name">${tx.note||tx.cat||'Inversión'}</div>
-        <div class="inv-sub">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${tx.date.slice(8,10)}/${tx.date.slice(5,7)}</div>
+        <div class="inv-sub">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${localDateKey(tx.date).slice(8,10)}/${localDateKey(tx.date).slice(5,7)}</div>
       </div>
       <div class="inv-r"><div class="inv-val" style="color:${amtColor}">${amtStr}</div></div>`;
     el.style.cursor='pointer';
@@ -5967,6 +5972,17 @@ function _dismissPWABanner(){
     else if(action==='add-income') openAdd('income');
   }, 400);
 })();
+
+// ── Selector de fecha directo (icono calendario) ──
+function openDateDirect(){
+  const inp=document.getElementById('date-direct-input'); if(!inp) { openDateModal(); return; }
+  const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
+  inp.value=`${ly}-${lm}-${ld}`;
+  try{ inp.showPicker(); } catch(e){ inp.click(); }
+}
+function applyDateDirect(val){
+  if(val){ txDate=new Date(val+'T12:00:00'); updateDateLbl(); }
+}
 
 // ── Modal de selección de fecha ──
 function openDateModal(){
