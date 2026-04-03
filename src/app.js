@@ -138,6 +138,7 @@ if(typeof S.hidden==='undefined') S.hidden=false;
 if(!Array.isArray(S.budgets)) S.budgets=[];
 if(!Array.isArray(S.goals)) S.goals=[];
 if(!Array.isArray(S.recurring)) S.recurring=[];
+if(!Array.isArray(S.deletedTxIds)) S.deletedTxIds=[];
 if(!S.lang) S.lang='es';
 if(!S.accent) S.accent='#34d48a';
 if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
@@ -745,6 +746,8 @@ function deleteTx(){
   if(!editingTxId) return;
   showConfirm(t('cDeleteTx'),t('cDeleteTxMsg'),()=>{
     const wasInvest=S.txs.find(t=>t.id===editingTxId)?.type==='invest';
+    // Registrar ID como eliminado para que el merge no lo restaure desde la nube
+    if(!S.deletedTxIds.includes(editingTxId)) S.deletedTxIds.push(editingTxId);
     S.txs=S.txs.filter(t=>t.id!==editingTxId);
     saveState(); closeEdit(); showToast(t('tDeleted'));
     setTimeout(()=>{ refreshHome(); if(wasInvest) renderInvest(); },50);
@@ -5626,6 +5629,7 @@ async function uploadToCloud(uid){
       accent: S.accent||'#34d48a',
       lang: S.lang||'es',
       investCurrencies: S.investCurrencies||['USD','EUR'],
+      deletedTxIds: S.deletedTxIds||[],
       splitPrefs: S.splitPrefs||{simplify:true,showSettled:true,autoPersonal:false,defaultMethod:'equal'},
       userName: S.userName||'',
       split: S.split||{groups:[],expenses:[]},
@@ -5658,11 +5662,13 @@ async function loadFromCloud(uid){
 // Tradeoff aceptado: si el usuario borra un tx en otro dispositivo, puede
 // que reaparezca hasta la próxima sincronización completa (puede borrarlo de nuevo).
 function _mergeTxById(local, cloud){
+  const deleted = new Set(S.deletedTxIds||[]);
   const localMap = new Map((local||[]).map(t=>[t.id, t]));
   const cloudMap = new Map((cloud||[]).map(t=>[t.id, t]));
   const result = [];
-  // Incluir todos los de la nube
+  // Incluir todos los de la nube (salvo los eliminados localmente)
   for(const [id, cloudTx] of cloudMap){
+    if(deleted.has(id)) continue; // eliminado en este dispositivo — no restaurar
     const localTx = localMap.get(id);
     if(!localTx){
       result.push(cloudTx); // Solo en nube (agregado en otro dispositivo)
@@ -5675,7 +5681,7 @@ function _mergeTxById(local, cloud){
   }
   // Agregar los que solo están en local (creados offline)
   for(const [id, localTx] of localMap){
-    if(!cloudMap.has(id)) result.push(localTx);
+    if(!cloudMap.has(id) && !deleted.has(id)) result.push(localTx);
   }
   return result;
 }
@@ -5706,6 +5712,13 @@ function mergeCloudData(data){
   if(Array.isArray(data.investCurrencies)) S.investCurrencies=data.investCurrencies;
   if(data.splitPrefs&&typeof data.splitPrefs==='object') S.splitPrefs=data.splitPrefs;
   if(data.userName) S.userName=data.userName;
+  // Unión de IDs eliminados para propagar bajas entre dispositivos
+  if(Array.isArray(data.deletedTxIds) && data.deletedTxIds.length){
+    const merged = new Set([...(S.deletedTxIds||[]), ...data.deletedTxIds]);
+    S.deletedTxIds = Array.from(merged);
+    // Quitar del array txs cualquier tx que figure como eliminada
+    S.txs = S.txs.filter(t=>!merged.has(t.id));
+  }
   const added = S.txs.length - prevTxCount;
   if(added>0) console.log('[Sync] mergeCloudData: +'+added+' movimientos desde nube');
 }
