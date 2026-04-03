@@ -1222,8 +1222,16 @@ function renderMonthly(){
   const txs=S.txs.filter(t=>{const d=new Date(t.date);return d.getMonth()===monthlyMonth&&d.getFullYear()===monthlyYear;});
   const income=txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const expense=txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const invest=txs.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
   const balance=income-expense;
+  // Inversiones: agrupar por moneda (compra suma, venta resta)
+  const mainCode=S.currency.code;
+  const investByCur={};
+  txs.filter(t=>t.type==='invest').forEach(t=>{
+    const code=t.currency||mainCode;
+    const sign=t.investType==='sell'?-1:1;
+    investByCur[code]=(investByCur[code]||0)+sign*t.amount;
+  });
+  const investTxs=txs.filter(t=>t.type==='invest');
 
   // Datos mes anterior para comparación
   const prevM=monthlyMonth===0?11:monthlyMonth-1;
@@ -1231,7 +1239,6 @@ function renderMonthly(){
   const txsPrev=S.txs.filter(t=>{const d=new Date(t.date);return d.getMonth()===prevM&&d.getFullYear()===prevY;});
   const prevIncome=txsPrev.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const prevExpense=txsPrev.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const prevInvest=txsPrev.filter(t=>t.type==='invest').reduce((a,t)=>a+t.amount,0);
 
   function diffBadge(cur,prev){
     if(prev===0) return '';
@@ -1259,8 +1266,16 @@ function renderMonthly(){
       <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:${balColor}">${balance>=0?'+':''}${s}${fmt(Math.abs(balance))}</div>
     </div>
     <div style="background:var(--amd);border:1px solid rgba(245,166,35,.2);border-radius:14px;padding:13px 12px">
-      <div style="font-size:10px;color:var(--am);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Inversiones</div>
-      <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:var(--am)">${s}${fmt(invest)}${diffBadge(invest,prevInvest)}</div>
+      <div style="font-size:10px;color:var(--am);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Inversiones · ${investTxs.length} mov.</div>
+      ${Object.keys(investByCur).length===0
+        ? `<div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:var(--am)">${s}0</div>`
+        : Object.entries(investByCur).map(([code,total])=>{
+            const cur=CURRENCIES.find(c=>c.code===code)||{sym:code,code};
+            const color=total<0?'var(--rd)':'var(--am)';
+            const suffix=code!==mainCode?` <span style="font-size:10px;font-weight:500">${code}</span>`:'';
+            return `<div style="font-size:${Object.keys(investByCur).length>1?'13px':'17px'};font-weight:700;font-family:'DM Mono',monospace;color:${color};line-height:1.35">${total<0?'-':''}${cur.sym}${fmt(Math.abs(total))}${suffix}</div>`;
+          }).join('')
+      }
     </div>
   </div>`;
   scroll.appendChild(sum);
@@ -1370,6 +1385,50 @@ function renderMonthly(){
       row.onmouseover=()=>row.style.background='var(--s2)';
       row.onmouseout=()=>row.style.background='var(--s1)';
       row.onclick=()=>openCatHistory('expense',catName,monthlyMonth,monthlyYear);
+      scroll.appendChild(row);
+    });
+  }
+
+  // ── Detalle de inversiones del mes ──
+  if(investTxs.length>0){
+    const invHdr=document.createElement('div'); invHdr.className='sec-hdr'; invHdr.style.marginBottom='8px';
+    invHdr.innerHTML='<span class="sec-ttl">Inversiones del mes</span>';
+    scroll.appendChild(invHdr);
+    // Resumen por moneda
+    if(Object.keys(investByCur).length>0){
+      const invSumDiv=document.createElement('div');
+      invSumDiv.style.cssText='background:var(--amd);border:1px solid rgba(245,166,35,.2);border-radius:14px;padding:12px 14px;display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px';
+      invSumDiv.innerHTML=Object.entries(investByCur).map(([code,total])=>{
+        const cur=CURRENCIES.find(c=>c.code===code)||{sym:code,code};
+        const color=total<0?'var(--rd)':'var(--am)';
+        return `<div style="display:flex;flex-direction:column;gap:1px;min-width:80px">
+          <div style="font-size:10px;color:var(--mu)">${cur.code}</div>
+          <div style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:${color}">${total<0?'-':''}${cur.sym}${fmt(Math.abs(total))}</div>
+        </div>`;
+      }).join('');
+      scroll.appendChild(invSumDiv);
+    }
+    // Lista de movimientos de inversión del mes
+    investTxs.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(tx=>{
+      const cat=findCat('invest',tx.cat);
+      const isSell=tx.investType==='sell';
+      const code=tx.currency||mainCode;
+      const cur=CURRENCIES.find(c=>c.code===code)||{sym:code,code};
+      const color=isSell?'var(--rd)':'var(--am)';
+      const ldk=localDateKey(tx.date);
+      const row=document.createElement('div');
+      row.style.cssText='background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:7px;cursor:pointer';
+      row.innerHTML=`
+        <div style="width:34px;height:34px;border-radius:10px;background:var(--amd);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${cat?cat.e:'📈'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tx.note||tx.cat||'Inversión'}</div>
+          <div style="font-size:11px;color:var(--mu);margin-top:1px">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${ldk.slice(8,10)}/${ldk.slice(5,7)}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:${color}">${isSell?'-':''}${cur.sym}${fmt(tx.amount)}</div>
+          ${code!==mainCode?`<div style="font-size:10px;color:var(--mu)">${code}</div>`:''}
+        </div>`;
+      row.onclick=()=>openEdit(tx.id);
       scroll.appendChild(row);
     });
   }
