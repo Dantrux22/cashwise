@@ -1451,7 +1451,7 @@ function closeCurrModal(){ document.getElementById('curr-modal').classList.add('
 function filterCurr(q){ renderCurrList(CURRENCIES.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||c.code.toLowerCase().includes(q.toLowerCase()))); }
 
 // ── Invest currencies modal ──────────────────────────────────────────────────
-const INVEST_CUR_OPTIONS=['USD','EUR','GBP','BRL','JPY','CHF','CAD','AUD'];
+const INVEST_CUR_OPTIONS=['ARS','USD','EUR','GBP','BRL','JPY','CHF','CAD','AUD'];
 
 function openInvestCurrModal(){
   _renderInvestCurrList();
