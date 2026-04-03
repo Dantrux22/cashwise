@@ -634,7 +634,8 @@ function saveTx(){
   const note=document.getElementById('note-inp').value.trim();
   const enToggle=document.getElementById('exclude-net-toggle');
   const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
-  const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:txDate.toISOString()};
+  const now=new Date().toISOString();
+  const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:txDate.toISOString(),modifiedAt:now};
   if(excludeFromNet) tx.excludeFromNet=true;
   if(txType==='invest'){
     if(txCurrency&&txCurrency!==S.currency.code) tx.currency=txCurrency;
@@ -730,6 +731,7 @@ function saveEdit(){
   if(amt<=0){ showToast(t('tInvalidAmt')); return; }
   tx.amount=amt; tx.note=document.getElementById('edit-note-inp').value.trim();
   if(editSelCat) tx.cat=editSelCat;
+  tx.modifiedAt=new Date().toISOString();
   saveState(); showToast(t('tSaved')); closeEdit();
   setTimeout(()=>{ if(curScreen==='s-home') refreshHome(); if(curScreen==='s-invest') renderInvest(); },50);
 }
@@ -5334,55 +5336,32 @@ async function onUserLoggedIn(user){
   const cloudData = await loadFromCloud(user.uid);
 
   if(!cloudData||cloudData._isEmpty){
-    // Cloud empty → push local data up
+    // Nube vacía → subir datos locales
     if(hasLocalData){ await uploadToCloud(user.uid); showToast('☁️ Datos locales subidos a tu cuenta'); }
     updateProfileUI(user); saveUserProfile(user); refreshSplitGroups(); return;
   }
 
-  // Normalise timestamps to ms for comparison
-  const _tsToMs=ts=>{
-    if(!ts) return 0;
-    if(ts.seconds) return ts.seconds*1000;               // Firestore Timestamp
-    if(ts.toDate) return ts.toDate().getTime();          // Firestore Timestamp (compat)
-    return new Date(ts).getTime();                       // ISO string
-  };
-  const cloudMs=_tsToMs(cloudData.updatedAt);
-  const localMs=S.lastSync?new Date(S.lastSync).getTime():0;
-  console.log('[Sync] cloud updatedAt ms:', cloudMs, '| local lastSync ms:', localMs);
+  // Siempre hacer merge bidireccional: nunca sobreescribir, nunca perder datos.
+  // 1. Mergear nube → local (agrega txs de otros dispositivos)
+  const prevCount = S.txs.length;
+  mergeCloudData(cloudData);
+  const addedFromCloud = S.txs.length - prevCount;
 
-  if(cloudMs>localMs){
-    // Firestore is newer — check if local also has unsaved changes to avoid silent overwrite
-    if(_pendingUpload && (S.txs.length>0||S.split.groups.length>0)){
-      // Both sides changed: let user decide
-      console.log('[Sync] → CONFLICT: cloud newer but local has pending changes');
-      showSyncModal();
-    } else {
-      // Local is clean: safe to download
-      console.log('[Sync] → downloading cloud data (cloud is newer, local clean)');
-      mergeCloudData(cloudData);
-      saveState(); updateCurrUI(); refreshHome(); renderInvest();
-      showToast('☁️ Datos actualizados desde tu cuenta');
-    }
-  } else if(localMs>0){
-    // Local is newer or equal → upload
-    console.log('[Sync] → uploading local data (local is newer or equal)');
-    await uploadToCloud(user.uid);
-    showToast('☁️ Datos sincronizados con tu cuenta');
+  // 2. Subir el estado mergeado a la nube (incluye txs offline + txs de nube)
+  //    uploadToCloud también hace merge-before-write, por lo que es idempotente.
+  await uploadToCloud(user.uid);
+
+  saveState(); updateCurrUI(); refreshHome(); renderInvest();
+
+  if(addedFromCloud>0){
+    showToast('☁️ +'+addedFromCloud+' movimiento'+(addedFromCloud>1?'s':'')+' sincronizado'+(addedFromCloud>1?'s':'')+' desde tu cuenta');
   } else if(hasLocalData){
-    // No lastSync on either side but local has data → upload (first login with offline txs)
-    console.log('[Sync] → uploading local data (first login, local has data)');
-    await uploadToCloud(user.uid);
-    showToast('☁️ Datos locales subidos a tu cuenta');
+    showToast('☁️ Datos sincronizados con tu cuenta');
   } else {
-    // Fresh install, no local data → download everything
-    console.log('[Sync] → downloading cloud data (fresh install)');
-    mergeCloudData(cloudData);
-    saveState(); updateCurrUI(); refreshHome(); renderInvest();
     showToast('✅ Datos cargados desde tu cuenta');
   }
   updateProfileUI(user);
   saveUserProfile(user);
-  // Load split groups from Firestore on login
   refreshSplitGroups();
 }
 
@@ -5400,14 +5379,18 @@ async function syncChoice(choice){
   const uid=_authUser?.uid;
   hideSyncModal();
   if(choice==='upload'){
+    // Sube local pero con merge-before-write, no pierde datos de nube
     await uploadToCloud(uid);
-    showToast('☁️ Datos locales subidos a tu cuenta');
+    saveState(); updateCurrUI(); refreshHome(); renderInvest();
+    showToast('☁️ Datos sincronizados');
   } else if(choice==='download'){
     const d=await loadFromCloud(uid);
-    if(d){ mergeCloudData(d); saveState(); refreshHome(); }
-    showToast('📥 Datos de tu cuenta cargados');
+    if(d){ mergeCloudData(d); saveState(); updateCurrUI(); refreshHome(); renderInvest(); }
+    // Subir el merge (que incluye lo local + lo de nube)
+    if(uid) await uploadToCloud(uid);
+    showToast('☁️ Datos sincronizados');
   } else {
-    showToast('💾 Manteniendo datos locales');
+    showToast('💾 Sincronización pospuesta');
   }
   if(_authUser) updateProfileUI(_authUser);
 }
@@ -5598,17 +5581,41 @@ async function linkMemberUidInGroup(groupId,email,userUid){
   }catch(e){ console.error('linkMemberUidInGroup:',e); }
 }
 
-// ── Firestore: subir ──
+// ── Firestore: subir (con merge read-before-write para no borrar datos de otros dispositivos) ──
 async function uploadToCloud(uid){
   if(!FIREBASE_ENABLED||!_fbDb||!uid) return;
   try{
-    console.log('[Upload] txs count:', S.txs.length, '| first invest:', JSON.stringify(S.txs.find(t=>t.type==='invest')||null));
+    // PASO 1: leer nube actual para evitar sobreescribir movimientos de otros dispositivos
+    let txsToUpload = S.txs||[];
+    let budgetsToUpload = S.budgets||[];
+    let goalsToUpload = S.goals||[];
+    let recurringToUpload = S.recurring||[];
+    try{
+      const currentCloud = await loadFromCloud(uid);
+      if(currentCloud && !currentCloud._isEmpty){
+        if(Array.isArray(currentCloud.txs) && currentCloud.txs.length){
+          const merged = _mergeTxById(S.txs||[], currentCloud.txs);
+          if(merged.length > (S.txs||[]).length){
+            const added = merged.length - (S.txs||[]).length;
+            console.log('[Upload] merge-before-write: +'+added+' txs de nube incorporados al local');
+            S.txs = merged; // actualizar local con txs de otros dispositivos
+          }
+          txsToUpload = S.txs;
+        }
+        if(Array.isArray(currentCloud.budgets))   budgetsToUpload   = _mergeById(S.budgets,   currentCloud.budgets);
+        if(Array.isArray(currentCloud.goals))     goalsToUpload     = _mergeById(S.goals,     currentCloud.goals);
+        if(Array.isArray(currentCloud.recurring)) recurringToUpload = _mergeById(S.recurring, currentCloud.recurring);
+      }
+    }catch(mergeErr){ console.warn('[Upload] merge-before-write falló, subiendo sin merge:', mergeErr.message); }
+
+    // PASO 2: escribir el estado mergeado
+    console.log('[Upload] subiendo', txsToUpload.length, 'txs');
     await _fbDb.collection('users').doc(uid).set({
-      txs: S.txs||[],
+      txs: txsToUpload,
       cats: S.cats,
-      budgets: S.budgets||[],
-      goals: S.goals||[],
-      recurring: S.recurring||[],
+      budgets: budgetsToUpload,
+      goals: goalsToUpload,
+      recurring: recurringToUpload,
       currency: S.currency,
       darkMode: S.darkMode!==false,
       accent: S.accent||'#34d48a',
@@ -5622,7 +5629,6 @@ async function uploadToCloud(uid){
     },{merge:true});
     S.lastSync=new Date().toISOString();
     _pendingUpload=false;
-    // No llamar saveState() aquí para evitar loop infinito
     try{ localStorage.setItem(SK, JSON.stringify(S)); }catch(_e){}
     _updateSyncChip();
   }catch(e){
@@ -5640,15 +5646,51 @@ async function loadFromCloud(uid){
   }catch(e){ console.warn('[CashWise] Error load:', e.message); return null; }
 }
 
-// ── Merge datos de la nube ──
+// ── Merge helpers: nunca borrar datos ──
+// Mergea dos arrays de txs por ID. Regla: si existe en ambos lados, gana
+// el que tiene modifiedAt más reciente; si solo existe en un lado, se conserva.
+// Esto garantiza que los datos agregados offline nunca se pierden.
+// Tradeoff aceptado: si el usuario borra un tx en otro dispositivo, puede
+// que reaparezca hasta la próxima sincronización completa (puede borrarlo de nuevo).
+function _mergeTxById(local, cloud){
+  const localMap = new Map((local||[]).map(t=>[t.id, t]));
+  const cloudMap = new Map((cloud||[]).map(t=>[t.id, t]));
+  const result = [];
+  // Incluir todos los de la nube
+  for(const [id, cloudTx] of cloudMap){
+    const localTx = localMap.get(id);
+    if(!localTx){
+      result.push(cloudTx); // Solo en nube (agregado en otro dispositivo)
+    } else {
+      // En ambos: gana el más reciente
+      const lMs = localTx.modifiedAt ? new Date(localTx.modifiedAt).getTime() : 0;
+      const cMs = cloudTx.modifiedAt ? new Date(cloudTx.modifiedAt).getTime() : 0;
+      result.push(lMs >= cMs ? localTx : cloudTx);
+    }
+  }
+  // Agregar los que solo están en local (creados offline)
+  for(const [id, localTx] of localMap){
+    if(!cloudMap.has(id)) result.push(localTx);
+  }
+  return result;
+}
+// Merge genérico para arrays con campo .id (budgets, goals, recurring)
+function _mergeById(local, cloud){
+  if(!Array.isArray(cloud)||!cloud.length) return local||[];
+  if(!Array.isArray(local)||!local.length) return cloud||[];
+  const map = new Map((cloud||[]).map(x=>[x.id, x]));
+  for(const item of (local||[])){ if(item.id) map.set(item.id, item); }
+  return Array.from(map.values());
+}
+
+// ── Merge datos de la nube (bidireccional — nunca sobreescribe) ──
 function mergeCloudData(data){
-  console.log('[Merge] cloud txs count:', Array.isArray(data.txs)?data.txs.length:'n/a', '| first invest:', JSON.stringify((data.txs||[]).find(t=>t.type==='invest')||null));
-  if(Array.isArray(data.txs))       S.txs=data.txs;
-  if(data.cats&&typeof data.cats==='object') S.cats=data.cats;
-  if(Array.isArray(data.budgets))   S.budgets=data.budgets;
-  if(Array.isArray(data.goals))     S.goals=data.goals;
-  if(Array.isArray(data.recurring)) S.recurring=data.recurring;
-  // Re-hydrate currency from CURRENCIES array so all fields are present
+  const prevTxCount = S.txs.length;
+  if(Array.isArray(data.txs))       S.txs      = _mergeTxById(S.txs, data.txs);
+  if(data.cats&&typeof data.cats==='object') S.cats = data.cats;
+  if(Array.isArray(data.budgets))   S.budgets  = _mergeById(S.budgets, data.budgets);
+  if(Array.isArray(data.goals))     S.goals    = _mergeById(S.goals, data.goals);
+  if(Array.isArray(data.recurring)) S.recurring= _mergeById(S.recurring, data.recurring);
   if(data.currency&&data.currency.code){
     S.currency=CURRENCIES.find(c=>c.code===data.currency.code)||data.currency;
   }
@@ -5659,6 +5701,8 @@ function mergeCloudData(data){
   if(Array.isArray(data.investCurrencies)) S.investCurrencies=data.investCurrencies;
   if(data.splitPrefs&&typeof data.splitPrefs==='object') S.splitPrefs=data.splitPrefs;
   if(data.userName) S.userName=data.userName;
+  const added = S.txs.length - prevTxCount;
+  if(added>0) console.log('[Sync] mergeCloudData: +'+added+' movimientos desde nube');
 }
 
 // ── Auto-sync al guardar ──
@@ -5679,28 +5723,31 @@ async function authLogout(){
   });
 }
 
-// ── Force sync ──
+// ── Force sync (bidireccional: siempre merge local + nube) ──
 async function forceSync(){
   if(!_authUser){ showToast('⚠️ Iniciá sesión primero'); return; }
   showToast(t('tSyncing'));
-  // 1. Subir cambios locales
-  await uploadToCloud(_authUser.uid);
-  // 2. Bajar si la nube (otro dispositivo) actualizó después del upload
   try{
-    const cloudData=await loadFromCloud(_authUser.uid);
-    if(cloudData&&!cloudData._isEmpty){
-      const _tsToMs=ts=>{ if(!ts) return 0; if(ts.seconds) return ts.seconds*1000; if(ts.toDate) return ts.toDate().getTime(); return new Date(ts).getTime(); };
-      const cloudMs=_tsToMs(cloudData.updatedAt);
-      const localMs=S.lastSync?new Date(S.lastSync).getTime():0;
-      if(cloudMs>localMs){
-        mergeCloudData(cloudData); saveState(); updateCurrUI(); refreshHome(); renderInvest();
-        showToast('☁️ Datos actualizados desde otro dispositivo');
-        renderProfile(); return;
-      }
+    // 1. Descargar nube y mergear en local
+    const cloudData = await loadFromCloud(_authUser.uid);
+    let addedFromCloud = 0;
+    if(cloudData && !cloudData._isEmpty){
+      const prevCount = S.txs.length;
+      mergeCloudData(cloudData);
+      addedFromCloud = S.txs.length - prevCount;
     }
-  }catch(_e){}
-  showToast(t('tSynced'));
-  renderProfile();
+    // 2. Subir estado mergeado (uploadToCloud también hace merge-before-write)
+    await uploadToCloud(_authUser.uid);
+    saveState(); updateCurrUI(); refreshHome(); renderInvest(); renderProfile();
+    if(addedFromCloud>0){
+      showToast('☁️ +'+addedFromCloud+' movimiento'+(addedFromCloud>1?'s':'')+' desde otro dispositivo');
+    } else {
+      showToast(t('tSynced'));
+    }
+  }catch(e){
+    console.warn('[forceSync] error:', e.message);
+    showToast('⚠️ Error al sincronizar');
+  }
 }
 
 // ── UI del perfil con auth real ──
@@ -5990,9 +6037,11 @@ function _updateSyncChip(){
 // Si el usuario hizo cambios mientras estaba offline, se suben en cuanto hay red.
 window.addEventListener('online', ()=>{
   _updateSyncChip();
-  if(_pendingUpload&&_authUser&&FIREBASE_ENABLED){
+  // Al reconectar: sync bidireccional para no perder txs de otros dispositivos.
+  // Independiente de _pendingUpload — puede haber datos nuevos en la nube.
+  if(_authUser&&FIREBASE_ENABLED){
     clearTimeout(_syncDebounce);
-    uploadToCloud(_authUser.uid);
+    setTimeout(()=>forceSync(), 1500); // pequeño delay para que la red estabilice
   }
 });
 

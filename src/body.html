@@ -1185,6 +1185,19 @@
   </div>
 </div>
 
+<!-- ══ SYNC CONFLICT MODAL ══ -->
+<div id="sync-overlay-bg" class="confirm-bg hidden" style="z-index:300">
+  <div id="sync-card" class="confirm-card" style="max-width:340px">
+    <div class="confirm-title">⚠️ Conflicto de sincronización</div>
+    <div class="confirm-msg">Hay cambios tanto en este dispositivo como en tu cuenta. ¿Qué querés hacer?</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button onclick="syncChoice('upload')" style="width:100%;padding:12px;border-radius:12px;background:var(--gr);color:#0f0f13;font-size:14px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif">📤 Subir este dispositivo</button>
+      <button onclick="syncChoice('download')" style="width:100%;padding:12px;border-radius:12px;background:var(--bld);color:var(--bl);font-size:14px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif">📥 Descargar de la nube</button>
+      <button onclick="syncChoice('keep')" style="width:100%;padding:12px;border-radius:12px;background:var(--s2);color:var(--mu);font-size:14px;font-weight:500;border:1px solid var(--br);cursor:pointer;font-family:'DM Sans',sans-serif">Decidir después</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ AUTH OVERLAY ══ -->
 <div class="auth-overlay hidden" id="auth-overlay">
   <div style="position:relative;width:100%;max-width:360px">
