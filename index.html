@@ -758,8 +758,8 @@ canvas.cv{width:100%;height:100%}
   </div>
 
   <!-- FECHA -->
-  <div class="tx-row">
-    <div class="tx-row-icon" onclick="openDateDirect()" style="cursor:pointer;position:relative">
+  <div class="tx-row" onclick="openDateDirect()" style="cursor:pointer">
+    <div class="tx-row-icon" style="position:relative">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <input type="date" id="date-direct-input" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;top:0;left:0" onchange="applyDateDirect(this.value)">
     </div>
@@ -8043,7 +8043,7 @@ function openDateDirect(){
   const inp=document.getElementById('date-direct-input'); if(!inp) { openDateModal(); return; }
   const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
   inp.value=`${ly}-${lm}-${ld}`;
-  try{ inp.showPicker(); } catch(e){ inp.click(); }
+  try{ inp.showPicker(); } catch(e){ openDateModal(); }
 }
 function applyDateDirect(val){
   if(val){ txDate=new Date(val+'T12:00:00'); updateDateLbl(); }
@@ -8134,7 +8134,7 @@ window.addEventListener('offline', ()=>{
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260403042414')
+    navigator.serviceWorker.register('./sw.js?v=20260413235016')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {

@@ -6050,7 +6050,7 @@ function openDateDirect(){
   const inp=document.getElementById('date-direct-input'); if(!inp) { openDateModal(); return; }
   const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
   inp.value=`${ly}-${lm}-${ld}`;
-  try{ inp.showPicker(); } catch(e){ inp.click(); }
+  try{ inp.showPicker(); } catch(e){ openDateModal(); }
 }
 function applyDateDirect(val){
   if(val){ txDate=new Date(val+'T12:00:00'); updateDateLbl(); }
