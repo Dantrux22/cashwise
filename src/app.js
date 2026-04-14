@@ -6045,30 +6045,55 @@ function _dismissPWABanner(){
   }, 400);
 })();
 
-// ── Selector de fecha directo (icono calendario) ──
-function openDateDirect(){
-  const inp=document.getElementById('date-direct-input'); if(!inp) { openDateModal(); return; }
-  const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
-  inp.value=`${ly}-${lm}-${ld}`;
-  try{ inp.showPicker(); } catch(e){ openDateModal(); }
-}
-function applyDateDirect(val){
-  if(val){ txDate=new Date(val+'T12:00:00'); updateDateLbl(); }
-}
-
-// ── Modal de selección de fecha ──
+// ── Modal de selección de fecha (custom selects — funciona en iOS/Android/PWA) ──
 function openDateModal(){
-  const inp=document.getElementById('date-modal-input'); if(!inp) return;
-  const ly=txDate.getFullYear(), lm=String(txDate.getMonth()+1).padStart(2,'0'), ld=String(txDate.getDate()).padStart(2,'0');
-  inp.value=`${ly}-${lm}-${ld}`;
+  const d = (txDate instanceof Date && !isNaN(txDate)) ? txDate : new Date();
+  const curDay=d.getDate(), curMonth=d.getMonth()+1, curYear=d.getFullYear();
+  const locale=(typeof S!=='undefined'&&S.lang==='en')?'en-US':'es-AR';
+
+  // Días 1-31
+  const dayEl=document.getElementById('date-sel-day');
+  dayEl.innerHTML='';
+  for(let i=1;i<=31;i++){
+    const o=document.createElement('option');
+    o.value=i; o.textContent=String(i).padStart(2,'0');
+    if(i===curDay) o.selected=true;
+    dayEl.appendChild(o);
+  }
+
+  // Meses
+  const monthEl=document.getElementById('date-sel-month');
+  monthEl.innerHTML='';
+  for(let i=0;i<12;i++){
+    const o=document.createElement('option');
+    o.value=i+1;
+    o.textContent=new Date(2000,i,1).toLocaleString(locale,{month:'long'}).replace(/^\w/,c=>c.toUpperCase());
+    if(i+1===curMonth) o.selected=true;
+    monthEl.appendChild(o);
+  }
+
+  // Años: 3 años atrás hasta 1 año adelante
+  const yearEl=document.getElementById('date-sel-year');
+  yearEl.innerHTML='';
+  const ny=new Date().getFullYear();
+  for(let y=ny-3;y<=ny+1;y++){
+    const o=document.createElement('option');
+    o.value=y; o.textContent=y;
+    if(y===curYear) o.selected=true;
+    yearEl.appendChild(o);
+  }
+
   document.getElementById('date-modal').classList.remove('hidden');
 }
 function closeDateModal(){
   document.getElementById('date-modal').classList.add('hidden');
 }
 function applyDateModal(){
-  const val=document.getElementById('date-modal-input').value;
-  if(val){ txDate=new Date(val+'T12:00:00'); updateDateLbl(); }
+  const day=parseInt(document.getElementById('date-sel-day').value);
+  const month=parseInt(document.getElementById('date-sel-month').value);
+  const year=parseInt(document.getElementById('date-sel-year').value);
+  txDate=new Date(year,month-1,day,12,0,0);
+  updateDateLbl();
   closeDateModal();
 }
 function updateDateLbl(){

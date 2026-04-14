@@ -148,10 +148,9 @@
   </div>
 
   <!-- FECHA -->
-  <div class="tx-row" onclick="openDateDirect()" style="cursor:pointer">
-    <div class="tx-row-icon" style="position:relative">
+  <div class="tx-row" onclick="openDateModal()" style="cursor:pointer">
+    <div class="tx-row-icon">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <input type="date" id="date-direct-input" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;top:0;left:0" onchange="applyDateDirect(this.value)">
     </div>
     <div class="tx-row-value" id="date-lbl" data-i18n="today">Hoy</div>
     <div class="tx-row-arrow">›</div>
@@ -528,7 +527,11 @@
       <div class="modal-title" data-i18n="selectDate">Seleccionar fecha</div>
       <button class="modal-x" onclick="closeDateModal()">✕</button>
     </div>
-    <input type="date" id="date-modal-input" class="modal-inp" style="font-size:16px;text-align:center;padding:14px;margin-bottom:6px">
+    <div style="display:flex;gap:8px;margin:16px 0 20px">
+      <select id="date-sel-day" style="flex:1;padding:12px 4px;font-size:17px;border:2px solid var(--br,#e5e5e5);border-radius:10px;text-align:center;background:var(--bg,#fff);color:var(--tx,#111);min-width:0"></select>
+      <select id="date-sel-month" style="flex:2;padding:12px 4px;font-size:17px;border:2px solid var(--br,#e5e5e5);border-radius:10px;text-align:center;background:var(--bg,#fff);color:var(--tx,#111);min-width:0"></select>
+      <select id="date-sel-year" style="flex:1.2;padding:12px 4px;font-size:17px;border:2px solid var(--br,#e5e5e5);border-radius:10px;text-align:center;background:var(--bg,#fff);color:var(--tx,#111);min-width:0"></select>
+    </div>
     <button class="modal-btn" onclick="applyDateModal()" data-i18n="applyDate">Aplicar</button>
     <button class="modal-btn secondary" onclick="closeDateModal()" data-i18n="cancelBtn">Cancelar</button>
   </div>
