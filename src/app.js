@@ -546,7 +546,7 @@ let txInvestType='buy'; // 'buy' | 'sell'
 function openAdd(forceType){
   editingId=null; editingTxId=null; amtStr='0'; selCat=null;
   const titleEl=document.getElementById('add-title');
-  if(titleEl) titleEl.textContent='Nueva transacción';
+  if(titleEl) titleEl.textContent=t('newTx');
   const noteEl=document.getElementById('note-inp');
   if(noteEl) noteEl.value='';
   // Reset "Excluir del neto" toggle
@@ -557,15 +557,58 @@ function openAdd(forceType){
   txDate=new Date(); updateDateLbl();
   setType(forceType||'expense'); // calls renderTxCatCircles internally
   updateAmt();
-  // Tacho siempre visible: en modo nuevo limpia el formulario
-  showDeleteBtn(false);
+  _showAddStep1(); // Paso 1: elegir tipo + categoría
   goTo('s-add');
-  setTimeout(showNumpad, 60); // auto-open numpad al entrar a nueva tx
 }
 
-function toggleExtras(){
-  document.getElementById('extras-body').classList.toggle('open');
-  document.getElementById('extras-toggle').classList.toggle('open');
+// ── Flujo de alta en 2 pasos: Paso 1 (tipo+categoría) → Paso 2 (monto+detalle) ──
+// Tocar una categoría en el Paso 1 avanza directo al Paso 2 (sin botón "siguiente").
+// En modo edición (editingId set) ambos pasos se muestran juntos, como antes.
+function _showAddStep1(){
+  document.getElementById('add-step1').classList.remove('add-step-hidden');
+  document.getElementById('add-step2').classList.add('add-step-hidden');
+  document.getElementById('add-back-btn').classList.add('add-step-hidden');
+  document.getElementById('add-cancel-btn').classList.remove('add-step-hidden');
+  document.getElementById('save-btn').classList.add('add-step-hidden');
+  const delBtn=document.getElementById('tx-delete-btn');
+  if(delBtn) delBtn.style.display='none';
+  hideNumpad();
+}
+
+function _showAddStep2(){
+  document.getElementById('add-step1').classList.add('add-step-hidden');
+  document.getElementById('add-step2').classList.remove('add-step-hidden');
+  document.getElementById('add-back-btn').classList.remove('add-step-hidden');
+  document.getElementById('add-cancel-btn').classList.add('add-step-hidden');
+  document.getElementById('save-btn').classList.remove('add-step-hidden');
+  showDeleteBtn(false); // modo nuevo: tacho = "limpiar formulario"
+  setTimeout(showNumpad, 60); // teclado auto-focado al entrar al Paso 2
+}
+
+function _showAddEditMode(){
+  // Edición: todo en una sola pantalla, como el formulario original
+  document.getElementById('add-step1').classList.remove('add-step-hidden');
+  document.getElementById('add-step2').classList.remove('add-step-hidden');
+  document.getElementById('add-back-btn').classList.add('add-step-hidden');
+  document.getElementById('add-cancel-btn').classList.remove('add-step-hidden');
+  document.getElementById('save-btn').classList.remove('add-step-hidden');
+}
+
+function _addBackToStep1(){
+  // Reinicia los campos del Paso 2 para que la próxima categoría elegida arranque limpia
+  amtStr='0'; selCat=null;
+  const noteEl=document.getElementById('note-inp');
+  if(noteEl) noteEl.value='';
+  txDate=new Date(); updateDateLbl();
+  const enToggle=document.getElementById('exclude-net-toggle');
+  if(enToggle) enToggle.classList.remove('on');
+  txCurrency=S.currency.code;
+  txInvestType='buy';
+  _updateTxCurrencyToggle();
+  _updateInvestTypeToggle();
+  updateAmt();
+  renderTxCatCircles(txType);
+  _showAddStep1();
 }
 
 function setType(txT){
@@ -682,7 +725,7 @@ function checkBudgetAlerts(tx){
 // ═══════════════════════════════════════════
 // EDIT TRANSACTION
 // ═══════════════════════════════════════════
-let editingTxId=null, editAmtStr='0', editSelCat=null;
+let editingTxId=null;
 
 function openEdit(id){
   const tx=S.txs.find(t=>t.id===id); if(!tx) return;
@@ -709,38 +752,11 @@ function openEdit(id){
   // Tacho en modo edición: borra el movimiento
   showDeleteBtn(true);
   hideNumpad();
+  _showAddEditMode();
   goTo('s-add');
 }
 
-function closeEdit(){ editingTxId=null; goBack(); }
-
-function enp(k){
-  const sep=getSep();
-  if(k==='del'){ editAmtStr=editAmtStr.length>1?editAmtStr.slice(0,-1):'0'; }
-  else if(k==='dec'){ if(!editAmtStr.includes(sep)) editAmtStr+=sep; }
-  else { if(editAmtStr==='0') editAmtStr=k; else if(editAmtStr.replace(/[^0-9]/g,'').length<12) editAmtStr+=k; }
-  updateEditAmt();
-}
-
-function updateEditAmt(){
-  document.getElementById('edit-dec-key').textContent=getSep();
-  const raw=editAmtStr.replace(',','.');
-  const parts=raw.split('.');
-  const intFmt=isNaN(parseInt(parts[0]))?'0':parseInt(parts[0]).toLocaleString('es-AR');
-  const decPart=parts.length>1?(getSep()+parts[1]):'';
-  document.getElementById('edit-amt-display').innerHTML=intFmt+decPart+'<span class="amt-cur"></span>';
-}
-
-function saveEdit(){
-  const tx=S.txs.find(t=>t.id===editingTxId); if(!tx){ closeEdit(); return; }
-  const amt=normAmt(editAmtStr);
-  if(amt<=0){ showToast(t('tInvalidAmt')); return; }
-  tx.amount=amt; tx.note=document.getElementById('edit-note-inp').value.trim();
-  if(editSelCat) tx.cat=editSelCat;
-  tx.modifiedAt=new Date().toISOString();
-  saveState(); showToast(t('tSaved')); closeEdit();
-  setTimeout(()=>{ if(curScreen==='s-home') refreshHome(); if(curScreen==='s-invest') renderInvest(); },50);
-}
+function closeEdit(){ editingTxId=null; editingId=null; goBack(); }
 
 function deleteTx(){
   if(!editingTxId) return;
@@ -1661,12 +1677,12 @@ const T = {
     // Add TX
     newTx:'Nueva transacción', saveBtn:'Guardar', cancelBtn:'Cancelar',
     typeExpense:'Gasto', typeIncome:'Ingreso', typeInvest:'Inversión',
-    descPlaceholder:'Descripción (opcional)', notePlaceholder:'Nota (opcional)',
+    descPlaceholder:'Descripción (opcional)',
     freqCats:'Categorías frecuentes', allCatsExpense:'Categorías de gasto',
     allCatsIncome:'Categorías de ingreso', allCatsInvest:'Categorías de inversión',
     tapAmount:'Tocá para ingresar el monto', today:'Hoy', done:'Listo',
     // Edit TX
-    editTx:'Editar movimiento', saveChanges:'Guardar cambios',
+    editTx:'Editar movimiento',
     // All TX
     allTx:'Todos los movimientos', allTxSearch:'Buscar por descripción...',
     chipAll:'Todos', chipExpense:'Gastos', chipIncome:'Ingresos', chipInvest:'Inversiones',
@@ -1723,7 +1739,6 @@ const T = {
     tEditGoalAmt:'⚠️ Monto inválido',
     tRecurringSaved:'✅ Recurrente guardado',
     tCatUpdated:'✅ Categoría actualizada', tCatDeleted:'🗑️ Categoría eliminada',
-    tQuickAdded:'✅ Movimiento agregado: {sym}{amt} en {cat}',
     tNoExport:'⚠️ Sin datos para exportar',
     tCSVExported:'✅ CSV exportado', tExcelExported:'✅ Excel exportado', tPDFExported:'✅ PDF exportado',
     tDataDeleted:'🗑️ Datos eliminados', tDataRestored:'✅ Datos restaurados', tInvalidFile:'⚠️ Archivo inválido',
@@ -1774,12 +1789,12 @@ const T = {
     // Add TX
     newTx:'New transaction', saveBtn:'Save', cancelBtn:'Cancel',
     typeExpense:'Expense', typeIncome:'Income', typeInvest:'Investment',
-    descPlaceholder:'Description (optional)', notePlaceholder:'Note (optional)',
+    descPlaceholder:'Description (optional)',
     freqCats:'Frequent categories', allCatsExpense:'Expense categories',
     allCatsIncome:'Income categories', allCatsInvest:'Investment categories',
     tapAmount:'Tap to enter amount', today:'Today', done:'Done',
     // Edit TX
-    editTx:'Edit transaction', saveChanges:'Save changes',
+    editTx:'Edit transaction',
     // All TX
     allTx:'All transactions', allTxSearch:'Search transactions...',
     chipAll:'All', chipExpense:'Expenses', chipIncome:'Income', chipInvest:'Investments',
@@ -1836,7 +1851,6 @@ const T = {
     tEditGoalAmt:'⚠️ Invalid amount',
     tRecurringSaved:'✅ Recurring saved',
     tCatUpdated:'✅ Category updated', tCatDeleted:'🗑️ Category deleted',
-    tQuickAdded:'✅ Entry added: {sym}{amt} in {cat}',
     tNoExport:'⚠️ No data to export',
     tCSVExported:'✅ CSV exported', tExcelExported:'✅ Excel exported', tPDFExported:'✅ PDF exported',
     tDataDeleted:'🗑️ Data deleted', tDataRestored:'✅ Data restored', tInvalidFile:'⚠️ Invalid file',
@@ -5931,7 +5945,6 @@ function renderTxCatCircles(type){
     }
   }
   if(allGrid){
-    const label=document.getElementById('tx-freq-label');
     if(allLabel) allLabel.textContent=type==='expense'?'Categorías de gasto':type==='income'?'Categorías de ingreso':'Tipo de inversión';
     allGrid.innerHTML='';
     cats.forEach(cat=>{ allGrid.appendChild(buildCatCircle(cat, type, false)); });
@@ -5949,23 +5962,18 @@ function buildCatCircle(cat, type, isFreq){
     <div class="tx-cat-circle-icon" style="background:${bg};opacity:${opacity}">${cat.e||'📁'}</div>
     <div class="tx-cat-circle-name">${cat.n}</div>`;
   el.onclick=()=>{
-    const wasSelected=isSelected;
-    selCat=wasSelected?null:cat.n;
-    renderTxCatCircles(txType);
-    // Quick-save: categoría seleccionada + monto ya ingresado
-    if(!wasSelected && normAmt(amtStr)>0){
-      _quickSaveTx();
+    if(editingId){
+      // Edición: solo seleccionar/deseleccionar, sin avanzar de pantalla ni autoguardar
+      selCat=isSelected?null:cat.n;
+      renderTxCatCircles(txType);
+      return;
     }
+    // Alta nueva: elegir categoría avanza directo al Paso 2 (monto+detalle)
+    selCat=cat.n;
+    renderTxCatCircles(txType);
+    _showAddStep2();
   };
   return el;
-}
-
-// Guardado rápido al seleccionar categoría con monto ya ingresado
-function _quickSaveTx(){
-  if(navigator.vibrate) navigator.vibrate(55);
-  const disp=document.getElementById('amt-display');
-  if(disp){ disp.classList.add('_qs-flash'); setTimeout(()=>disp.classList.remove('_qs-flash'),400); }
-  setTimeout(()=>saveTx(), 200);
 }
 
 // ═══════════════════════════════════════════
@@ -6044,67 +6052,6 @@ function _dismissPWABanner(){
   setTimeout(()=>{
     if(action==='add-expense') openAdd('expense');
     else if(action==='add-income') openAdd('income');
-  }, 400);
-})();
-
-// ── Quick-add vía URL params: ?quickadd=1&type=&amount=&desc=&cat= ──
-// Pensado para triggers externos (iOS Shortcuts, Android Tasker/widget).
-// Reusa saveTx() (mismo pipeline que el quick-save de "+" al elegir categoría
-// con monto ya cargado) — no hay una segunda ruta de guardado en paralelo.
-// Nota: el param `acc` (cuenta) NO se soporta — CashWise no tiene concepto de
-// cuentas/wallets hoy, así que si viene se ignora sin romper el resto del flujo.
-function _qaNormStr(s){
-  return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-}
-(function _handleQuickAdd(){
-  let params;
-  try{ params=new URLSearchParams(window.location.search); }catch(e){ return; }
-  if(params.get('quickadd')!=='1') return;
-
-  // Capturar todo antes de limpiar la URL (mismo criterio que _handlePWAShortcut)
-  const rawAmount=params.get('amount');
-  const rawType=(params.get('type')||'').toLowerCase().trim();
-  const desc=(params.get('desc')||'').slice(0,80);
-  const rawCat=params.get('cat');
-  // acc: leído pero deliberadamente ignorado (sin feature de cuentas en la app)
-
-  // Limpiar query params inmediatamente para que un refresh no repita el alta
-  window.history.replaceState({},'',window.location.pathname);
-
-  const amount=parseFloat(String(rawAmount||'').replace(',','.'));
-  if(!rawAmount || !isFinite(amount) || amount<=0) return; // sin monto válido: abortar todo el flujo, sin guardado parcial
-
-  const qaType=(rawType==='income')?'income':'expense'; // default expense; cualquier valor no reconocido también cae en expense
-
-  setTimeout(()=>{
-    try{
-      const catPool=S.cats[qaType]||[];
-      const matchedCat=rawCat?catPool.find(c=>_qaNormStr(c.n)===_qaNormStr(rawCat)):null;
-
-      if(matchedCat){
-        // Auto-guardado: seteamos el mismo estado global que usa el formulario manual
-        // y disparamos saveTx() — el pipeline real (Firestore, merge multi-dispositivo,
-        // localStorage) es exactamente el mismo que un alta manual.
-        editingId=null;
-        txType=qaType;
-        amtStr=String(amount).replace('.',getSep());
-        selCat=matchedCat.n;
-        const noteEl=document.getElementById('note-inp');
-        if(noteEl) noteEl.value=desc;
-        txDate=new Date();
-        saveTx();
-        // saveTx() ya dispara un toast genérico; lo pisamos con uno más descriptivo
-        showToast(t('tQuickAdded').replace('{sym}',sym()).replace('{amt}',fmt(amount)).replace('{cat}',matchedCat.n));
-      } else {
-        // Sin categoría (no vino o no matcheó): abrir el modal de alta pre-cargado
-        // y dejar que el usuario elija la categoría a mano — no se autoguarda.
-        openAdd(qaType);
-        amtStr=String(amount).replace('.',getSep());
-        updateAmt();
-        const noteEl=document.getElementById('note-inp');
-        if(noteEl) noteEl.value=desc;
-      }
-    }catch(e){ console.warn('[quickadd] error procesando parámetros:', e); }
   }, 400);
 })();
 

@@ -230,44 +230,23 @@ canvas.cv{width:100%;height:100%}
 .fab svg{width:26px;height:26px;fill:none;stroke:#0f0f13;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 
 /* ADD SCREEN */
+.add-step-hidden{display:none}
 .type-toggle{display:flex;background:var(--s1);border:1px solid var(--br);border-radius:16px;padding:4px;margin:0 20px 14px;flex-shrink:0}
 .type-btn{flex:1;padding:9px 4px;border-radius:12px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;transition:background .18s,color .18s;color:var(--mu)}
 .type-btn.ae{background:var(--rdd);color:var(--rd)}
 .type-btn.ai{background:var(--gd);color:var(--gr)}
 .type-btn.av{background:var(--amd);color:var(--am)}
-.amt-area{text-align:center;padding:4px 20px 14px;flex-shrink:0}
-.amt-curr-lbl{font-size:13px;color:var(--mu);margin-bottom:2px}
 .amt-num{font-size:56px;font-weight:300;font-family:'DM Mono',monospace;letter-spacing:-2px;line-height:1;min-height:66px;display:flex;align-items:center;justify-content:center;transition:color .18s;word-break:break-all}
 .amt-num.ec{color:var(--rd)}.amt-num.ic{color:var(--gr)}.amt-num.vc{color:var(--am)}
 .amt-cur{display:inline-block;width:2px;height:50px;background:currentColor;margin-left:2px;border-radius:1px;animation:blink 1s infinite;flex-shrink:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes ptr-spin{to{transform:rotate(360deg)}}
-.cat-gw{padding:0 20px;flex-shrink:0;margin-bottom:8px}
-.cat-glbl{font-size:11px;color:var(--mu);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .cat-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;background:var(--s1);border:2px solid var(--br);border-radius:13px;cursor:pointer;transition:background .16s,border-color .16s}
 .cat-btn:hover{background:var(--s2)}
 .cat-btn .ce{font-size:18px}
 .cat-btn .cn{font-size:10px;color:var(--mu);text-align:center;line-height:1.2}
 
-/* Quick add note — collapsible */
-.quick-extras{padding:0 20px;flex-shrink:0;margin-bottom:8px}
-.quick-extras-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);cursor:pointer;margin-bottom:6px}
-.quick-extras-toggle svg{width:14px;height:14px;stroke:var(--mu);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
-.quick-extras-toggle.open svg{transform:rotate(180deg)}
-.extras-body{display:none}
-.extras-body.open{display:flex;flex-direction:column;gap:8px}
-.note-inp{width:100%;background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:11px 14px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none}
-.note-inp::placeholder{color:var(--mu)}
-.note-inp:focus{border-color:var(--su)}
-.date-chip{background:var(--s1);border:1px solid var(--br);border-radius:11px;padding:9px 12px;display:flex;align-items:center;gap:6px;cursor:pointer}
-.date-chip svg{width:13px;height:13px;stroke:var(--mu);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.date-chip span{font-size:12px;color:var(--mu)}
-
-.save-btn{margin:0 20px 8px;padding:14px;border-radius:16px;background:var(--gr);border:none;width:calc(100% - 40px);color:#0f0f13;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:filter .15s;flex-shrink:0}
-.save-btn:hover{filter:brightness(1.08)}.save-btn:active{transform:scale(.98)}
-.save-btn.eb{background:var(--rd);color:#fff}
-.save-btn.vb{background:var(--am);color:#0f0f13}
 .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--br);border-top:1px solid var(--br);flex-shrink:0;margin-top:auto}
 .nk{background:var(--s1);padding:15px 10px;text-align:center;font-size:22px;cursor:pointer;user-select:none;transition:background .1s}
 .nk.sm{font-size:15px;color:var(--mu)}
@@ -387,8 +366,6 @@ canvas.cv{width:100%;height:100%}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .au{animation:fadeUp .28s ease both}
-@keyframes _qsFlash{0%{transform:scale(1)}35%{transform:scale(1.1)}70%{transform:scale(.97)}100%{transform:scale(1)}}
-._qs-flash{animation:_qsFlash .35s cubic-bezier(.4,0,.2,1)}
 
 /* ═══════════════════════════════════════════
    SPLIT CSS — rediseño completo
@@ -716,82 +693,91 @@ canvas.cv{width:100%;height:100%}
 
   <!-- NAV -->
   <div class="tx-screen-nav">
-    <button class="tx-nav-pill" onclick="goBack()" data-i18n="cancelBtn">Cancelar</button>
+    <button class="tx-nav-pill" id="add-cancel-btn" onclick="goBack()" data-i18n="cancelBtn">Cancelar</button>
+    <button class="tx-nav-pill add-step-hidden" id="add-back-btn" onclick="_addBackToStep1()" data-i18n="back">Volver</button>
     <div id="add-title" style="font-size:15px;font-weight:600;color:var(--mu)" data-i18n="newTx">Nueva transacción</div>
-    <button class="tx-nav-pill save" id="save-btn" onclick="saveTx()" data-i18n="saveBtn">Guardar</button>
+    <button class="tx-nav-pill save add-step-hidden" id="save-btn" onclick="saveTx()" data-i18n="saveBtn">Guardar</button>
   </div>
 
   <div id="s-add-scroll" style="flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:80px">
-  <!-- MONTO — toca para abrir teclado -->
-  <div class="tx-amt-block" id="amt-tap-area" onclick="showNumpad()" style="cursor:pointer">
-    <div style="font-size:13px;color:var(--mu);margin-bottom:4px" id="add-curr-lbl">ARS</div>
-    <div class="amt-num ec" id="amt-display" style="font-size:52px">0<span class="amt-cur"></span></div>
-    <div style="font-size:11px;color:var(--mu);margin-top:6px" id="amt-tap-hint" data-i18n="tapAmount">Tocá para ingresar el monto</div>
-  </div>
 
-  <!-- TIPO -->
-  <div class="tx-type-toggle">
-    <div class="tx-type-btn active-e" id="btn-e" onclick="setType('expense')" data-i18n="typeExpense">Gasto</div>
-    <div class="tx-type-btn" id="btn-i" onclick="setType('income')" data-i18n="typeIncome">Ingreso</div>
-    <div class="tx-type-btn" id="btn-v" onclick="setType('invest')" data-i18n="typeInvest">Inversión</div>
-  </div>
+  <!-- PASO 1: tipo + categoría — tocar una categoría avanza directo al Paso 2 -->
+  <div id="add-step1">
+    <!-- TIPO -->
+    <div class="tx-type-toggle">
+      <div class="tx-type-btn active-e" id="btn-e" onclick="setType('expense')" data-i18n="typeExpense">Gasto</div>
+      <div class="tx-type-btn" id="btn-i" onclick="setType('income')" data-i18n="typeIncome">Ingreso</div>
+      <div class="tx-type-btn" id="btn-v" onclick="setType('invest')" data-i18n="typeInvest">Inversión</div>
+    </div>
 
-  <!-- MONEDA (visible solo para tipo Inversión) -->
-  <div id="tx-curr-row" style="display:none;padding:0 20px 6px;overflow-x:auto;white-space:nowrap;scrollbar-width:none">
-    <div id="tx-curr-pills" style="display:inline-flex;gap:6px"></div>
-  </div>
+    <!-- CATEGORÍAS FRECUENTES -->
+    <div class="tx-cats-section" id="tx-freq-section" style="display:none">
+      <div class="tx-cats-label" id="tx-freq-label" data-i18n="freqCats">Categorías frecuentes</div>
+      <div class="tx-cats-grid" id="tx-freq-grid"></div>
+    </div>
 
-  <!-- TIPO OPERACIÓN — Compra / Venta (solo Inversión) -->
-  <div id="tx-invest-type-row" style="display:none;padding:0 20px 8px">
-    <div style="display:flex;background:var(--s2);border-radius:50px;padding:3px">
-      <div id="btn-buy" onclick="setInvestType('buy')" style="flex:1;padding:7px 4px;border-radius:50px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--mu)">Compra</div>
-      <div id="btn-sell" onclick="setInvestType('sell')" style="flex:1;padding:7px 4px;border-radius:50px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--mu)">Venta</div>
+    <!-- TODAS LAS CATEGORÍAS -->
+    <div class="tx-cats-section">
+      <div class="tx-cats-label" id="tx-all-cats-label" data-i18n="allCatsExpense">Categorías de gasto</div>
+      <div class="tx-cats-grid" id="cat-grid"></div>
     </div>
   </div>
 
-  <!-- DESCRIPCIÓN -->
-  <div class="tx-row">
-    <div class="tx-row-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+  <!-- PASO 2: monto + detalle + guardar (categoría ya elegida en el Paso 1) -->
+  <div id="add-step2" class="add-step-hidden">
+    <!-- MONTO — toca para abrir teclado -->
+    <div class="tx-amt-block" id="amt-tap-area" onclick="showNumpad()" style="cursor:pointer">
+      <div style="font-size:13px;color:var(--mu);margin-bottom:4px" id="add-curr-lbl">ARS</div>
+      <div class="amt-num ec" id="amt-display" style="font-size:52px">0<span class="amt-cur"></span></div>
+      <div style="font-size:11px;color:var(--mu);margin-top:6px" id="amt-tap-hint" data-i18n="tapAmount">Tocá para ingresar el monto</div>
     </div>
-    <input class="tx-desc-inp" type="text" placeholder="Descripción (opcional)" id="note-inp" maxlength="80" data-i18n-ph="descPlaceholder">
-  </div>
 
-  <!-- FECHA -->
-  <div class="tx-row" onclick="openDateModal()" style="cursor:pointer">
-    <div class="tx-row-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <!-- MONEDA (visible solo para tipo Inversión) -->
+    <div id="tx-curr-row" style="display:none;padding:0 20px 6px;overflow-x:auto;white-space:nowrap;scrollbar-width:none">
+      <div id="tx-curr-pills" style="display:inline-flex;gap:6px"></div>
     </div>
-    <div class="tx-row-value" id="date-lbl" data-i18n="today">Hoy</div>
-    <div class="tx-row-arrow">›</div>
-  </div>
 
-  <!-- CATEGORÍAS FRECUENTES -->
-  <div class="tx-cats-section" id="tx-freq-section" style="display:none">
-    <div class="tx-cats-label" id="tx-freq-label" data-i18n="freqCats">Categorías frecuentes</div>
-    <div class="tx-cats-grid" id="tx-freq-grid"></div>
-  </div>
-
-  <!-- TODAS LAS CATEGORÍAS -->
-  <div class="tx-cats-section">
-    <div class="tx-cats-label" id="tx-all-cats-label" data-i18n="allCatsExpense">Categorías de gasto</div>
-    <div class="tx-cats-grid" id="cat-grid"></div>
-  </div>
-
-  <!-- EXCLUIR DEL NETO — solo visible cuando tipo = Inversión -->
-  <div class="tx-row" id="exclude-net-row" style="display:none">
-    <div class="tx-row-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><line x1="18" y1="7" x2="22" y2="7"/><line x1="22" y1="7" x2="22" y2="11"/></svg>
+    <!-- TIPO OPERACIÓN — Compra / Venta (solo Inversión) -->
+    <div id="tx-invest-type-row" style="display:none;padding:0 20px 8px">
+      <div style="display:flex;background:var(--s2);border-radius:50px;padding:3px">
+        <div id="btn-buy" onclick="setInvestType('buy')" style="flex:1;padding:7px 4px;border-radius:50px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--mu)">Compra</div>
+        <div id="btn-sell" onclick="setInvestType('sell')" style="flex:1;padding:7px 4px;border-radius:50px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--mu)">Venta</div>
+      </div>
     </div>
-    <div style="flex:1">
-      <div style="font-size:14px;font-weight:500;color:var(--tx)">Excluir del neto</div>
-      <div style="font-size:11px;color:var(--mu);margin-top:1px">Esta plata sigue siendo tuya</div>
+
+    <!-- DESCRIPCIÓN -->
+    <div class="tx-row">
+      <div class="tx-row-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+      </div>
+      <input class="tx-desc-inp" type="text" placeholder="Descripción (opcional)" id="note-inp" maxlength="80" data-i18n-ph="descPlaceholder">
     </div>
-    <div class="toggle" id="exclude-net-toggle" onclick="this.classList.toggle('on')"></div>
+
+    <!-- FECHA -->
+    <div class="tx-row" onclick="openDateModal()" style="cursor:pointer">
+      <div class="tx-row-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="tx-row-value" id="date-lbl" data-i18n="today">Hoy</div>
+      <div class="tx-row-arrow">›</div>
+    </div>
+
+    <!-- EXCLUIR DEL NETO — solo visible cuando tipo = Inversión -->
+    <div class="tx-row" id="exclude-net-row" style="display:none">
+      <div class="tx-row-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><line x1="18" y1="7" x2="22" y2="7"/><line x1="22" y1="7" x2="22" y2="11"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:500;color:var(--tx)">Excluir del neto</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:1px">Esta plata sigue siendo tuya</div>
+      </div>
+      <div class="toggle" id="exclude-net-toggle" onclick="this.classList.toggle('on')"></div>
+    </div>
+
+    <!-- Spacer para el numpad cuando está visible -->
+    <div id="numpad-spacer" style="height:0;transition:height .25s"></div>
   </div>
 
-  <!-- Spacer para el numpad cuando está visible -->
-  <div id="numpad-spacer" style="height:0;transition:height .25s"></div>
   </div><!-- end s-add-scroll -->
 
   <!-- TECLADO — oculto por defecto, aparece al tocar el monto -->
@@ -809,49 +795,6 @@ canvas.cv{width:100%;height:100%}
       <div class="nk" onclick="np('0')">0</div>
       <div class="nk" onclick="np('del')">⌫</div>
     </div>
-  </div>
-
-
-
-  <div style="display:none"><div id="extras-body"></div><div id="extras-toggle"></div></div>
-</div>
-
-<!-- ══ EDIT SCREEN ══ -->
-<div class="screen hidden" id="s-edit">
-  <div class="nav" style="padding:14px 20px 8px">
-    <div class="back-btn" onclick="closeEdit()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
-    <div class="scr-title" data-i18n="editTx">Editar movimiento</div>
-    <div style="width:60px"></div>
-  </div>
-  <div class="type-toggle" style="pointer-events:none;opacity:.6">
-    <div class="type-btn" id="edit-btn-e">🔴 <span data-i18n="typeExpense">Gasto</span></div>
-    <div class="type-btn" id="edit-btn-i">🟢 <span data-i18n="typeIncome">Ingreso</span></div>
-    <div class="type-btn" id="edit-btn-v">🟡 <span data-i18n="typeInvest">Inversión</span></div>
-  </div>
-  <div class="amt-area">
-    <div class="amt-curr-lbl" id="edit-curr-lbl">ARS</div>
-    <div class="amt-num ec" id="edit-amt-display">0<span class="amt-cur"></span></div>
-  </div>
-  <div class="cat-gw">
-    <div class="cat-glbl" data-i18n="category">Categoría</div>
-    <div class="cat-grid" id="edit-cat-grid"></div>
-  </div>
-  <div class="quick-extras">
-    <div style="margin-bottom:8px">
-      <input class="note-inp" type="text" placeholder="Nota (opcional)" id="edit-note-inp" maxlength="80" data-i18n-ph="notePlaceholder">
-    </div>
-  </div>
-  <div style="display:flex;gap:10px;padding:0 20px 8px;flex-shrink:0">
-    <button class="save-btn eb" id="edit-save-btn" onclick="saveEdit()" style="margin:0;flex:1" data-i18n="saveChanges">Guardar cambios</button>
-    <button onclick="deleteTx()" style="width:50px;border-radius:16px;background:var(--rdd);border:1px solid rgba(240,86,106,.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🗑️</button>
-  </div>
-  <div class="numpad">
-    <div class="nk" onclick="enp('1')">1</div><div class="nk" onclick="enp('2')">2</div><div class="nk" onclick="enp('3')">3</div>
-    <div class="nk" onclick="enp('4')">4</div><div class="nk" onclick="enp('5')">5</div><div class="nk" onclick="enp('6')">6</div>
-    <div class="nk" onclick="enp('7')">7</div><div class="nk" onclick="enp('8')">8</div><div class="nk" onclick="enp('9')">9</div>
-    <div class="nk sm" id="edit-dec-key" onclick="enp('dec')">,</div>
-    <div class="nk" onclick="enp('0')">0</div>
-    <div class="nk" onclick="enp('del')">⌫</div>
   </div>
 </div>
 
@@ -2542,7 +2485,7 @@ let txInvestType='buy'; // 'buy' | 'sell'
 function openAdd(forceType){
   editingId=null; editingTxId=null; amtStr='0'; selCat=null;
   const titleEl=document.getElementById('add-title');
-  if(titleEl) titleEl.textContent='Nueva transacción';
+  if(titleEl) titleEl.textContent=t('newTx');
   const noteEl=document.getElementById('note-inp');
   if(noteEl) noteEl.value='';
   // Reset "Excluir del neto" toggle
@@ -2553,15 +2496,58 @@ function openAdd(forceType){
   txDate=new Date(); updateDateLbl();
   setType(forceType||'expense'); // calls renderTxCatCircles internally
   updateAmt();
-  // Tacho siempre visible: en modo nuevo limpia el formulario
-  showDeleteBtn(false);
+  _showAddStep1(); // Paso 1: elegir tipo + categoría
   goTo('s-add');
-  setTimeout(showNumpad, 60); // auto-open numpad al entrar a nueva tx
 }
 
-function toggleExtras(){
-  document.getElementById('extras-body').classList.toggle('open');
-  document.getElementById('extras-toggle').classList.toggle('open');
+// ── Flujo de alta en 2 pasos: Paso 1 (tipo+categoría) → Paso 2 (monto+detalle) ──
+// Tocar una categoría en el Paso 1 avanza directo al Paso 2 (sin botón "siguiente").
+// En modo edición (editingId set) ambos pasos se muestran juntos, como antes.
+function _showAddStep1(){
+  document.getElementById('add-step1').classList.remove('add-step-hidden');
+  document.getElementById('add-step2').classList.add('add-step-hidden');
+  document.getElementById('add-back-btn').classList.add('add-step-hidden');
+  document.getElementById('add-cancel-btn').classList.remove('add-step-hidden');
+  document.getElementById('save-btn').classList.add('add-step-hidden');
+  const delBtn=document.getElementById('tx-delete-btn');
+  if(delBtn) delBtn.style.display='none';
+  hideNumpad();
+}
+
+function _showAddStep2(){
+  document.getElementById('add-step1').classList.add('add-step-hidden');
+  document.getElementById('add-step2').classList.remove('add-step-hidden');
+  document.getElementById('add-back-btn').classList.remove('add-step-hidden');
+  document.getElementById('add-cancel-btn').classList.add('add-step-hidden');
+  document.getElementById('save-btn').classList.remove('add-step-hidden');
+  showDeleteBtn(false); // modo nuevo: tacho = "limpiar formulario"
+  setTimeout(showNumpad, 60); // teclado auto-focado al entrar al Paso 2
+}
+
+function _showAddEditMode(){
+  // Edición: todo en una sola pantalla, como el formulario original
+  document.getElementById('add-step1').classList.remove('add-step-hidden');
+  document.getElementById('add-step2').classList.remove('add-step-hidden');
+  document.getElementById('add-back-btn').classList.add('add-step-hidden');
+  document.getElementById('add-cancel-btn').classList.remove('add-step-hidden');
+  document.getElementById('save-btn').classList.remove('add-step-hidden');
+}
+
+function _addBackToStep1(){
+  // Reinicia los campos del Paso 2 para que la próxima categoría elegida arranque limpia
+  amtStr='0'; selCat=null;
+  const noteEl=document.getElementById('note-inp');
+  if(noteEl) noteEl.value='';
+  txDate=new Date(); updateDateLbl();
+  const enToggle=document.getElementById('exclude-net-toggle');
+  if(enToggle) enToggle.classList.remove('on');
+  txCurrency=S.currency.code;
+  txInvestType='buy';
+  _updateTxCurrencyToggle();
+  _updateInvestTypeToggle();
+  updateAmt();
+  renderTxCatCircles(txType);
+  _showAddStep1();
 }
 
 function setType(txT){
@@ -2678,7 +2664,7 @@ function checkBudgetAlerts(tx){
 // ═══════════════════════════════════════════
 // EDIT TRANSACTION
 // ═══════════════════════════════════════════
-let editingTxId=null, editAmtStr='0', editSelCat=null;
+let editingTxId=null;
 
 function openEdit(id){
   const tx=S.txs.find(t=>t.id===id); if(!tx) return;
@@ -2705,38 +2691,11 @@ function openEdit(id){
   // Tacho en modo edición: borra el movimiento
   showDeleteBtn(true);
   hideNumpad();
+  _showAddEditMode();
   goTo('s-add');
 }
 
-function closeEdit(){ editingTxId=null; goBack(); }
-
-function enp(k){
-  const sep=getSep();
-  if(k==='del'){ editAmtStr=editAmtStr.length>1?editAmtStr.slice(0,-1):'0'; }
-  else if(k==='dec'){ if(!editAmtStr.includes(sep)) editAmtStr+=sep; }
-  else { if(editAmtStr==='0') editAmtStr=k; else if(editAmtStr.replace(/[^0-9]/g,'').length<12) editAmtStr+=k; }
-  updateEditAmt();
-}
-
-function updateEditAmt(){
-  document.getElementById('edit-dec-key').textContent=getSep();
-  const raw=editAmtStr.replace(',','.');
-  const parts=raw.split('.');
-  const intFmt=isNaN(parseInt(parts[0]))?'0':parseInt(parts[0]).toLocaleString('es-AR');
-  const decPart=parts.length>1?(getSep()+parts[1]):'';
-  document.getElementById('edit-amt-display').innerHTML=intFmt+decPart+'<span class="amt-cur"></span>';
-}
-
-function saveEdit(){
-  const tx=S.txs.find(t=>t.id===editingTxId); if(!tx){ closeEdit(); return; }
-  const amt=normAmt(editAmtStr);
-  if(amt<=0){ showToast(t('tInvalidAmt')); return; }
-  tx.amount=amt; tx.note=document.getElementById('edit-note-inp').value.trim();
-  if(editSelCat) tx.cat=editSelCat;
-  tx.modifiedAt=new Date().toISOString();
-  saveState(); showToast(t('tSaved')); closeEdit();
-  setTimeout(()=>{ if(curScreen==='s-home') refreshHome(); if(curScreen==='s-invest') renderInvest(); },50);
-}
+function closeEdit(){ editingTxId=null; editingId=null; goBack(); }
 
 function deleteTx(){
   if(!editingTxId) return;
@@ -3657,12 +3616,12 @@ const T = {
     // Add TX
     newTx:'Nueva transacción', saveBtn:'Guardar', cancelBtn:'Cancelar',
     typeExpense:'Gasto', typeIncome:'Ingreso', typeInvest:'Inversión',
-    descPlaceholder:'Descripción (opcional)', notePlaceholder:'Nota (opcional)',
+    descPlaceholder:'Descripción (opcional)',
     freqCats:'Categorías frecuentes', allCatsExpense:'Categorías de gasto',
     allCatsIncome:'Categorías de ingreso', allCatsInvest:'Categorías de inversión',
     tapAmount:'Tocá para ingresar el monto', today:'Hoy', done:'Listo',
     // Edit TX
-    editTx:'Editar movimiento', saveChanges:'Guardar cambios',
+    editTx:'Editar movimiento',
     // All TX
     allTx:'Todos los movimientos', allTxSearch:'Buscar por descripción...',
     chipAll:'Todos', chipExpense:'Gastos', chipIncome:'Ingresos', chipInvest:'Inversiones',
@@ -3719,7 +3678,6 @@ const T = {
     tEditGoalAmt:'⚠️ Monto inválido',
     tRecurringSaved:'✅ Recurrente guardado',
     tCatUpdated:'✅ Categoría actualizada', tCatDeleted:'🗑️ Categoría eliminada',
-    tQuickAdded:'✅ Movimiento agregado: {sym}{amt} en {cat}',
     tNoExport:'⚠️ Sin datos para exportar',
     tCSVExported:'✅ CSV exportado', tExcelExported:'✅ Excel exportado', tPDFExported:'✅ PDF exportado',
     tDataDeleted:'🗑️ Datos eliminados', tDataRestored:'✅ Datos restaurados', tInvalidFile:'⚠️ Archivo inválido',
@@ -3770,12 +3728,12 @@ const T = {
     // Add TX
     newTx:'New transaction', saveBtn:'Save', cancelBtn:'Cancel',
     typeExpense:'Expense', typeIncome:'Income', typeInvest:'Investment',
-    descPlaceholder:'Description (optional)', notePlaceholder:'Note (optional)',
+    descPlaceholder:'Description (optional)',
     freqCats:'Frequent categories', allCatsExpense:'Expense categories',
     allCatsIncome:'Income categories', allCatsInvest:'Investment categories',
     tapAmount:'Tap to enter amount', today:'Today', done:'Done',
     // Edit TX
-    editTx:'Edit transaction', saveChanges:'Save changes',
+    editTx:'Edit transaction',
     // All TX
     allTx:'All transactions', allTxSearch:'Search transactions...',
     chipAll:'All', chipExpense:'Expenses', chipIncome:'Income', chipInvest:'Investments',
@@ -3832,7 +3790,6 @@ const T = {
     tEditGoalAmt:'⚠️ Invalid amount',
     tRecurringSaved:'✅ Recurring saved',
     tCatUpdated:'✅ Category updated', tCatDeleted:'🗑️ Category deleted',
-    tQuickAdded:'✅ Entry added: {sym}{amt} in {cat}',
     tNoExport:'⚠️ No data to export',
     tCSVExported:'✅ CSV exported', tExcelExported:'✅ Excel exported', tPDFExported:'✅ PDF exported',
     tDataDeleted:'🗑️ Data deleted', tDataRestored:'✅ Data restored', tInvalidFile:'⚠️ Invalid file',
@@ -7927,7 +7884,6 @@ function renderTxCatCircles(type){
     }
   }
   if(allGrid){
-    const label=document.getElementById('tx-freq-label');
     if(allLabel) allLabel.textContent=type==='expense'?'Categorías de gasto':type==='income'?'Categorías de ingreso':'Tipo de inversión';
     allGrid.innerHTML='';
     cats.forEach(cat=>{ allGrid.appendChild(buildCatCircle(cat, type, false)); });
@@ -7945,23 +7901,18 @@ function buildCatCircle(cat, type, isFreq){
     <div class="tx-cat-circle-icon" style="background:${bg};opacity:${opacity}">${cat.e||'📁'}</div>
     <div class="tx-cat-circle-name">${cat.n}</div>`;
   el.onclick=()=>{
-    const wasSelected=isSelected;
-    selCat=wasSelected?null:cat.n;
-    renderTxCatCircles(txType);
-    // Quick-save: categoría seleccionada + monto ya ingresado
-    if(!wasSelected && normAmt(amtStr)>0){
-      _quickSaveTx();
+    if(editingId){
+      // Edición: solo seleccionar/deseleccionar, sin avanzar de pantalla ni autoguardar
+      selCat=isSelected?null:cat.n;
+      renderTxCatCircles(txType);
+      return;
     }
+    // Alta nueva: elegir categoría avanza directo al Paso 2 (monto+detalle)
+    selCat=cat.n;
+    renderTxCatCircles(txType);
+    _showAddStep2();
   };
   return el;
-}
-
-// Guardado rápido al seleccionar categoría con monto ya ingresado
-function _quickSaveTx(){
-  if(navigator.vibrate) navigator.vibrate(55);
-  const disp=document.getElementById('amt-display');
-  if(disp){ disp.classList.add('_qs-flash'); setTimeout(()=>disp.classList.remove('_qs-flash'),400); }
-  setTimeout(()=>saveTx(), 200);
 }
 
 // ═══════════════════════════════════════════
@@ -8040,67 +7991,6 @@ function _dismissPWABanner(){
   setTimeout(()=>{
     if(action==='add-expense') openAdd('expense');
     else if(action==='add-income') openAdd('income');
-  }, 400);
-})();
-
-// ── Quick-add vía URL params: ?quickadd=1&type=&amount=&desc=&cat= ──
-// Pensado para triggers externos (iOS Shortcuts, Android Tasker/widget).
-// Reusa saveTx() (mismo pipeline que el quick-save de "+" al elegir categoría
-// con monto ya cargado) — no hay una segunda ruta de guardado en paralelo.
-// Nota: el param `acc` (cuenta) NO se soporta — CashWise no tiene concepto de
-// cuentas/wallets hoy, así que si viene se ignora sin romper el resto del flujo.
-function _qaNormStr(s){
-  return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-}
-(function _handleQuickAdd(){
-  let params;
-  try{ params=new URLSearchParams(window.location.search); }catch(e){ return; }
-  if(params.get('quickadd')!=='1') return;
-
-  // Capturar todo antes de limpiar la URL (mismo criterio que _handlePWAShortcut)
-  const rawAmount=params.get('amount');
-  const rawType=(params.get('type')||'').toLowerCase().trim();
-  const desc=(params.get('desc')||'').slice(0,80);
-  const rawCat=params.get('cat');
-  // acc: leído pero deliberadamente ignorado (sin feature de cuentas en la app)
-
-  // Limpiar query params inmediatamente para que un refresh no repita el alta
-  window.history.replaceState({},'',window.location.pathname);
-
-  const amount=parseFloat(String(rawAmount||'').replace(',','.'));
-  if(!rawAmount || !isFinite(amount) || amount<=0) return; // sin monto válido: abortar todo el flujo, sin guardado parcial
-
-  const qaType=(rawType==='income')?'income':'expense'; // default expense; cualquier valor no reconocido también cae en expense
-
-  setTimeout(()=>{
-    try{
-      const catPool=S.cats[qaType]||[];
-      const matchedCat=rawCat?catPool.find(c=>_qaNormStr(c.n)===_qaNormStr(rawCat)):null;
-
-      if(matchedCat){
-        // Auto-guardado: seteamos el mismo estado global que usa el formulario manual
-        // y disparamos saveTx() — el pipeline real (Firestore, merge multi-dispositivo,
-        // localStorage) es exactamente el mismo que un alta manual.
-        editingId=null;
-        txType=qaType;
-        amtStr=String(amount).replace('.',getSep());
-        selCat=matchedCat.n;
-        const noteEl=document.getElementById('note-inp');
-        if(noteEl) noteEl.value=desc;
-        txDate=new Date();
-        saveTx();
-        // saveTx() ya dispara un toast genérico; lo pisamos con uno más descriptivo
-        showToast(t('tQuickAdded').replace('{sym}',sym()).replace('{amt}',fmt(amount)).replace('{cat}',matchedCat.n));
-      } else {
-        // Sin categoría (no vino o no matcheó): abrir el modal de alta pre-cargado
-        // y dejar que el usuario elija la categoría a mano — no se autoguarda.
-        openAdd(qaType);
-        amtStr=String(amount).replace('.',getSep());
-        updateAmt();
-        const noteEl=document.getElementById('note-inp');
-        if(noteEl) noteEl.value=desc;
-      }
-    }catch(e){ console.warn('[quickadd] error procesando parámetros:', e); }
   }, 400);
 })();
 
@@ -8225,7 +8115,7 @@ window.addEventListener('offline', ()=>{
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260917090115')
+    navigator.serviceWorker.register('./sw.js?v=20260917102624')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {

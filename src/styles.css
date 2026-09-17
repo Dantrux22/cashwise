@@ -210,44 +210,23 @@ canvas.cv{width:100%;height:100%}
 .fab svg{width:26px;height:26px;fill:none;stroke:#0f0f13;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 
 /* ADD SCREEN */
+.add-step-hidden{display:none}
 .type-toggle{display:flex;background:var(--s1);border:1px solid var(--br);border-radius:16px;padding:4px;margin:0 20px 14px;flex-shrink:0}
 .type-btn{flex:1;padding:9px 4px;border-radius:12px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;transition:background .18s,color .18s;color:var(--mu)}
 .type-btn.ae{background:var(--rdd);color:var(--rd)}
 .type-btn.ai{background:var(--gd);color:var(--gr)}
 .type-btn.av{background:var(--amd);color:var(--am)}
-.amt-area{text-align:center;padding:4px 20px 14px;flex-shrink:0}
-.amt-curr-lbl{font-size:13px;color:var(--mu);margin-bottom:2px}
 .amt-num{font-size:56px;font-weight:300;font-family:'DM Mono',monospace;letter-spacing:-2px;line-height:1;min-height:66px;display:flex;align-items:center;justify-content:center;transition:color .18s;word-break:break-all}
 .amt-num.ec{color:var(--rd)}.amt-num.ic{color:var(--gr)}.amt-num.vc{color:var(--am)}
 .amt-cur{display:inline-block;width:2px;height:50px;background:currentColor;margin-left:2px;border-radius:1px;animation:blink 1s infinite;flex-shrink:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes ptr-spin{to{transform:rotate(360deg)}}
-.cat-gw{padding:0 20px;flex-shrink:0;margin-bottom:8px}
-.cat-glbl{font-size:11px;color:var(--mu);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .cat-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;background:var(--s1);border:2px solid var(--br);border-radius:13px;cursor:pointer;transition:background .16s,border-color .16s}
 .cat-btn:hover{background:var(--s2)}
 .cat-btn .ce{font-size:18px}
 .cat-btn .cn{font-size:10px;color:var(--mu);text-align:center;line-height:1.2}
 
-/* Quick add note — collapsible */
-.quick-extras{padding:0 20px;flex-shrink:0;margin-bottom:8px}
-.quick-extras-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);cursor:pointer;margin-bottom:6px}
-.quick-extras-toggle svg{width:14px;height:14px;stroke:var(--mu);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
-.quick-extras-toggle.open svg{transform:rotate(180deg)}
-.extras-body{display:none}
-.extras-body.open{display:flex;flex-direction:column;gap:8px}
-.note-inp{width:100%;background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:11px 14px;color:var(--tx);font-size:14px;font-family:'DM Sans',sans-serif;outline:none}
-.note-inp::placeholder{color:var(--mu)}
-.note-inp:focus{border-color:var(--su)}
-.date-chip{background:var(--s1);border:1px solid var(--br);border-radius:11px;padding:9px 12px;display:flex;align-items:center;gap:6px;cursor:pointer}
-.date-chip svg{width:13px;height:13px;stroke:var(--mu);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.date-chip span{font-size:12px;color:var(--mu)}
-
-.save-btn{margin:0 20px 8px;padding:14px;border-radius:16px;background:var(--gr);border:none;width:calc(100% - 40px);color:#0f0f13;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:filter .15s;flex-shrink:0}
-.save-btn:hover{filter:brightness(1.08)}.save-btn:active{transform:scale(.98)}
-.save-btn.eb{background:var(--rd);color:#fff}
-.save-btn.vb{background:var(--am);color:#0f0f13}
 .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--br);border-top:1px solid var(--br);flex-shrink:0;margin-top:auto}
 .nk{background:var(--s1);padding:15px 10px;text-align:center;font-size:22px;cursor:pointer;user-select:none;transition:background .1s}
 .nk.sm{font-size:15px;color:var(--mu)}
@@ -367,8 +346,6 @@ canvas.cv{width:100%;height:100%}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .au{animation:fadeUp .28s ease both}
-@keyframes _qsFlash{0%{transform:scale(1)}35%{transform:scale(1.1)}70%{transform:scale(.97)}100%{transform:scale(1)}}
-._qs-flash{animation:_qsFlash .35s cubic-bezier(.4,0,.2,1)}
 
 /* ═══════════════════════════════════════════
    SPLIT CSS — rediseño completo
