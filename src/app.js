@@ -1723,6 +1723,7 @@ const T = {
     tEditGoalAmt:'⚠️ Monto inválido',
     tRecurringSaved:'✅ Recurrente guardado',
     tCatUpdated:'✅ Categoría actualizada', tCatDeleted:'🗑️ Categoría eliminada',
+    tQuickAdded:'✅ Movimiento agregado: {sym}{amt} en {cat}',
     tNoExport:'⚠️ Sin datos para exportar',
     tCSVExported:'✅ CSV exportado', tExcelExported:'✅ Excel exportado', tPDFExported:'✅ PDF exportado',
     tDataDeleted:'🗑️ Datos eliminados', tDataRestored:'✅ Datos restaurados', tInvalidFile:'⚠️ Archivo inválido',
@@ -1835,6 +1836,7 @@ const T = {
     tEditGoalAmt:'⚠️ Invalid amount',
     tRecurringSaved:'✅ Recurring saved',
     tCatUpdated:'✅ Category updated', tCatDeleted:'🗑️ Category deleted',
+    tQuickAdded:'✅ Entry added: {sym}{amt} in {cat}',
     tNoExport:'⚠️ No data to export',
     tCSVExported:'✅ CSV exported', tExcelExported:'✅ Excel exported', tPDFExported:'✅ PDF exported',
     tDataDeleted:'🗑️ Data deleted', tDataRestored:'✅ Data restored', tInvalidFile:'⚠️ Invalid file',
@@ -6042,6 +6044,67 @@ function _dismissPWABanner(){
   setTimeout(()=>{
     if(action==='add-expense') openAdd('expense');
     else if(action==='add-income') openAdd('income');
+  }, 400);
+})();
+
+// ── Quick-add vía URL params: ?quickadd=1&type=&amount=&desc=&cat= ──
+// Pensado para triggers externos (iOS Shortcuts, Android Tasker/widget).
+// Reusa saveTx() (mismo pipeline que el quick-save de "+" al elegir categoría
+// con monto ya cargado) — no hay una segunda ruta de guardado en paralelo.
+// Nota: el param `acc` (cuenta) NO se soporta — CashWise no tiene concepto de
+// cuentas/wallets hoy, así que si viene se ignora sin romper el resto del flujo.
+function _qaNormStr(s){
+  return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
+(function _handleQuickAdd(){
+  let params;
+  try{ params=new URLSearchParams(window.location.search); }catch(e){ return; }
+  if(params.get('quickadd')!=='1') return;
+
+  // Capturar todo antes de limpiar la URL (mismo criterio que _handlePWAShortcut)
+  const rawAmount=params.get('amount');
+  const rawType=(params.get('type')||'').toLowerCase().trim();
+  const desc=(params.get('desc')||'').slice(0,80);
+  const rawCat=params.get('cat');
+  // acc: leído pero deliberadamente ignorado (sin feature de cuentas en la app)
+
+  // Limpiar query params inmediatamente para que un refresh no repita el alta
+  window.history.replaceState({},'',window.location.pathname);
+
+  const amount=parseFloat(String(rawAmount||'').replace(',','.'));
+  if(!rawAmount || !isFinite(amount) || amount<=0) return; // sin monto válido: abortar todo el flujo, sin guardado parcial
+
+  const qaType=(rawType==='income')?'income':'expense'; // default expense; cualquier valor no reconocido también cae en expense
+
+  setTimeout(()=>{
+    try{
+      const catPool=S.cats[qaType]||[];
+      const matchedCat=rawCat?catPool.find(c=>_qaNormStr(c.n)===_qaNormStr(rawCat)):null;
+
+      if(matchedCat){
+        // Auto-guardado: seteamos el mismo estado global que usa el formulario manual
+        // y disparamos saveTx() — el pipeline real (Firestore, merge multi-dispositivo,
+        // localStorage) es exactamente el mismo que un alta manual.
+        editingId=null;
+        txType=qaType;
+        amtStr=String(amount).replace('.',getSep());
+        selCat=matchedCat.n;
+        const noteEl=document.getElementById('note-inp');
+        if(noteEl) noteEl.value=desc;
+        txDate=new Date();
+        saveTx();
+        // saveTx() ya dispara un toast genérico; lo pisamos con uno más descriptivo
+        showToast(t('tQuickAdded').replace('{sym}',sym()).replace('{amt}',fmt(amount)).replace('{cat}',matchedCat.n));
+      } else {
+        // Sin categoría (no vino o no matcheó): abrir el modal de alta pre-cargado
+        // y dejar que el usuario elija la categoría a mano — no se autoguarda.
+        openAdd(qaType);
+        amtStr=String(amount).replace('.',getSep());
+        updateAmt();
+        const noteEl=document.getElementById('note-inp');
+        if(noteEl) noteEl.value=desc;
+      }
+    }catch(e){ console.warn('[quickadd] error procesando parámetros:', e); }
   }, 400);
 })();
 
