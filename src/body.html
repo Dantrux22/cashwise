@@ -106,34 +106,19 @@
     <button class="tx-nav-pill" id="add-cancel-btn" onclick="goBack()" data-i18n="cancelBtn">Cancelar</button>
     <button class="tx-nav-pill add-step-hidden" id="add-back-btn" onclick="_addBackToStep1()" data-i18n="back">Volver</button>
     <div id="add-title" style="font-size:15px;font-weight:600;color:var(--mu)" data-i18n="newTx">Nueva transacción</div>
-    <button class="tx-nav-pill save add-step-hidden" id="save-btn" onclick="saveTx()" data-i18n="saveBtn">Guardar</button>
+    <div style="width:97px;flex-shrink:0"></div>
   </div>
 
   <div id="s-add-scroll" style="flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:80px">
 
-  <!-- PASO 1: tipo + categoría — tocar una categoría avanza directo al Paso 2 -->
-  <div id="add-step1">
-    <!-- TIPO -->
-    <div class="tx-type-toggle">
-      <div class="tx-type-btn active-e" id="btn-e" onclick="setType('expense')" data-i18n="typeExpense">Gasto</div>
-      <div class="tx-type-btn" id="btn-i" onclick="setType('income')" data-i18n="typeIncome">Ingreso</div>
-      <div class="tx-type-btn" id="btn-v" onclick="setType('invest')" data-i18n="typeInvest">Inversión</div>
-    </div>
-
-    <!-- CATEGORÍAS FRECUENTES -->
-    <div class="tx-cats-section" id="tx-freq-section" style="display:none">
-      <div class="tx-cats-label" id="tx-freq-label" data-i18n="freqCats">Categorías frecuentes</div>
-      <div class="tx-cats-grid" id="tx-freq-grid"></div>
-    </div>
-
-    <!-- TODAS LAS CATEGORÍAS -->
-    <div class="tx-cats-section">
-      <div class="tx-cats-label" id="tx-all-cats-label" data-i18n="allCatsExpense">Categorías de gasto</div>
-      <div class="tx-cats-grid" id="cat-grid"></div>
-    </div>
-  </div>
-
-  <!-- PASO 2: monto + detalle + guardar (categoría ya elegida en el Paso 1) -->
+  <!-- PASO 2 en el DOM (monto+detalle+fecha+guardar) — va primero a propósito:
+       en modo edición se muestra junto con el Paso 1 (categorías), y así
+       queda arriba de todo, que es donde tiene que estar para editar rápido.
+       En el alta nueva esto no cambia nada visualmente: los pasos se muestran
+       de a uno (ver _showAddStep1/_showAddStep2), el orden en el DOM no
+       importa ahí. Una sola pantalla: precio → detalle → fecha → guardar,
+       con el teclado fijo abajo — Guardar queda arriba del teclado, no
+       tapado, así no hace falta cerrarlo primero para guardar. -->
   <div id="add-step2" class="add-step-hidden">
     <!-- MONTO — toca para abrir teclado -->
     <div class="tx-amt-block" id="amt-tap-area" onclick="showNumpad()" style="cursor:pointer">
@@ -155,6 +140,18 @@
       </div>
     </div>
 
+    <!-- EXCLUIR DEL NETO — solo visible cuando tipo = Inversión -->
+    <div class="tx-row" id="exclude-net-row" style="display:none">
+      <div class="tx-row-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><line x1="18" y1="7" x2="22" y2="7"/><line x1="22" y1="7" x2="22" y2="11"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:500;color:var(--tx)">Excluir del neto</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:1px">Esta plata sigue siendo tuya</div>
+      </div>
+      <div class="toggle" id="exclude-net-toggle" onclick="this.classList.toggle('on')"></div>
+    </div>
+
     <!-- DESCRIPCIÓN -->
     <div class="tx-row">
       <div class="tx-row-icon">
@@ -172,30 +169,46 @@
       <div class="tx-row-arrow">›</div>
     </div>
 
-    <!-- EXCLUIR DEL NETO — solo visible cuando tipo = Inversión -->
-    <div class="tx-row" id="exclude-net-row" style="display:none">
-      <div class="tx-row-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><line x1="18" y1="7" x2="22" y2="7"/><line x1="22" y1="7" x2="22" y2="11"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:500;color:var(--tx)">Excluir del neto</div>
-        <div style="font-size:11px;color:var(--mu);margin-top:1px">Esta plata sigue siendo tuya</div>
-      </div>
-      <div class="toggle" id="exclude-net-toggle" onclick="this.classList.toggle('on')"></div>
+    <!-- GUARDAR — ancho completo, en el flujo normal (no tapado por el teclado) -->
+    <div style="padding:16px 20px 4px">
+      <button class="modal-btn" id="save-btn" onclick="saveTx()" data-i18n="saveBtn">Guardar</button>
     </div>
 
     <!-- Spacer para el numpad cuando está visible -->
     <div id="numpad-spacer" style="height:0;transition:height .25s"></div>
   </div>
 
+  <!-- PASO 1: tipo + categoría — tocar una categoría avanza directo al Paso 2
+       en el alta nueva. En edición queda debajo de monto/detalle/fecha
+       (ver comentario arriba), siempre visible para poder recategorizar. -->
+  <div id="add-step1">
+    <!-- TIPO -->
+    <div class="tx-type-toggle">
+      <div class="tx-type-btn active-e" id="btn-e" onclick="setType('expense')" data-i18n="typeExpense">Gasto</div>
+      <div class="tx-type-btn" id="btn-i" onclick="setType('income')" data-i18n="typeIncome">Ingreso</div>
+      <div class="tx-type-btn" id="btn-v" onclick="setType('invest')" data-i18n="typeInvest">Inversión</div>
+    </div>
+
+    <!-- CATEGORÍAS FRECUENTES -->
+    <div class="tx-cats-section" id="tx-freq-section" style="display:none">
+      <div class="tx-cats-label" id="tx-freq-label" data-i18n="freqCats">Categorías frecuentes</div>
+      <div class="tx-cats-grid" id="tx-freq-grid"></div>
+    </div>
+
+    <!-- TODAS LAS CATEGORÍAS -->
+    <div class="tx-cats-section">
+      <div class="tx-cats-label" id="tx-all-cats-label" data-i18n="allCatsExpense">Categorías de gasto</div>
+      <div class="tx-cats-grid" id="cat-grid"></div>
+    </div>
+  </div>
+
   </div><!-- end s-add-scroll -->
 
   <!-- TECLADO — oculto por defecto, aparece al tocar el monto -->
   <div id="main-numpad" style="position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--bg);border-top:1px solid var(--br);z-index:100;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);will-change:transform">
-    <!-- Header del teclado: monto + cerrar -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px">
+    <!-- Header del teclado: solo muestra el monto, sin botón para cerrar (el teclado es fijo) -->
+    <div style="display:flex;align-items:center;justify-content:center;padding:10px 16px 6px">
       <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace" id="numpad-amt-preview">0</div>
-      <button onclick="hideNumpad()" style="background:var(--s2);border:none;color:var(--mu);font-size:13px;font-weight:500;padding:6px 14px;border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif" data-i18n="done">Listo</button>
     </div>
     <div class="numpad" style="border:none;border-top:1px solid var(--br)">
       <div class="nk" onclick="np('1')">1</div><div class="nk" onclick="np('2')">2</div><div class="nk" onclick="np('3')">3</div>
@@ -876,7 +889,7 @@
 
 <!-- TACHO GLOBAL — aparece flotando cuando se edita un movimiento -->
 
-<div id="tx-delete-btn" onclick="deleteTx()" style="display:none;position:absolute;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:var(--rdd);border:2px solid rgba(240,86,106,.5);align-items:center;justify-content:center;cursor:pointer;z-index:200;box-shadow:0 4px 20px rgba(240,86,106,.35);transition:transform .15s,opacity .2s">
+<div id="tx-delete-btn" onclick="deleteTx()" style="display:none;position:absolute;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:var(--rdd);border:2px solid rgba(240,86,106,.5);align-items:center;justify-content:center;cursor:pointer;z-index:200;box-shadow:0 4px 20px rgba(240,86,106,.35);transition:transform .25s,opacity .2s">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><
 </div>
 <div class="toast" id="toast"></div>

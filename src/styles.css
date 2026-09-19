@@ -335,7 +335,6 @@ canvas.cv{width:100%;height:100%}
 /* ── Pantalla unificada de transacción ──────────────── */
 .tx-screen-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px}
 .tx-nav-pill{padding:8px 18px;border-radius:50px;border:1px solid var(--br);background:var(--s1);font-size:14px;font-weight:500;color:var(--mu);cursor:pointer;font-family:'DM Sans',sans-serif}
-.tx-nav-pill.save{background:none;border:none;color:var(--gr);font-size:15px;font-weight:600}
 .tx-amt-block{padding:16px 24px 8px;text-align:center}
 .tx-type-toggle{display:flex;background:var(--s2);border-radius:50px;padding:3px;margin:0 24px 16px}
 .tx-type-btn{flex:1;padding:8px 4px;border-radius:50px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;color:var(--mu);transition:background .2s,color .2s,box-shadow .2s;user-select:none}

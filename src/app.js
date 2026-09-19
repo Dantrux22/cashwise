@@ -562,7 +562,6 @@ function _showAddStep1(){
   document.getElementById('add-step2').classList.add('add-step-hidden');
   document.getElementById('add-back-btn').classList.add('add-step-hidden');
   document.getElementById('add-cancel-btn').classList.remove('add-step-hidden');
-  document.getElementById('save-btn').classList.add('add-step-hidden');
   const delBtn=document.getElementById('tx-delete-btn');
   if(delBtn) delBtn.style.display='none';
   hideNumpad();
@@ -573,18 +572,16 @@ function _showAddStep2(){
   document.getElementById('add-step2').classList.remove('add-step-hidden');
   document.getElementById('add-back-btn').classList.remove('add-step-hidden');
   document.getElementById('add-cancel-btn').classList.add('add-step-hidden');
-  document.getElementById('save-btn').classList.remove('add-step-hidden');
   showDeleteBtn(false); // modo nuevo: tacho = "limpiar formulario"
   setTimeout(showNumpad, 60); // teclado auto-focado al entrar al Paso 2
 }
 
 function _showAddEditMode(){
-  // Edición: todo en una sola pantalla, como el formulario original
+  // Edición: todo en una sola pantalla (monto/detalle/fecha/guardar arriba, categoría abajo)
   document.getElementById('add-step1').classList.remove('add-step-hidden');
   document.getElementById('add-step2').classList.remove('add-step-hidden');
   document.getElementById('add-back-btn').classList.add('add-step-hidden');
   document.getElementById('add-cancel-btn').classList.remove('add-step-hidden');
-  document.getElementById('save-btn').classList.remove('add-step-hidden');
 }
 
 function _addBackToStep1(){
@@ -618,9 +615,7 @@ function setType(txT){
   // Color monto
   const disp=document.getElementById('amt-display');
   if(disp) disp.className='amt-num '+(txT==='income'?'ic':txT==='invest'?'vc':'ec');
-  // Botón guardar color
-  const sb=document.getElementById('save-btn');
-  if(sb) sb.style.color=txT==='income'?'var(--gr)':txT==='invest'?'var(--am)':'var(--rd)';
+  // Botón guardar: siempre verde (.modal-btn ya lo define así), sin importar el tipo
   // Categorías
   renderTxCatCircles(txT);
   updateAmt();
@@ -691,6 +686,7 @@ function saveTx(){
     showToast(t('tUpdated'));
   }
   else { S.txs.unshift(tx); showToast(`✅ ${txType==='income'?'+':'-'}${sym()}${fmt(amt)}`); }
+  if(navigator.vibrate) navigator.vibrate(35); // feedback háptico breve al guardar
   saveState();
   if(typeof _authUser!=='undefined'&&_authUser&&typeof FIREBASE_ENABLED!=='undefined'&&FIREBASE_ENABLED){
     clearTimeout(_syncDebounce); uploadToCloud(_authUser.uid);
@@ -1515,7 +1511,7 @@ const T = {
     descPlaceholder:'Descripción (opcional)',
     freqCats:'Categorías frecuentes', allCatsExpense:'Categorías de gasto',
     allCatsIncome:'Categorías de ingreso', allCatsInvest:'Categorías de inversión',
-    tapAmount:'Tocá para ingresar el monto', today:'Hoy', done:'Listo',
+    tapAmount:'Tocá para ingresar el monto', today:'Hoy',
     // Edit TX
     editTx:'Editar movimiento',
     // All TX
@@ -1611,7 +1607,7 @@ const T = {
     descPlaceholder:'Description (optional)',
     freqCats:'Frequent categories', allCatsExpense:'Expense categories',
     allCatsIncome:'Income categories', allCatsInvest:'Investment categories',
-    tapAmount:'Tap to enter amount', today:'Today', done:'Done',
+    tapAmount:'Tap to enter amount', today:'Today',
     // Edit TX
     editTx:'Edit transaction',
     // All TX
@@ -2473,9 +2469,9 @@ function showNumpad(){
   if(np){ np.style.transform = 'translateY(0)'; }
   if(spacer){ spacer.style.height = '220px'; }
   if(hint){ hint.style.display = 'none'; }
-  // Subir el tacho para que no quede tapado por el numpad
+  // Subir el tacho para que quede arriba del teclado, no tapado
   const del = document.getElementById('tx-delete-btn');
-  if(del && del.style.display !== 'none'){ del.style.transform='translateY(-220px)'; del.style.transition='transform .25s,opacity .2s'; }
+  if(del && del.style.display !== 'none'){ del.style.transform='translateY(-220px)'; }
   updateNumpadPreview();
 }
 
@@ -2485,9 +2481,9 @@ function hideNumpad(){
   const spacer = document.getElementById('numpad-spacer');
   if(np){ np.style.transform = 'translateY(100%)'; }
   if(spacer){ spacer.style.height = '0'; }
-  // Volver el tacho a su posición original
+  // Volver el tacho a su posición original (el teclado ya no está ahí)
   const del = document.getElementById('tx-delete-btn');
-  if(del && del.style.display !== 'none'){ del.style.transform='translateY(0)'; del.style.transition='transform .25s,opacity .2s'; }
+  if(del && del.style.display !== 'none'){ del.style.transform='translateY(0)'; }
 }
 
 function updateNumpadPreview(){
