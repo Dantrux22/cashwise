@@ -288,21 +288,6 @@
   </div>
 </div>
 
-<!-- ══ GOALS ══ -->
-<div class="screen hidden" id="s-goals">
-  <div class="nav">
-    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Volver</span></div>
-    <div class="scr-title" data-i18n="goals">Metas de ahorro</div>
-    <div class="icon-btn" onclick="openGoalModal(null)">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </div>
-  </div>
-  <div class="scroll">
-    <div style="font-size:12px;color:var(--mu);margin-bottom:14px;line-height:1.6" data-i18n="goalsDesc">Fijate cuánto falta para cada objetivo. Aboná manualmente tu progreso.</div>
-    <div class="goal-list" id="goal-list"></div>
-  </div>
-</div>
-
 <!-- ══ RECURRING ══ -->
 <div class="screen hidden" id="s-recurring">
   <div class="nav">
@@ -430,7 +415,6 @@
       <div class="set-sec-ttl" data-i18n="secFinance">Finanzas</div>
       <div class="set-card">
         <div class="set-row" onclick="goTo('s-budgets')"><div><div class="set-lbl" data-i18n="rBudgets">Presupuestos</div><div class="set-sub" data-i18n="rBudgetsSub">Límites por categoría</div></div><div class="set-arr">›</div></div>
-        <div class="set-row" onclick="goTo('s-goals')"><div><div class="set-lbl" data-i18n="rGoals">Metas de ahorro</div><div class="set-sub" data-i18n="rGoalsSub">Objetivos y progreso</div></div><div class="set-arr">›</div></div>
         <div class="set-row" onclick="goTo('s-recurring')"><div><div class="set-lbl" data-i18n="rRecurring">Recurrentes</div><div class="set-sub" data-i18n="rRecurringSub">Gastos e ingresos automáticos</div></div><div class="set-arr">›</div></div>
         <div class="set-row" onclick="goTo('s-monthly')"><div><div class="set-lbl" data-i18n="rMonthly">Resumen mensual</div><div class="set-sub" data-i18n="rMonthlySub">Gastos por categoría</div></div><div class="set-arr">›</div></div>
       </div>
@@ -535,26 +519,6 @@
   </div>
 </div>
 
-<!-- Goal modal -->
-<div class="modal-bg hidden" id="goal-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-hdr">
-      <div class="modal-title" id="goal-modal-title">Nueva meta</div>
-      <button class="modal-x" onclick="closeGoalModal()">✕</button>
-    </div>
-    <input class="modal-inp" type="text" placeholder="Nombre de la meta (ej: Viaje a Europa)" id="goal-name-inp" maxlength="40">
-    <div class="modal-lbl">Monto objetivo</div>
-    <input class="modal-inp" type="number" placeholder="0" id="goal-target-inp" min="0">
-    <div class="modal-lbl">Ahorrado hasta ahora</div>
-    <input class="modal-inp" type="number" placeholder="0" id="goal-saved-inp" min="0">
-    <div class="modal-lbl">Ícono</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="goal-emoji-row"></div>
-    <button class="modal-btn" onclick="saveGoal()">Guardar meta</button>
-    <button class="modal-btn secondary" id="goal-add-btn" style="display:none" onclick="addToGoal()">✏️ Editar monto ahorrado</button>
-    <button class="modal-btn danger" id="goal-del-btn" style="display:none" onclick="deleteGoal()">Eliminar meta</button>
-  </div>
-</div>
 
 <!-- Recurring modal -->
 <div class="modal-bg hidden" id="rec-modal">
@@ -855,18 +819,6 @@
   </div>
 </div>
 
-<!-- Modal historial abonos a meta -->
-<div class="modal-bg hidden" id="goal-history-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-hdr">
-      <div class="modal-title">Historial de abonos</div>
-      <button class="modal-x" onclick="document.getElementById('goal-history-modal').classList.add('hidden')">✕</button>
-    </div>
-    <div id="goal-history-list" style="max-height:60vh;overflow-y:auto"></div>
-    <button class="modal-btn danger" id="goal-withdraw-btn" onclick="withdrawGoalAmount()">Retirar monto</button>
-  </div>
-</div>
 
 <!-- Modal bienvenida — aparece solo al registrarse por primera vez -->
 <div class="modal-bg hidden" id="welcome-modal">

@@ -75,7 +75,6 @@ const COLORS = [
   '#DEF7FF','#B0A8B9','#4B4453','#F8615A','#34d48a','#6b8cff',
 ];
 const ACCENTS = ['#34d48a','#f4a7b9','#4d96ff','#845ec2','#ffd93d','#ff6b6b'];
-const GOAL_EMOJIS = ['🎯','✈️','🏠','🚗','💻','📱','🎓','💍','🏖️','🎿','🏋️','💰','🌍','🎪','🎁'];
 const CURRENCIES = [
   {code:'ARS',name:'Peso Argentino',flag:'🇦🇷',sym:'$'},
   {code:'NZD',name:'Dólar Neozelandés',flag:'🇳🇿',sym:'NZ$'},
@@ -125,7 +124,7 @@ const _saved = loadState();
 const S = _saved || {
   txs:[], cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),
   currency:CURRENCIES[0], hidden:false, accent:'#34d48a',
-  budgets:[], goals:[], recurring:[], lang:'es',
+  budgets:[], recurring:[], lang:'es',
 };
 // Guards
 if(!Array.isArray(S.txs)) S.txs=[];
@@ -136,7 +135,6 @@ if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAU
 if(!S.currency||!S.currency.sym) S.currency=CURRENCIES[0];
 if(typeof S.hidden==='undefined') S.hidden=false;
 if(!Array.isArray(S.budgets)) S.budgets=[];
-if(!Array.isArray(S.goals)) S.goals=[];
 if(!Array.isArray(S.recurring)) S.recurring=[];
 if(!Array.isArray(S.deletedTxIds)) S.deletedTxIds=[];
 if(!S.lang) S.lang='es';
@@ -167,7 +165,6 @@ function goTo(id){
     's-invest':renderInvest,
     's-cats':renderCatLists,
     's-budgets':renderBudgets,
-    's-goals':renderGoals,
     's-recurring':renderRecurring,
     's-profile':renderProfile,
     's-settings':renderAccentDots,
@@ -187,7 +184,7 @@ function goBack(){
   curScreen=prev;
   // Refresh on return
   const R={'s-home':refreshHome,'s-invest':renderInvest,'s-cats':renderCatLists,
-           's-budgets':renderBudgets,'s-goals':renderGoals,'s-monthly':renderMonthly,
+           's-budgets':renderBudgets,'s-monthly':renderMonthly,
            's-allTx':renderAllTx,'s-recurring':renderRecurring};
   if(R[prev]) R[prev]();
 
@@ -898,155 +895,6 @@ function deleteBudget(){
 }
 
 // ═══════════════════════════════════════════
-// GOALS
-// ═══════════════════════════════════════════
-let editingGoalId=null, goalEmoji='🎯';
-
-function renderGoals(){
-  const list=document.getElementById('goal-list'); if(!list) return; list.innerHTML='';
-  if(S.goals.length===0){ renderEmptyState(list,'🎯','Sin metas todavía.<br>Tocá + para crear tu primera meta.'); return; }
-  S.goals.forEach(g=>{
-    const pct=Math.min(g.saved/g.target,1);
-    const done=pct>=1;
-    const el=document.createElement('div'); el.className='goal-item';
-    el.innerHTML=`
-      <span class="goal-emoji">${g.emoji||'🎯'}</span>
-      <div class="goal-top">
-        <div>
-          <div class="goal-name">${g.name}</div>
-          <div class="goal-sub">${done?'✅ ¡Meta alcanzada!':'En progreso'}</div>
-        </div>
-        <div class="goal-amounts">
-          <div class="goal-saved">${sym()}${fmt(g.saved)}</div>
-          <div class="goal-target">de ${sym()}${fmt(g.target)}</div>
-        </div>
-      </div>
-      <div class="goal-bar-wrap" style="margin-bottom:8px">
-        <div class="goal-bar-fill" style="background:${done?'var(--gr)':'var(--bl)'}" data-pct="${Math.round(pct*100)}"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="goal-pct">${Math.round(pct*100)}% completado</div>
-        <div style="display:flex;gap:6px">
-          <button style="padding:5px 10px;border-radius:9px;background:var(--s2);color:var(--mu);border:1px solid var(--br);font-size:12px;font-weight:600;cursor:pointer"
-            onclick="event.stopPropagation();openGoalHistory('${g.id}')">📋</button>
-          <button style="padding:5px 14px;border-radius:9px;background:var(--bld);color:var(--bl);border:1px solid rgba(107,140,255,.3);font-size:12px;font-weight:600;cursor:pointer" 
-            onclick="event.stopPropagation();quickAddToGoal('${g.id}')">+ Abonar</button>
-        </div>
-      </div>`;
-    el.onclick=()=>openGoalModal(g.id);
-    list.appendChild(el);
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      const f=el.querySelector('.goal-bar-fill');
-      if(f) f.style.transform='scaleX('+f.dataset.pct/100+')';
-    }));
-  });
-}
-
-function quickAddToGoal(id){
-  const g=S.goals.find(x=>x.id===id); if(!g) return;
-  // Mostrar input inline para abonar
-  const modal_html=`
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--s1);border:1px solid var(--br);border-radius:20px;padding:24px;width:100%;max-width:320px">
-        <div style="font-size:22px;text-align:center;margin-bottom:8px">${g.emoji||'🎯'}</div>
-        <div style="font-size:15px;font-weight:600;text-align:center;margin-bottom:4px">${g.name}</div>
-        <div style="font-size:12px;color:var(--mu);text-align:center;margin-bottom:16px">
-          Ahorrado: ${sym()}${fmt(g.saved)} de ${sym()}${fmt(g.target)}
-        </div>
-        <div style="font-size:12px;color:var(--mu);margin-bottom:6px">¿Cuánto querés abonar?</div>
-        <input id="quick-goal-inp" type="number" placeholder="0" min="0" 
-          style="width:100%;background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:12px 14px;color:var(--tx);font-size:16px;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
-        <div style="display:flex;gap:8px">
-          <button onclick="document.getElementById('quick-goal-overlay').remove()" 
-            style="flex:1;padding:12px;border-radius:12px;background:var(--s2);border:1px solid var(--br);font-size:14px;font-weight:600;cursor:pointer;color:var(--tx)">Cancelar</button>
-          <button onclick="confirmQuickAddGoal('${id}')"
-            style="flex:1;padding:12px;border-radius:12px;background:var(--gr);border:none;font-size:14px;font-weight:600;cursor:pointer;color:#0f0f13">Abonar</button>
-        </div>
-      </div>
-    </div>`;
-  const overlay=document.createElement('div');
-  overlay.id='quick-goal-overlay';
-  overlay.innerHTML=modal_html;
-  document.querySelector('.phone').appendChild(overlay);
-  setTimeout(()=>{ const inp=document.getElementById('quick-goal-inp'); if(inp) inp.focus(); },100);
-}
-
-function confirmQuickAddGoal(id){
-  const inp=document.getElementById('quick-goal-inp');
-  const amt=parseFloat(inp?.value)||0;
-  if(amt<=0){ showToast(t('tEnterAmt')); return; }
-  const g=S.goals.find(x=>x.id===id); if(!g) return;
-  g.saved=Math.min(g.saved+amt, g.target);
-  if(!g.deposits) g.deposits=[];
-  g.deposits.push({amount:amt,date:new Date().toISOString()});
-  saveState();
-  document.getElementById('quick-goal-overlay')?.remove();
-  renderGoals();
-  const pct=Math.round(g.saved/g.target*100);
-  showToast(pct>=100?'🎉 ¡Meta alcanzada!':'✅ '+sym()+fmt(amt)+' abonado ('+pct+'%)');
-}
-
-
-
-function openGoalModal(id){
-  editingGoalId=id;
-  const g=id?S.goals.find(x=>x.id===id):null;
-  goalEmoji=g?g.emoji||'🎯':'🎯';
-  document.getElementById('goal-modal-title').textContent=id?t('editGoal'):t('newGoal');
-  document.getElementById('goal-name-inp').value=g?g.name:'';
-  document.getElementById('goal-target-inp').value=g?g.target:'';
-  document.getElementById('goal-saved-inp').value=g?g.saved:'';
-  document.getElementById('goal-del-btn').style.display=id?'block':'none';
-  document.getElementById('goal-add-btn').style.display=id?'block':'none';
-  renderGoalEmojis();
-  document.getElementById('goal-modal').classList.remove('hidden');
-}
-
-function renderGoalEmojis(){
-  const row=document.getElementById('goal-emoji-row'); row.innerHTML='';
-  GOAL_EMOJIS.forEach(e=>{
-    const b=document.createElement('div');
-    const sel=e===goalEmoji;
-    b.style.cssText='width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:2px solid '+(sel?'var(--gr)':'transparent')+';background:'+(sel?'var(--gd)':'var(--s2)');
-    b.textContent=e;
-    b.onclick=()=>{ goalEmoji=e; renderGoalEmojis(); };
-    row.appendChild(b);
-  });
-}
-function closeGoalModal(){ document.getElementById('goal-modal').classList.add('hidden'); editingGoalId=null; }
-
-function saveGoal(){
-  const name=document.getElementById('goal-name-inp').value.trim();
-  const target=parseFloat(document.getElementById('goal-target-inp').value)||0;
-  const savedVal=document.getElementById('goal-saved-inp').value;
-  const saved=savedVal===''?0:parseFloat(savedVal)||0;
-  if(!name){ showToast(t('tEnterName')); return; }
-  if(target<=0){ showToast(t('tEnterTarget')); return; }
-  if(editingGoalId){
-    const g=S.goals.find(x=>x.id===editingGoalId);
-    if(g){ g.name=name; g.target=target; g.saved=saved; g.emoji=goalEmoji; }
-  } else {
-    S.goals.push({id:uid(),name,target,saved,emoji:goalEmoji});
-  }
-  saveState(); closeGoalModal(); renderGoals(); showToast(t('tGoalSaved'));
-}
-
-function addToGoal(){
-  const g=S.goals.find(x=>x.id===editingGoalId); if(!g) return;
-  // Usar el campo saved directamente — el usuario edita el valor y guarda
-  showToast('✏️ Editá el monto ahorrado y guardá');
-  document.getElementById('goal-saved-inp').focus();
-}
-
-function deleteGoal(){
-  if(!editingGoalId) return;
-  showConfirm(t('cDeleteGoal'),t('cDeleteGoalMsg'),()=>{
-    S.goals=S.goals.filter(g=>g.id!==editingGoalId);
-    saveState(); closeGoalModal(); renderGoals(); showToast(t('tGoalDeleted'));
-  });
-}
-
-// ═══════════════════════════════════════════
 // RECURRING
 // ═══════════════════════════════════════════
 let editingRecId=null, recType='expense', recSelCat=null;
@@ -1678,8 +1526,6 @@ const T = {
     records:'Registros', myRecords:'Mis registros', addRecord:'+ Agregar →',
     // Budgets
     budgets:'Presupuestos', budgetsDesc:'Establecé límites de gasto por categoría. Te avisamos al llegar al 80%.',
-    // Goals
-    goals:'Metas de ahorro', goalsDesc:'Fijate cuánto falta para cada objetivo. Aboná manualmente tu progreso.',
     // Recurring
     recurring:'Recurrentes', recurringDesc:'Alquiler, suscripciones, sueldos. Se registran automáticamente el día que corresponde.',
     // Categories
@@ -1696,7 +1542,6 @@ const T = {
     secCurrency:'Moneda', secData:'Datos',
     secGeneral:'General', secAppearance:'Apariencia', secDanger:'Zona de peligro',
     rBudgets:'Presupuestos', rBudgetsSub:'Límites por categoría',
-    rGoals:'Metas de ahorro', rGoalsSub:'Objetivos y progreso',
     rRecurring:'Recurrentes', rRecurringSub:'Gastos e ingresos automáticos',
     rMonthly:'Resumen mensual', rMonthlySub:'Gastos por categoría',
     rLang:'Idioma de la app', rCurrency:'Moneda principal',
@@ -1713,9 +1558,7 @@ const T = {
     tSelectCat:'⚠️ Seleccioná una categoría',
     tEnterLimit:'⚠️ Ingresá un límite', tBudgetExists:'⚠️ Ya existe un presupuesto para esa categoría',
     tBudgetSaved:'✅ Presupuesto guardado',
-    tEnterName:'⚠️ Ingresá un nombre', tEnterTarget:'⚠️ Ingresá el objetivo',
-    tGoalSaved:'✅ Meta guardada', tGoalDeleted:'🗑️ Meta eliminada',
-    tEditGoalAmt:'⚠️ Monto inválido',
+    tEnterName:'⚠️ Ingresá un nombre',
     tRecurringSaved:'✅ Recurrente guardado',
     tCatUpdated:'✅ Categoría actualizada', tCatDeleted:'🗑️ Categoría eliminada',
     tNoExport:'⚠️ Sin datos para exportar',
@@ -1723,11 +1566,9 @@ const T = {
     tDataDeleted:'🗑️ Datos eliminados', tDataRestored:'✅ Datos restaurados', tInvalidFile:'⚠️ Archivo inválido',
     tDepositUndone:'↩️ Depósito deshecho',
     tSynced:'✅ Sincronizado', tSyncing:'☁️ Sincronizando...', tWriteName:'⚠️ Escribí un nombre',
-    tGroupUpdated:'✅ Grupo actualizado', tGroupDeleted:'🗑️ Grupo eliminado',
     // Confirm dialogs
     cDeleteTx:'Eliminar movimiento', cDeleteTxMsg:'¿Seguro que querés eliminar este movimiento?',
     cDeleteBudget:'Eliminar presupuesto', cDeleteBudgetMsg:'¿Seguro que querés eliminar este presupuesto?',
-    cDeleteGoal:'Eliminar meta', cDeleteGoalMsg:'¿Seguro que querés eliminar esta meta?',
     cDeleteRec:'Eliminar recurrente', cDeleteRecMsg:'¿Seguro que querés eliminar este recurrente?',
     cDeleteCat:'Eliminar categoría', cDeleteCatMsg:'¿Seguro que querés eliminar esta categoría?',
     cDeleteAll:'Borrar todos los datos', cDeleteAllMsg:'Esta acción no se puede deshacer. ¿Continuar?',
@@ -1735,12 +1576,11 @@ const T = {
     cLogout:'Cerrar sesión', cLogoutMsg:'¿Cerrar sesión?',
     // Modal titles
     newBudget:'Nuevo presupuesto', editBudget:'Editar presupuesto',
-    newGoal:'Nueva meta', editGoal:'Editar meta',
     newRec:'Nuevo recurrente', editRec:'Editar recurrente',
     editCat:'Editar categoría', newCat:'Nueva categoría',
     // Empty states
     emptyTxs:'Sin movimientos', emptyBudgets:'Sin presupuestos aún',
-    emptyGoals:'Sin metas aún', emptyRec:'Sin recurrentes aún',
+    emptyRec:'Sin recurrentes aún',
     emptyTxMonth:'Sin movimientos este mes', emptyTxCat:'Sin movimientos en esta categoría',
     // Date modal
     selectDate:'Seleccionar fecha', applyDate:'Aplicar',
@@ -1782,8 +1622,6 @@ const T = {
     records:'Records', myRecords:'My records', addRecord:'+ Add →',
     // Budgets
     budgets:'Budgets', budgetsDesc:'Set spending limits by category. We alert you at 80%.',
-    // Goals
-    goals:'Savings goals', goalsDesc:'Track how much is left for each goal. Update your progress manually.',
     // Recurring
     recurring:'Recurring', recurringDesc:'Rent, subscriptions, salaries. Recorded automatically on the due day.',
     // Categories
@@ -1800,7 +1638,6 @@ const T = {
     secCurrency:'Currency', secData:'Data',
     secGeneral:'General', secAppearance:'Appearance', secDanger:'Danger zone',
     rBudgets:'Budgets', rBudgetsSub:'Limits by category',
-    rGoals:'Savings goals', rGoalsSub:'Goals and progress',
     rRecurring:'Recurring', rRecurringSub:'Automatic expenses and income',
     rMonthly:'Monthly summary', rMonthlySub:'Expenses by category',
     rLang:'App language', rCurrency:'Main currency',
@@ -1817,9 +1654,7 @@ const T = {
     tSelectCat:'⚠️ Select a category',
     tEnterLimit:'⚠️ Enter a limit', tBudgetExists:'⚠️ A budget already exists for that category',
     tBudgetSaved:'✅ Budget saved',
-    tEnterName:'⚠️ Enter a name', tEnterTarget:'⚠️ Enter a target amount',
-    tGoalSaved:'✅ Goal saved', tGoalDeleted:'🗑️ Goal deleted',
-    tEditGoalAmt:'⚠️ Invalid amount',
+    tEnterName:'⚠️ Enter a name',
     tRecurringSaved:'✅ Recurring saved',
     tCatUpdated:'✅ Category updated', tCatDeleted:'🗑️ Category deleted',
     tNoExport:'⚠️ No data to export',
@@ -1827,11 +1662,9 @@ const T = {
     tDataDeleted:'🗑️ Data deleted', tDataRestored:'✅ Data restored', tInvalidFile:'⚠️ Invalid file',
     tDepositUndone:'↩️ Deposit undone',
     tSynced:'✅ Synced', tSyncing:'☁️ Syncing...', tWriteName:'⚠️ Enter a name',
-    tGroupUpdated:'✅ Group updated', tGroupDeleted:'🗑️ Group deleted',
     // Confirm dialogs
     cDeleteTx:'Delete transaction', cDeleteTxMsg:'Are you sure you want to delete this transaction?',
     cDeleteBudget:'Delete budget', cDeleteBudgetMsg:'Are you sure you want to delete this budget?',
-    cDeleteGoal:'Delete goal', cDeleteGoalMsg:'Are you sure you want to delete this goal?',
     cDeleteRec:'Delete recurring', cDeleteRecMsg:'Are you sure you want to delete this recurring item?',
     cDeleteCat:'Delete category', cDeleteCatMsg:'Are you sure you want to delete this category?',
     cDeleteAll:'Delete all data', cDeleteAllMsg:'This action cannot be undone. Continue?',
@@ -1839,12 +1672,11 @@ const T = {
     cLogout:'Log out', cLogoutMsg:'Log out?',
     // Modal titles
     newBudget:'New budget', editBudget:'Edit budget',
-    newGoal:'New goal', editGoal:'Edit goal',
     newRec:'New recurring', editRec:'Edit recurring',
     editCat:'Edit category', newCat:'New category',
     // Empty states
     emptyTxs:'No transactions', emptyBudgets:'No budgets yet',
-    emptyGoals:'No goals yet', emptyRec:'No recurring items yet',
+    emptyRec:'No recurring items yet',
     emptyTxMonth:'No transactions this month', emptyTxCat:'No transactions in this category',
     // Date modal
     selectDate:'Select date', applyDate:'Apply',
@@ -1905,7 +1737,6 @@ function updateLangUI(){
   const scr=typeof curScreen!=='undefined'?curScreen:'';
   if(scr==='s-home') refreshHome();
   else if(scr==='s-budgets') renderBudgets();
-  else if(scr==='s-goals') renderGoals();
   else if(scr==='s-recurring') renderRecurring();
   else if(scr==='s-cats') renderCatLists();
   else if(scr==='s-invest') renderInvest();
@@ -2012,7 +1843,6 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
         if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
         if(!Array.isArray(S.budgets)) S.budgets=[];
-        if(!Array.isArray(S.goals)) S.goals=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
         // Re-hydrate currency object from CURRENCIES array so all fields (flag, name, sym) are present
         if(S.currency&&S.currency.code){
@@ -2501,7 +2331,7 @@ function confirmImport(){
 
 function clearAll(){
   showConfirm(t('cDeleteAll'),t('cDeleteAllMsg'),()=>{
-    S.txs=[]; S.budgets=[]; S.goals=[]; S.recurring=[];
+    S.txs=[]; S.budgets=[]; S.recurring=[];
     saveState(); refreshHome(); showToast(t('tDataDeleted'));
   });
 }
@@ -2922,90 +2752,6 @@ function renderUpcoming(container){
     wrap.appendChild(el);
   });
   container.appendChild(wrap);
-}
-
-// ══════════════════════════════════════════════════════
-// PUNTO 7: Historial de abonos a metas + retirar
-// ══════════════════════════════════════════════════════
-let _currentGoalId=null;
-
-function openGoalHistory(id){
-  _currentGoalId=id;
-  const g=S.goals.find(x=>x.id===id); if(!g) return;
-  const list=document.getElementById('goal-history-list');
-  list.innerHTML='';
-  const deposits=g.deposits||[];
-  if(!deposits.length){
-    list.innerHTML='<div style="padding:20px;text-align:center;color:var(--mu);font-size:13px">Sin abonos registrados</div>';
-  } else {
-    [...deposits].reverse().forEach((d,i)=>{
-      const el=document.createElement('div');
-      el.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:13px 4px;border-bottom:1px solid var(--br)';
-      el.innerHTML=`
-        <div>
-          <div style="font-size:13px;font-weight:500">${sym()}${fmt(d.amount)}</div>
-          <div style="font-size:11px;color:var(--mu)">${(dt=>{return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');})(new Date(d.date))}</div>
-        </div>
-        <button onclick="undoGoalDeposit('${id}',${deposits.length-1-i})" style="background:var(--rdd);border:none;color:var(--rd);padding:6px 12px;border-radius:9px;font-size:12px;cursor:pointer">Deshacer</button>`;
-      list.appendChild(el);
-    });
-  }
-  const wb=document.getElementById('goal-withdraw-btn');
-  if(wb) wb.style.display=deposits.length?'block':'none';
-  document.getElementById('goal-history-modal').classList.remove('hidden');
-}
-
-function undoGoalDeposit(goalId, idx){
-  const g=S.goals.find(x=>x.id===goalId); if(!g||!g.deposits) return;
-  const deposit=g.deposits[idx];
-  if(!deposit) return;
-  showConfirm('Deshacer abono','¿Deshacer este abono de '+sym()+fmt(deposit.amount)+'?',()=>{
-    g.saved=Math.max(0, g.saved-deposit.amount);
-    g.deposits.splice(idx,1);
-    saveState();
-    openGoalHistory(goalId);
-    renderGoals();
-    showToast(t('tDepositUndone'));
-  });
-}
-
-function withdrawGoalAmount(){
-  const g=S.goals.find(x=>x.id===_currentGoalId); if(!g) return;
-  document.getElementById('goal-history-modal').classList.add('hidden');
-  // Abrir quick add con monto negativo
-  const modal_html=`
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--s1);border:1px solid var(--br);border-radius:20px;padding:24px;width:100%;max-width:320px">
-        <div style="font-size:22px;text-align:center;margin-bottom:8px">${g.emoji||'🎯'}</div>
-        <div style="font-size:15px;font-weight:600;text-align:center;margin-bottom:4px">${g.name}</div>
-        <div style="font-size:12px;color:var(--mu);text-align:center;margin-bottom:16px">Disponible: ${sym()}${fmt(g.saved)}</div>
-        <input id="withdraw-inp" type="number" placeholder="0" min="0" max="${g.saved}"
-          style="width:100%;background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:12px 14px;color:var(--tx);font-size:16px;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
-        <div style="display:flex;gap:8px">
-          <button onclick="document.getElementById('withdraw-overlay').remove()"
-            style="flex:1;padding:12px;border-radius:12px;background:var(--s2);border:1px solid var(--br);font-size:14px;font-weight:600;cursor:pointer;color:var(--tx)">Cancelar</button>
-          <button onclick="confirmWithdraw('${g.id}')"
-            style="flex:1;padding:12px;border-radius:12px;background:var(--rdd);border:1px solid rgba(240,86,106,.3);font-size:14px;font-weight:600;cursor:pointer;color:var(--rd)">Retirar</button>
-        </div>
-      </div>
-    </div>`;
-  const overlay=document.createElement('div'); overlay.id='withdraw-overlay'; overlay.innerHTML=modal_html;
-  document.querySelector('.phone').appendChild(overlay);
-  setTimeout(()=>document.getElementById('withdraw-inp')?.focus(),100);
-}
-
-function confirmWithdraw(goalId){
-  const inp=document.getElementById('withdraw-inp');
-  const amt=parseFloat(inp?.value)||0;
-  const g=S.goals.find(x=>x.id===goalId); if(!g) return;
-  if(amt<=0||amt>g.saved){ showToast(t('tInvalidAmt')); return; }
-  g.saved=parseFloat((g.saved-amt).toFixed(2));
-  if(!g.deposits) g.deposits=[];
-  g.deposits.push({amount:-amt,date:new Date().toISOString(),type:'withdraw'});
-  saveState();
-  document.getElementById('withdraw-overlay')?.remove();
-  renderGoals();
-  showToast('✅ '+sym()+fmt(amt)+' retirado de la meta');
 }
 
 // ── Resumen mensual — notificación in-app el 1ro de cada mes ──
@@ -3695,7 +3441,6 @@ async function uploadToCloud(uid){
     // PASO 1: leer nube actual para evitar sobreescribir movimientos de otros dispositivos
     let txsToUpload = S.txs||[];
     let budgetsToUpload = S.budgets||[];
-    let goalsToUpload = S.goals||[];
     let recurringToUpload = S.recurring||[];
     try{
       const currentCloud = await loadFromCloud(uid);
@@ -3710,7 +3455,6 @@ async function uploadToCloud(uid){
           txsToUpload = S.txs;
         }
         if(Array.isArray(currentCloud.budgets))   budgetsToUpload   = _mergeById(S.budgets,   currentCloud.budgets);
-        if(Array.isArray(currentCloud.goals))     goalsToUpload     = _mergeById(S.goals,     currentCloud.goals);
         if(Array.isArray(currentCloud.recurring)) recurringToUpload = _mergeById(S.recurring, currentCloud.recurring);
       }
     }catch(mergeErr){ console.warn('[Upload] merge-before-write falló, subiendo sin merge:', mergeErr.message); }
@@ -3721,7 +3465,6 @@ async function uploadToCloud(uid){
       txs: txsToUpload,
       cats: S.cats,
       budgets: budgetsToUpload,
-      goals: goalsToUpload,
       recurring: recurringToUpload,
       currency: S.currency,
       darkMode: S.darkMode!==false,
@@ -3782,7 +3525,7 @@ function _mergeTxById(local, cloud){
   }
   return result;
 }
-// Merge genérico para arrays con campo .id (budgets, goals, recurring)
+// Merge genérico para arrays con campo .id (budgets, recurring)
 function _mergeById(local, cloud){
   if(!Array.isArray(cloud)||!cloud.length) return local||[];
   if(!Array.isArray(local)||!local.length) return cloud||[];
@@ -3797,7 +3540,6 @@ function mergeCloudData(data){
   if(Array.isArray(data.txs))       S.txs      = _mergeTxById(S.txs, data.txs);
   if(data.cats&&typeof data.cats==='object') S.cats = data.cats;
   if(Array.isArray(data.budgets))   S.budgets  = _mergeById(S.budgets, data.budgets);
-  if(Array.isArray(data.goals))     S.goals    = _mergeById(S.goals, data.goals);
   if(Array.isArray(data.recurring)) S.recurring= _mergeById(S.recurring, data.recurring);
   if(data.currency&&data.currency.code){
     S.currency=CURRENCIES.find(c=>c.code===data.currency.code)||data.currency;
