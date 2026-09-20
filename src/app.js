@@ -2471,7 +2471,7 @@ function showNumpad(){
   if(hint){ hint.style.display = 'none'; }
   // Subir el tacho para que quede arriba del teclado, no tapado
   const del = document.getElementById('tx-delete-btn');
-  if(del && del.style.display !== 'none'){ del.style.transform='translateY(-220px)'; }
+  if(del && del.style.display !== 'none'){ del.style.transform='translateY(-280px)'; }
   updateNumpadPreview();
 }
 
@@ -2509,27 +2509,27 @@ function showDeleteBtn(isEdit){
   btn.style.opacity = '1';
   btn.style.transform = 'scale(1)';
   btn.style.transition = 'transform .25s, opacity .2s';
+  btn.style.background = 'var(--rdd)';
+  btn.style.borderColor = 'rgba(240,86,106,.4)';
   if(isEdit){
-    // Modo edición: borrar movimiento
+    // Modo edición: elimina el movimiento ya guardado (con confirmación, deleteTx())
     btn.title = 'Eliminar movimiento';
     btn.onclick = deleteTx;
-    btn.style.background = 'var(--rdd)';
-    btn.style.borderColor = 'rgba(240,86,106,.4)';
   } else {
-    // Modo nuevo: limpiar formulario
-    btn.title = 'Limpiar';
+    // Modo nuevo: descarta el movimiento en curso (todavía no guardado) y vuelve
+    // al inicio — mismo ícono y significado que en edición ("eliminar y salir"),
+    // no un simple "limpiar campos y quedarse". Sin confirmación: no hay nada
+    // guardado que perder todavía.
+    btn.title = 'Descartar';
     btn.onclick = ()=>{
       amtStr='0'; selCat=null;
       document.getElementById('note-inp').value='';
       txDate=new Date(); updateDateLbl();
-      updateAmt(); renderTxCatCircles(txType);
+      updateAmt();
       hideNumpad();
-      showToast('🗑️ Formulario limpiado');
+      showToast('🗑️ Movimiento descartado');
+      goBack();
     };
-    btn.style.background = 'var(--s2)';
-    btn.style.borderColor = 'var(--br)';
-    // Cambiar ícono a "limpiar"
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
   }
 }
 
