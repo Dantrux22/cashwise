@@ -54,11 +54,24 @@ const DEFAULT_CATS = {
     {id:'i5',e:'🛍️',n:'Ventas',c:'#34d48a'},{id:'i6',e:'✨',n:'Otro',c:'#94a3b8'},
   ],
   invest:[
+    {id:'v0',e:'💱',n:'Compra de monedas',c:'#f5a623'},
     {id:'v1',e:'📊',n:'Acciones',c:'#f5a623'},{id:'v2',e:'₿',n:'Cripto',c:'#f5a623'},
     {id:'v3',e:'🏦',n:'Plazo fijo',c:'#f5a623'},{id:'v4',e:'🏢',n:'Inmuebles',c:'#f5a623'},
     {id:'v5',e:'💹',n:'FCI',c:'#f5a623'},{id:'v6',e:'✨',n:'Otro',c:'#94a3b8'},
   ]
 };
+
+// Migración única: agrega "Compra de monedas" a instalaciones existentes que
+// ya tenían S.cats.invest guardado antes de que esta categoría existiera.
+// Corre UNA sola vez (marca S._addedCurrencyPurchaseCat) — si el usuario la
+// borra después a propósito desde Categorías, no vuelve a resucitarla solo.
+function _ensureCurrencyPurchaseCat(){
+  if(S._addedCurrencyPurchaseCat) return;
+  if(Array.isArray(S.cats.invest)&&!S.cats.invest.some(c=>c.n==='Compra de monedas')){
+    S.cats.invest.unshift({id:'v0',e:'💱',n:'Compra de monedas',c:'#f5a623'});
+  }
+  S._addedCurrencyPurchaseCat=true;
+}
 
 const EMOJI_GROUPS = [
   {label:'🍕 Comida',     emojis:['🍕','🍔','🌮','🍜','🍣','🥗','🍷','🧃','🍺','🥤','🍦','🧁','☕','🫖']},
@@ -138,6 +151,7 @@ if(!S.cats||typeof S.cats!=='object') S.cats=JSON.parse(JSON.stringify(DEFAULT_C
 if(!Array.isArray(S.cats.expense)) S.cats.expense=JSON.parse(JSON.stringify(DEFAULT_CATS.expense));
 if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
 if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
+_ensureCurrencyPurchaseCat();
 if(!S.currency||!S.currency.sym) S.currency=CURRENCIES[0];
 if(typeof S.hidden==='undefined') S.hidden=false;
 if(!Array.isArray(S.budgets)) S.budgets=[];
@@ -303,10 +317,11 @@ function refreshHome(){
   const mainTxs=txs.filter(t=>!t.currency||t.currency===mainCode);
   const income=mainTxs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const expense=mainTxs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  // Net invest total (buy - sell) for main currency
-  const invest=S.txs.filter(t=>t.type==='invest'&&(!t.currency||t.currency===mainCode)).reduce((a,t)=>a+(t.investType==='sell'?-t.amount:t.amount),0);
-  // Only invest txs without excludeFromNet reduce the net balance
-  const investForNet=mainTxs.filter(t=>t.type==='invest'&&!t.excludeFromNet).reduce((a,t)=>a+(t.investType==='sell'?-t.amount:t.amount),0);
+  // El Balance disponible sí descuenta el costo real en pesos de comprar otra
+  // moneda (cotización × cantidad), cuando se cargó esa cotización — comprar
+  // dólares es un gasto real en pesos, aunque "Invertido" no lo muestre mezclado.
+  const investForNet=mainTxs.filter(t=>t.type==='invest'&&!t.excludeFromNet).reduce((a,t)=>a+(t.investType==='sell'?-t.amount:t.amount),0)
+    + txs.filter(t=>t.type==='invest'&&t.currency&&t.currency!==mainCode&&!t.excludeFromNet&&t.mainRate).reduce((a,t)=>a+(t.investType==='sell'?-1:1)*t.mainRate*t.amount,0);
   const net=income-expense-investForNet;
   const s=sym();
 
@@ -315,10 +330,13 @@ function refreshHome(){
   const csIncEl=document.getElementById('cs-inc'); if(csIncEl) csIncEl.textContent='+'+s+fmtCompact(income);
   const csExpEl=document.getElementById('cs-exp'); if(csExpEl) csExpEl.textContent='-'+s+fmtCompact(expense);
   const csNetEl=document.getElementById('cs-net'); if(csNetEl) csNetEl.textContent=(net>=0?'+':'-')+s+fmtCompact(Math.abs(net));
-  const csInvEl=document.getElementById('cs-inv'); if(csInvEl) csInvEl.textContent=s+fmtCompact(invest);
 
   drawChart(mainTxs);
-  renderTxList(mainTxs.filter(t=>t.type!=='invest'),'tx-list',5);
+  // "Últimos movimientos": gastos/ingresos en tu moneda principal + TODAS las
+  // inversiones sin importar la moneda (comprar dólares es un movimiento real,
+  // tiene que verse acá, no solo dentro de la pantalla de Inversiones).
+  const homeListTxs=txs.filter(t=>t.type!=='invest'&&(!t.currency||t.currency===mainCode)).concat(txs.filter(t=>t.type==='invest'));
+  renderTxList(homeListTxs,'tx-list',5);
   if(S.hidden) applyHide(true);
   // Secondary currency mini-row
   _renderSecondaryRow();
@@ -514,6 +532,14 @@ function buildTxItem(tx){
   const foreignCur=isV&&tx.currency&&tx.currency!==S.currency.code;
   const txSym=foreignCur?(CURRENCIES.find(c=>c.code===tx.currency)||{sym:tx.currency}).sym:sym();
   const amtSuffix=foreignCur?' '+tx.currency:'';
+  const isSellInv=tx.investType==='sell';
+  // Compra/venta de moneda extranjera: signo +/- en la moneda comprada, y si
+  // se cargó la cotización, el total real en pesos debajo (signo contrario —
+  // comprar dólares resta pesos, venderlos suma pesos).
+  const amtSign=foreignCur?(isSellInv?'-':'+'):(isIn?'+':isV?'':'-');
+  const mainTotalLine=(foreignCur&&tx.mainRate)
+    ?`<div style="font-size:10px;margin-top:1px;color:${isSellInv?'var(--gr)':'var(--rd)'}">${isSellInv?'+':'-'}${sym()}${fmt(tx.mainRate*tx.amount)}</div>`
+    :'';
   el.innerHTML=`
     <div class="tx-ico" style="background:${bg}">${emoji}</div>
     <div class="tx-info">
@@ -521,7 +547,8 @@ function buildTxItem(tx){
       <div class="tx-cat">${tx.cat||''}</div>
     </div>
     <div class="tx-r">
-      <div class="tx-amt ${cls}">${isIn?'+':isV?'':'-'}${txSym}${fmt(tx.amount)}${amtSuffix}</div>
+      <div class="tx-amt ${cls}">${amtSign}${txSym}${fmt(tx.amount)}${amtSuffix}</div>
+      ${mainTotalLine}
       <div class="tx-dt">${localDateKey(tx.date).slice(8,10)}/${localDateKey(tx.date).slice(5,7)}</div>
     </div>`;
   el.onclick=()=>openEdit(tx.id);
@@ -545,6 +572,8 @@ function openAdd(forceType){
   // Reset "Excluir del neto" toggle
   const enToggle=document.getElementById('exclude-net-toggle');
   if(enToggle) enToggle.classList.remove('on');
+  const mainAmtInp0=document.getElementById('invest-rate-inp');
+  if(mainAmtInp0) mainAmtInp0.value='';
   txCurrency=S.currency.code;
   txInvestType='buy';
   txDate=new Date(); updateDateLbl();
@@ -592,10 +621,13 @@ function _addBackToStep1(){
   txDate=new Date(); updateDateLbl();
   const enToggle=document.getElementById('exclude-net-toggle');
   if(enToggle) enToggle.classList.remove('on');
+  const mainAmtInp=document.getElementById('invest-rate-inp');
+  if(mainAmtInp) mainAmtInp.value='';
   txCurrency=S.currency.code;
   txInvestType='buy';
   _updateTxCurrencyToggle();
   _updateInvestTypeToggle();
+  _updateInvestRateRow();
   updateAmt();
   renderTxCatCircles(txType);
   _showAddStep1();
@@ -628,6 +660,7 @@ function setType(txT){
   if(txT==='invest') _updateInvestTypeToggle();
   // Mostrar/ocultar selector de moneda solo para inversiones
   _updateTxCurrencyToggle();
+  _updateInvestRateRow();
 }
 
 function buildCatGrid(containerId, type, selected, onSel){
@@ -672,13 +705,30 @@ function saveTx(){
   const note=document.getElementById('note-inp').value.trim();
   if(note.length>MAX_NOTE_LEN){ showToast(t('tNoteTooLong')); return; }
   const enToggle=document.getElementById('exclude-net-toggle');
-  const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
+  const enRow=document.getElementById('exclude-net-row');
+  // "Excluir del neto" solo aplica si su fila está visible (inversión en
+  // moneda principal) — en moneda extranjera la decide la cotización, nunca este toggle
+  const excludeFromNet=txType==='invest'&&enRow&&enRow.style.display!=='none'&&enToggle&&enToggle.classList.contains('on');
   const now=new Date().toISOString();
   const tx={id:editingId||uid(),type:txType,amount:amt,cat:selCat||'',note,date:txDate.toISOString(),modifiedAt:now};
   if(excludeFromNet) tx.excludeFromNet=true;
   if(txType==='invest'){
     if(txCurrency&&txCurrency!==S.currency.code) tx.currency=txCurrency;
     if(txInvestType==='sell') tx.investType='sell';
+    // Cotización por unidad en moneda principal (opcional — solo si la fila
+    // está visible, es decir, la inversión está en otra moneda). El total en
+    // pesos se calcula (cotización × cantidad) donde haga falta, nunca se
+    // guarda como número fijo aparte.
+    const rateRow=document.getElementById('invest-rate-row');
+    if(rateRow&&rateRow.style.display!=='none'){
+      const rateInp=document.getElementById('invest-rate-inp');
+      const rawRate=rateInp?rateInp.value.trim():'';
+      if(rawRate){
+        const rate=normAmt(rawRate);
+        if(rate<=0||rate>MAX_TX_AMOUNT){ showToast(t('tInvalidAmt')); return; }
+        tx.mainRate=rate;
+      }
+    }
   }
   if(editingId){
     const original=S.txs.find(t=>t.id===editingId);
@@ -740,6 +790,9 @@ function openEdit(id){
   txInvestType=tx.investType||'buy';
   _updateTxCurrencyToggle();
   _updateInvestTypeToggle();
+  _updateInvestRateRow();
+  const rateInp=document.getElementById('invest-rate-inp');
+  if(rateInp) rateInp.value=tx.mainRate?String(tx.mainRate).replace('.',getSep()):'';
   // Tacho en modo edición: borra el movimiento
   showDeleteBtn(true);
   hideNumpad();
@@ -767,54 +820,63 @@ function deleteTx(){
 function renderInvest(){
   const invTxs=S.txs.filter(t=>t.type==='invest').sort((a,b)=>new Date(b.date)-new Date(a.date));
   const mainCode=S.currency.code;
-  // Build net totals per currency (buy adds, sell subtracts)
-  const byCode={};
-  invTxs.forEach(t=>{
-    const c=t.currency||mainCode;
-    const sign=t.investType==='sell'?-1:1;
-    byCode[c]=(byCode[c]||0)+sign*t.amount;
-  });
-  // Populate multi-currency totals header
-  const totalsEl=document.getElementById('inv-totals-list');
-  if(totalsEl){
-    const codes=Object.keys(byCode);
-    if(codes.length===0){
-      totalsEl.innerHTML=`<div class="itv-line" style="font-size:38px;font-weight:300;font-family:'DM Mono',monospace;letter-spacing:-2px;color:var(--am)">${sym()}0</div>`;
-    } else {
-      totalsEl.innerHTML=codes.map(code=>{
-        const cur=CURRENCIES.find(c=>c.code===code)||{sym:code,code};
-        const total=byCode[code];
-        const color=total<0?'var(--rd)':'var(--am)';
-        const suffix=code!==mainCode?`<span style="font-size:16px;font-weight:400;letter-spacing:0;margin-left:3px">${code}</span>`:'';
-        return `<div class="itv-line" style="font-size:32px;font-weight:300;font-family:'DM Mono',monospace;letter-spacing:-1.5px;color:${color};line-height:1.25">${total<0?'-':''}${cur.sym}${fmt(Math.abs(total))}${suffix}</div>`;
-      }).join('');
-    }
-  }
-  // Hide old breakdown panel (header now shows all currencies)
-  const byCurEl=document.getElementById('inv-by-currency');
-  if(byCurEl) byCurEl.style.display='none';
-  document.getElementById('inv-count').textContent=invTxs.length;
+  const countLbl=document.getElementById('inv-count-lbl');
+  if(countLbl) countLbl.textContent=invTxs.length?`${invTxs.length} movimiento${invTxs.length!==1?'s':''} en ${new Set(invTxs.map(t=>t.currency||mainCode)).size} moneda${new Set(invTxs.map(t=>t.currency||mainCode)).size!==1?'s':''}.`:'Tus ahorros y activos, agrupados por moneda.';
   if(S.hidden) applyHide(true);
   const list=document.getElementById('inv-list'); list.innerHTML='';
-  if(invTxs.length===0){ renderEmptyState(list,'📊','Sin inversiones registradas.'); return; }
+  if(invTxs.length===0){ renderEmptyState(list,'💰','Sin ahorros ni inversiones registradas.'); return; }
+
+  // Agrupar por categoría + moneda juntas — comprar dólares (Compra de
+  // monedas) nunca se mezcla con comprar acciones (Acciones) aunque estén en
+  // la misma moneda; son cosas distintas aunque compartan divisa.
+  const groupsArr=[];
   invTxs.forEach(tx=>{
-    const cat=findCat('invest',tx.cat);
-    const el=document.createElement('div'); el.className='inv-item';
-    const isSell=tx.investType==='sell';
-    const txCode=tx.currency||mainCode;
-    const txCur=CURRENCIES.find(c=>c.code===txCode)||{sym:txCode};
-    const amtStr=(isSell?'-':'')+txCur.sym+fmt(tx.amount)+(txCode!==mainCode?' '+txCode:'');
-    const amtColor=isSell?'var(--rd)':'var(--am)';
-    el.innerHTML=`
-      <div class="inv-ico">${cat?cat.e:'📈'}</div>
-      <div class="inv-info">
-        <div class="inv-name">${tx.note||tx.cat||'Inversión'}</div>
-        <div class="inv-sub">${isSell?'Venta':'Compra'}${tx.cat?' · '+tx.cat:''} · ${localDateKey(tx.date).slice(8,10)}/${localDateKey(tx.date).slice(5,7)}</div>
-      </div>
-      <div class="inv-r"><div class="inv-val" style="color:${amtColor}">${amtStr}</div></div>`;
-    el.style.cursor='pointer';
-    el.onclick=()=>openEdit(tx.id);
-    list.appendChild(el);
+    const code=tx.currency||mainCode;
+    const catKey=tx.cat||'Otro';
+    let grp=groupsArr.find(g=>g.catKey===catKey&&g.code===code);
+    if(!grp){ grp={catKey,code,txs:[]}; groupsArr.push(grp); }
+    grp.txs.push(tx);
+  });
+  // Grupo con el movimiento más reciente primero (invTxs ya viene ordenado
+  // por fecha desc, así que el primer tx empujado a cada grupo es el más nuevo)
+  groupsArr.sort((a,b)=>new Date(b.txs[0].date)-new Date(a.txs[0].date));
+
+  groupsArr.forEach(grp=>{
+    const {catKey,code,txs:txsInGroup}=grp;
+    const catDef=findCat('invest',catKey);
+    const cur=CURRENCIES.find(c=>c.code===code)||{sym:code,flag:'🌐',code};
+    const total=txsInGroup.reduce((a,t)=>a+(t.investType==='sell'?-1:1)*t.amount,0);
+    const totalColor=total<0?'var(--rd)':'var(--am)';
+    const groupEl=document.createElement('div');
+    groupEl.className='inv-cur-group';
+    groupEl.innerHTML=`
+      <div class="inv-cur-hdr">
+        <div class="inv-cur-flag">${catDef?catDef.e:(cur.flag||'🌐')}</div>
+        <div class="inv-cur-name">${catKey}${code!==mainCode?' · '+code:''}</div>
+        <div class="inv-cur-total itv-line" style="color:${totalColor}">${total<0?'-':''}${cur.sym}${fmt(Math.abs(total))}</div>
+      </div>`;
+    const itemsWrap=document.createElement('div');
+    itemsWrap.className='inv-cur-items';
+    txsInGroup.forEach(tx=>{
+      const el=document.createElement('div'); el.className='inv-item';
+      const isSell=tx.investType==='sell';
+      const amtStr=(isSell?'-':'')+cur.sym+fmt(tx.amount);
+      const amtColor=isSell?'var(--rd)':'var(--am)';
+      // Total real en la moneda principal (cotización × cantidad), si se cargó
+      const mainAmtLine=tx.mainRate?`<div style="font-size:10px;color:var(--mu);margin-top:1px">${isSell?'+':'-'}${sym()}${fmt(tx.mainRate*tx.amount)}</div>`:'';
+      el.innerHTML=`
+        <div class="inv-ico">${catDef?catDef.e:'📈'}</div>
+        <div class="inv-info">
+          <div class="inv-name">${tx.note||tx.cat||'Inversión'}</div>
+          <div class="inv-sub">${isSell?'Venta':'Compra'} · ${localDateKey(tx.date).slice(8,10)}/${localDateKey(tx.date).slice(5,7)}</div>
+        </div>
+        <div class="inv-r"><div class="inv-val" style="color:${amtColor}">${amtStr}</div>${mainAmtLine}</div>`;
+      el.style.cursor='pointer';
+      el.onclick=()=>openEdit(tx.id);
+      itemsWrap.appendChild(el);
+    });
+    groupEl.appendChild(itemsWrap);
+    list.appendChild(groupEl);
   });
 }
 
@@ -1338,11 +1400,11 @@ function applyHide(hide){
     ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
     :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
   if(hide){
-    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net'];
+    const ids=['cs-inc','cs-exp','cs-net','c-net'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(!el.dataset.real) el.dataset.real=el.textContent; el.textContent=MASK; });
     document.querySelectorAll('.itv-line').forEach(el=>{ if(!el.dataset.real) el.dataset.real=el.textContent; el.textContent=MASK; });
   } else {
-    const ids=['cs-inc','cs-exp','cs-net','cs-inv','c-net'];
+    const ids=['cs-inc','cs-exp','cs-net','c-net'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; delete el.dataset.real; });
     refreshHome();
     if(curScreen==='s-invest') renderInvest();
@@ -1415,11 +1477,13 @@ const INVEST_PILL_CURRENCIES=['USD','EUR'];
 function setTxCurrency(code){
   txCurrency=code;
   _updateTxCurrencyToggle();
+  _updateInvestRateRow();
 }
 
 function setInvestType(t){
   txInvestType=t;
   _updateInvestTypeToggle();
+  _updateInvestRateRow();
 }
 
 function _updateInvestTypeToggle(){
@@ -1442,7 +1506,15 @@ function _updateTxCurrencyToggle(){
   container.innerHTML='';
   const mainCode=S.currency.code;
   const investCurs=Array.isArray(S.investCurrencies)&&S.investCurrencies.length?S.investCurrencies:INVEST_PILL_CURRENCIES;
-  const allCodes=[mainCode,...investCurs.filter(c=>c!==mainCode)];
+  // Nunca se invierte en la moneda principal (es la moneda en la que cobrás/gastás,
+  // no tendría sentido "comprar pesos con pesos") — no se ofrece como opción.
+  let allCodes=investCurs.filter(c=>c!==mainCode);
+  if(!allCodes.length) allCodes=INVEST_PILL_CURRENCIES.filter(c=>c!==mainCode);
+  if(!allCodes.length) allCodes=['USD'];
+  // Si la moneda actualmente seleccionada ya no es una opción válida (ej. era
+  // la principal) y esto es una carga nueva (no edición de un movimiento viejo
+  // que sí puede estar en la moneda principal), caer a la primera disponible.
+  if(!allCodes.includes(txCurrency)&&!editingId) txCurrency=allCodes[0];
   allCodes.forEach(code=>{
     const cur=CURRENCIES.find(c=>c.code===code)||{code,sym:code,flag:''};
     const active=txCurrency===code;
@@ -1454,6 +1526,30 @@ function _updateTxCurrencyToggle(){
   });
 }
 
+// Fila opcional "costo/ingreso en moneda principal" — solo tiene sentido
+// cuando la inversión está en una moneda distinta a la principal (ej. compraste
+// USD con pesos). Si se completa, ese monto es lo que afecta tu balance en tu
+// moneda principal; si se deja vacío, la inversión no toca el balance (como
+// era antes de este campo).
+function _updateInvestRateRow(){
+  const row=document.getElementById('invest-rate-row');
+  const enRow=document.getElementById('exclude-net-row');
+  if(!row) return;
+  const isForeign=txType==='invest'&&txCurrency&&txCurrency!==S.currency.code;
+  row.style.display=isForeign?'':'none';
+  // "Excluir del neto" solo tiene sentido para inversiones en la moneda
+  // principal (ej. Acciones compradas en pesos). En moneda extranjera, la
+  // cotización ya decide si afecta el balance — vacía = no afecta, cargada =
+  // resta/suma — un toggle aparte sería redundante y contradictorio.
+  if(enRow&&txType==='invest') enRow.style.display=isForeign?'none':'';
+  if(!isForeign) return;
+  const isSell=txInvestType==='sell';
+  const lbl=document.getElementById('invest-rate-lbl');
+  const sub=document.getElementById('invest-rate-sub');
+  if(lbl) lbl.textContent='Cotización en '+S.currency.code;
+  if(sub) sub.textContent='Opcional — a cuánto '+(isSell?'vendiste':'compraste')+' cada '+txCurrency;
+}
+
 function _renderSecondaryRow(){
   const row=document.getElementById('h-secondary-row');
   if(!row) return;
@@ -1461,13 +1557,17 @@ function _renderSecondaryRow(){
   // Find invest transactions with a non-main currency
   const foreignInvest=S.txs.filter(t=>t.type==='invest'&&t.currency&&t.currency!==mainCode);
   if(!foreignInvest.length){ row.style.display='none'; return; }
-  // Group totals by currency code
+  // Neto por moneda: compra suma, venta resta — mismo criterio que el resto de la app
   const byCode={};
-  foreignInvest.forEach(t=>{ byCode[t.currency]=(byCode[t.currency]||0)+t.amount; });
-  const parts=Object.entries(byCode).map(([code,total])=>{
-    const cur=CURRENCIES.find(c=>c.code===code)||{sym:code};
-    return cur.sym+fmt(total)+' '+code;
+  foreignInvest.forEach(t=>{
+    const sign=t.investType==='sell'?-1:1;
+    byCode[t.currency]=(byCode[t.currency]||0)+sign*t.amount;
   });
+  const parts=Object.entries(byCode).filter(([,total])=>total!==0).map(([code,total])=>{
+    const cur=CURRENCIES.find(c=>c.code===code)||{sym:code};
+    return (total<0?'-':'')+cur.sym+fmt(Math.abs(total))+' '+code;
+  });
+  if(!parts.length){ row.style.display='none'; return; }
   const bal=document.getElementById('h-secondary-bal');
   if(bal) bal.textContent=parts.join(' · ');
   row.style.display='block';
@@ -1824,6 +1924,7 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.cats.expense)) S.cats.expense=JSON.parse(JSON.stringify(DEFAULT_CATS.expense));
         if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
         if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
+        _ensureCurrencyPurchaseCat();
         if(!Array.isArray(S.budgets)) S.budgets=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
         // Re-hydrate currency object from CURRENCIES array so all fields (flag, name, sym) are present
@@ -2399,6 +2500,8 @@ function showDeleteBtn(isEdit){
     btn.onclick = ()=>{
       amtStr='0'; selCat=null;
       document.getElementById('note-inp').value='';
+      const mainAmtInp=document.getElementById('invest-rate-inp');
+      if(mainAmtInp) mainAmtInp.value='';
       txDate=new Date(); updateDateLbl();
       updateAmt();
       hideNumpad();
