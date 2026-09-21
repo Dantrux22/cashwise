@@ -176,7 +176,7 @@ function goTo(id){
     's-settings':renderAccentDots,
     's-allTx':renderAllTx,
     's-monthly':()=>{monthlyYear=new Date().getFullYear();monthlyMonth=new Date().getMonth();renderMonthly();},
-    's-data':()=>{ switchDataTab('export'); document.getElementById('import-preview').style.display='none'; document.getElementById('sankey-preview-wrap').style.display='none'; _pendingImportTxs=[]; },
+    's-data':()=>{ switchDataTab('export'); document.getElementById('import-preview').style.display='none'; _pendingImportTxs=[]; },
   };
   if(R[id]) R[id]();
 }
@@ -1222,7 +1222,7 @@ function renderMonthly(){
       const cat=findCat('expense',catName);
       const pct=Math.round(total/expense*100);
       const row=document.createElement('div');
-      row.style.cssText='background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;margin-bottom:7px;transition:background .14s';
+      row.className='monthly-cat-row';
       row.innerHTML=`
         <div style="width:36px;height:36px;border-radius:10px;background:${(cat&&cat.c)||'#94a3b8'}20;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${(cat&&cat.e)||'📦'}</div>
         <div style="flex:1;min-width:0">
@@ -1234,9 +1234,8 @@ function renderMonthly(){
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--rd)">${s}${fmt(total)}</div>
           <div style="font-size:10px;color:var(--mu);margin-top:1px">${pct}%</div>
-        </div>`;
-      row.onmouseover=()=>row.style.background='var(--s2)';
-      row.onmouseout=()=>row.style.background='var(--s1)';
+        </div>
+        <div class="tx-row-arrow">›</div>`;
       row.onclick=()=>openCatHistory('expense',catName,monthlyMonth,monthlyYear);
       scroll.appendChild(row);
     });
@@ -1975,117 +1974,6 @@ async function exportPDF(){
 }
 
 // ═══════════════════════════════════════════
-// EXPORT — SANKEY SVG
-// ═══════════════════════════════════════════
-let _sankeySVGContent='';
-function exportSankey(){
-  if(!S.txs.length){ showToast(t('tNoExport')); return; }
-  const svg=buildSankeySVG();
-  _sankeySVGContent=svg;
-  const wrap=document.getElementById('sankey-preview-wrap');
-  const previewEl=document.getElementById('sankey-preview-svg');
-  previewEl.innerHTML=svg;
-  wrap.style.display='';
-  wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-function downloadSankeyNow(){
-  if(!_sankeySVGContent) return;
-  download('cashwise-sankey.svg','data:image/svg+xml;charset=utf-8,'+encodeURIComponent(_sankeySVGContent));
-  showToast('🌊 Sankey exportado');
-}
-
-function buildSankeySVG(){
-  const W=700,H=420,PAD=16,NODE_W=140,NODE_H_MIN=28;
-  const incomeMap={}, expenseMap={};
-  S.txs.forEach(t=>{
-    if(t.type==='income'){ incomeMap[t.cat||'Otro']=(incomeMap[t.cat||'Otro']||0)+t.amount; }
-    if(t.type==='expense'){ expenseMap[t.cat||'Otro']=(expenseMap[t.cat||'Otro']||0)+t.amount; }
-  });
-  const incEntries=Object.entries(incomeMap).sort((a,b)=>b[1]-a[1]);
-  const expEntries=Object.entries(expenseMap).sort((a,b)=>b[1]-a[1]);
-  const totalIncome=incEntries.reduce((a,[,v])=>a+v,0)||1;
-  const totalExpense=expEntries.reduce((a,[,v])=>a+v,0)||1;
-  const USABLE_H=H-PAD*2;
-  const CENTER_X=W/2;
-  const CENTER_W=80;
-  // Colors for categories (cycle through palette)
-  const PALETTE=['#34d48a','#6b8cff','#f5a623','#b57bee','#f0566a','#38bdf8','#22c55e','#fb923c'];
-  function nodeColor(i){ return PALETTE[i%PALETTE.length]; }
-  // Build income nodes
-  const incNodes=incEntries.map(([cat,amt],i)=>({cat,amt,pct:amt/totalIncome,color:nodeColor(i)}));
-  const expNodes=expEntries.map(([cat,amt],i)=>({cat,amt,pct:amt/totalExpense,color:nodeColor(i+4)}));
-  // Layout income nodes (left column)
-  const LEFT_X=PAD;
-  const RIGHT_X=W-PAD-NODE_W;
-  function layoutNodes(nodes,totalH){
-    const GAP=8;
-    const totalGaps=(nodes.length-1)*GAP;
-    const availH=totalH-totalGaps;
-    let y=PAD;
-    return nodes.map(n=>{
-      const h=Math.max(NODE_H_MIN,Math.round(n.pct*availH));
-      const node={...n,y,h};
-      y+=h+GAP;
-      return node;
-    });
-  }
-  const incLaid=layoutNodes(incNodes,USABLE_H);
-  const expLaid=layoutNodes(expNodes,USABLE_H);
-  // Center node
-  const centerH=Math.max(60,Math.round((totalIncome/(totalIncome+totalExpense))*USABLE_H));
-  const centerY=(H-centerH)/2;
-  // Build SVG
-  let paths='', rects='', texts='';
-  // Income links → center
-  const centerInX=CENTER_X-CENTER_W/2;
-  const centerOutX=CENTER_X+CENTER_W/2;
-  let incOffsetAtCenter=centerY;
-  incLaid.forEach(n=>{
-    const lh=Math.round(n.pct*centerH);
-    const x0=LEFT_X+NODE_W;
-    const y0=n.y+n.h/2-lh/2;
-    const x1=centerInX;
-    const y1=incOffsetAtCenter;
-    const mx=(x0+x1)/2;
-    paths+=`<path d="M${x0},${y0} C${mx},${y0} ${mx},${y1} ${x1},${y1} L${x1},${y1+lh} C${mx},${y1+lh} ${mx},${y0+lh} ${x0},${y0+lh} Z" fill="${n.color}" opacity="0.35"/>`;
-    incOffsetAtCenter+=lh;
-  });
-  // Center → expense links
-  let expOffsetAtCenter=centerY;
-  expLaid.forEach(n=>{
-    const lh=Math.round(n.pct*centerH);
-    const x0=centerOutX;
-    const y0=expOffsetAtCenter;
-    const x1=RIGHT_X;
-    const y1=n.y+n.h/2-lh/2;
-    const mx=(x0+x1)/2;
-    paths+=`<path d="M${x0},${y0} C${mx},${y0} ${mx},${y1} ${x1},${y1} L${x1},${y1+lh} C${mx},${y1+lh} ${mx},${y0+lh} ${x0},${y0+lh} Z" fill="${n.color}" opacity="0.35"/>`;
-    expOffsetAtCenter+=lh;
-  });
-  // Income rects + labels
-  incLaid.forEach(n=>{
-    rects+=`<rect x="${LEFT_X}" y="${n.y}" width="${NODE_W}" height="${n.h}" rx="6" fill="${n.color}" opacity="0.85"/>`;
-    const fs=Math.min(12,Math.max(8,n.h-4));
-    texts+=`<text x="${LEFT_X+NODE_W/2}" y="${n.y+n.h/2}" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" fill="#0f0f13" font-family="DM Sans,sans-serif" font-weight="600">${n.cat}</text>`;
-    texts+=`<text x="${LEFT_X+NODE_W+4}" y="${n.y+n.h/2}" text-anchor="start" dominant-baseline="middle" font-size="9" fill="#7878a0" font-family="DM Mono,monospace">${fmt(n.amt)}</text>`;
-  });
-  // Center rect
-  rects+=`<rect x="${CENTER_X-CENTER_W/2}" y="${centerY}" width="${CENTER_W}" height="${centerH}" rx="8" fill="#1a1a22"/>`;
-  texts+=`<text x="${CENTER_X}" y="${centerY+centerH/2-8}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#f0f0f8" font-family="DM Sans,sans-serif" font-weight="600">Balance</text>`;
-  const net=totalIncome-totalExpense;
-  const netColor=net>=0?'#34d48a':'#f0566a';
-  texts+=`<text x="${CENTER_X}" y="${centerY+centerH/2+8}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="${netColor}" font-family="DM Mono,monospace">${(net>=0?'+':'')+fmt(net)}</text>`;
-  // Expense rects + labels
-  expLaid.forEach(n=>{
-    rects+=`<rect x="${RIGHT_X}" y="${n.y}" width="${NODE_W}" height="${n.h}" rx="6" fill="${n.color}" opacity="0.85"/>`;
-    const fs=Math.min(12,Math.max(8,n.h-4));
-    texts+=`<text x="${RIGHT_X+NODE_W/2}" y="${n.y+n.h/2}" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" fill="#0f0f13" font-family="DM Sans,sans-serif" font-weight="600">${n.cat}</text>`;
-    texts+=`<text x="${RIGHT_X-4}" y="${n.y+n.h/2}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="#7878a0" font-family="DM Mono,monospace">${fmt(n.amt)}</text>`;
-  });
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="background:#0f0f13;border-radius:16px">${paths}${rects}${texts}</svg>`;
-}
-
-// ═══════════════════════════════════════════
 // IMPORT — data file handling
 // ═══════════════════════════════════════════
 let _pendingImportTxs=[];
@@ -2728,112 +2616,6 @@ function renderUpcoming(container){
     wrap.appendChild(el);
   });
   container.appendChild(wrap);
-}
-
-// ── Resumen mensual — notificación in-app el 1ro de cada mes ──
-function importMoneeExcel() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.xlsx,.xls';
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
-    showToast('⏳ Importando...');
-    try {
-      const data = await file.arrayBuffer();
-      parseMoneeExcel(data);
-    } catch(err) {
-      showToast('❌ Error al leer el archivo: ' + err.message);
-    }
-  };
-  input.click();
-}
-
-function parseMoneeExcel(arrayBuffer) {
-  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
-
-  function findCatName(moneecat, type) {
-    const catList = S.cats[type] || [];
-    const allCats = [...(S.cats.expense||[]),...(S.cats.income||[]),...(S.cats.invest||[])];
-    const exact = catList.find(c => c.n.toLowerCase() === moneecat.toLowerCase());
-    if(exact) return exact.n;
-    const exactAny = allCats.find(c => c.n.toLowerCase() === moneecat.toLowerCase());
-    if(exactAny) return exactAny.n;
-    const partial = allCats.find(c =>
-      c.n.toLowerCase().includes(moneecat.toLowerCase()) ||
-      moneecat.toLowerCase().includes(c.n.toLowerCase())
-    );
-    if(partial) return partial.n;
-    return 'Otro';
-  }
-
-  const MONTH_MAP = {
-    'January':0,'February':1,'March':2,'April':3,'May':4,'June':5,
-    'July':6,'August':7,'September':8,'October':9,'November':10,'December':11
-  };
-
-  let imported = 0, skipped = 0, duplicates = 0;
-  const newTxs = [];
-
-  for(let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if(!row || row.length < 6) continue;
-
-    const [account, category, description, person, dateStr, amount, recurring, status] = row;
-
-    if(status && status !== 'Settled') { skipped++; continue; }
-    if(!amount || amount === 0) { skipped++; continue; }
-
-    let date;
-    try {
-      if(dateStr instanceof Date) {
-        date = new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate(), 12, 0, 0).toISOString();
-      } else if(typeof dateStr === 'number') {
-        const d = new Date(Math.round((dateStr - 25569) * 86400 * 1000));
-        date = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0).toISOString();
-      } else {
-        const parts = String(dateStr).trim().split(' ');
-        const day = parseInt(parts[0]);
-        const month = MONTH_MAP[parts[1]];
-        const year = parseInt(parts[2]);
-        if(isNaN(day) || isNaN(month) || isNaN(year)) throw new Error();
-        date = new Date(year, month, day, 12, 0, 0).toISOString();
-      }
-    } catch(e) { skipped++; continue; }
-
-    const note = String(description || '').trim();
-    const isDup = S.txs.some(t =>
-      t.note === note &&
-      Math.abs(t.amount - Math.abs(amount)) < 0.01 &&
-      t.date.slice(0,10) === date.slice(0,10)
-    );
-    if(isDup) { duplicates++; continue; }
-
-    const type = amount > 0 ? 'income' : 'expense';
-    const cat = findCatName(String(category || '').trim(), type);
-
-    newTxs.push({
-      id: uid(),
-      type,
-      amount: Math.abs(parseFloat(parseFloat(amount).toFixed(2))),
-      cat,
-      note,
-      date
-    });
-    imported++;
-  }
-
-  if(newTxs.length === 0) {
-    showToast(`⚠️ Sin datos nuevos (${duplicates} duplicados, ${skipped} omitidos)`);
-    return;
-  }
-
-  S.txs = [...S.txs, ...newTxs];
-  saveState();
-  refreshHome();
-  showToast(`✅ ${imported} movimientos importados${duplicates > 0 ? ` (${duplicates} duplicados omitidos)` : ''}`);
 }
 
 function showVerificationPending(user) {

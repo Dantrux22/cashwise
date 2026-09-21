@@ -639,20 +639,6 @@
         </div>
         <div style="color:var(--gr);font-size:18px">↓</div>
       </div>
-      <div class="data-export-card" onclick="exportSankey()">
-        <div class="data-export-ico">🌊</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:600;margin-bottom:2px">Sankey</div>
-          <div style="font-size:12px;color:var(--mu)">Diagrama de flujo de dinero</div>
-        </div>
-        <div style="color:var(--gr);font-size:18px">↓</div>
-      </div>
-      <!-- Sankey preview -->
-      <div id="sankey-preview-wrap" style="display:none;margin-top:8px">
-        <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Vista previa del diagrama:</div>
-        <div id="sankey-preview-svg" style="background:var(--s1);border:1px solid var(--br);border-radius:16px;overflow:hidden;margin-bottom:10px"></div>
-        <button onclick="downloadSankeyNow()" style="width:100%;padding:12px;border-radius:14px;background:var(--gr);border:none;color:#0f0f13;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer">Descargar SVG</button>
-      </div>
     </div>
 
     <!-- ── TAB IMPORTAR ── -->
@@ -664,14 +650,6 @@
           <div style="font-size:12px;color:var(--mu)">Restaura todos tus datos desde un backup anterior.</div>
         </div>
         <div style="color:var(--am);font-size:18px">↑</div>
-      </div>
-      <div class="data-export-card" onclick="importMoneeExcel()" style="margin-bottom:12px">
-        <div class="data-export-ico">🟣</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:600;margin-bottom:2px">Importar desde Monee</div>
-          <div style="font-size:12px;color:var(--mu)">Excel exportado de Monee (.xlsx)</div>
-        </div>
-        <div style="color:var(--gr);font-size:18px">↑</div>
       </div>
       <div class="data-drop-zone" id="data-drop-zone" onclick="document.getElementById('data-file-inp').click()"
         ondragover="event.preventDefault();this.classList.add('dragover')"
