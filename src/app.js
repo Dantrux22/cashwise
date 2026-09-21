@@ -54,7 +54,7 @@ const DEFAULT_CATS = {
     {id:'i5',e:'🛍️',n:'Ventas',c:'#34d48a'},{id:'i6',e:'✨',n:'Otro',c:'#94a3b8'},
   ],
   invest:[
-    {id:'v0',e:'💱',n:'Compra de monedas',c:'#f5a623'},
+    {id:'v0',e:'💵💶',n:'Compra de monedas',c:'#f5a623'},
     {id:'v1',e:'📊',n:'Acciones',c:'#f5a623'},{id:'v2',e:'₿',n:'Cripto',c:'#f5a623'},
     {id:'v3',e:'🏦',n:'Plazo fijo',c:'#f5a623'},{id:'v4',e:'🏢',n:'Inmuebles',c:'#f5a623'},
     {id:'v5',e:'💹',n:'FCI',c:'#f5a623'},{id:'v6',e:'✨',n:'Otro',c:'#94a3b8'},
@@ -73,9 +73,19 @@ const CURRENCY_PURCHASE_CAT_NAME='Compra de monedas';
 function _ensureCurrencyPurchaseCat(){
   if(S._addedCurrencyPurchaseCat) return;
   if(Array.isArray(S.cats.invest)&&!S.cats.invest.some(c=>c.n===CURRENCY_PURCHASE_CAT_NAME)){
-    S.cats.invest.unshift({id:'v0',e:'💱',n:CURRENCY_PURCHASE_CAT_NAME,c:'#f5a623'});
+    S.cats.invest.unshift({id:'v0',e:'💵💶',n:CURRENCY_PURCHASE_CAT_NAME,c:'#f5a623'});
   }
   S._addedCurrencyPurchaseCat=true;
+}
+
+// Migración única aparte: actualiza el ícono de "Compra de monedas" en
+// instalaciones que ya la tenían con el ícono viejo (💱). Si después la
+// editás vos mismo desde Categorías, no se vuelve a pisar sola.
+function _updateCurrencyPurchaseCatIcon(){
+  if(S._updatedCurrencyPurchaseCatIcon) return;
+  const cat=Array.isArray(S.cats.invest)&&S.cats.invest.find(c=>c.n===CURRENCY_PURCHASE_CAT_NAME);
+  if(cat) cat.e='💵💶';
+  S._updatedCurrencyPurchaseCatIcon=true;
 }
 
 const EMOJI_GROUPS = [
@@ -157,6 +167,7 @@ if(!Array.isArray(S.cats.expense)) S.cats.expense=JSON.parse(JSON.stringify(DEFA
 if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
 if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
 _ensureCurrencyPurchaseCat();
+_updateCurrencyPurchaseCatIcon();
 if(!S.currency||!S.currency.sym) S.currency=CURRENCIES[0];
 if(typeof S.hidden==='undefined') S.hidden=false;
 if(!Array.isArray(S.budgets)) S.budgets=[];
@@ -582,7 +593,7 @@ function openAdd(forceType){
   txCurrency=S.currency.code;
   txInvestType='buy';
   txDate=new Date(); updateDateLbl();
-  setType(forceType||'expense'); // calls renderTxCatCircles internally
+  setType(forceType||'expense'); // calls renderTxCatCircles internally; en invest preselecciona "Compra de monedas"
   updateAmt();
   _showAddStep1(); // Paso 1: elegir tipo + categoría
   goTo('s-add');
@@ -1971,6 +1982,7 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
         if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
         _ensureCurrencyPurchaseCat();
+        _updateCurrencyPurchaseCatIcon();
         if(!Array.isArray(S.budgets)) S.budgets=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
         // Re-hydrate currency object from CURRENCIES array so all fields (flag, name, sym) are present
