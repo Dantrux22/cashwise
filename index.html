@@ -27,7 +27,7 @@
   --bld:rgba(107,140,255,.12);--amd:rgba(245,166,35,.12);
   font-family:'DM Sans',sans-serif;
 }
-body{background:#12122a;color:var(--tx);min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:32px 16px}
+body{background:#12122a;color:var(--tx);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:32px 16px}
 body.light{background:#e8eaf0;--bg:#f4f4f8;--s1:#ffffff;--s2:#ededf4;--s3:#e4e4ee;--br:#d8d8e8;--tx:#0f0f1a;--mu:#7070a0;--su:#e8e8f8;--gd:rgba(52,212,138,.1);--rdd:rgba(240,86,106,.1);--bld:rgba(107,140,255,.1);--amd:rgba(245,166,35,.1)}
 body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.06),inset 0 0 0 2px #d0d0e0}
 .phone{
@@ -401,7 +401,7 @@ canvas.cv{width:100%;height:100%}
 .dash-alert.danger{background:var(--rdd);border:1px solid rgba(240,86,106,.3)}
 
 /* ══ AUTH ══ */
-.auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;overflow-y:auto}
+.auth-overlay{position:absolute;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;overflow-y:auto}
 .auth-overlay:not(.hidden){display:flex}
 .auth-overlay.hidden{display:none}
 .auth-logo{font-size:32px;font-weight:600;letter-spacing:-.8px;margin-bottom:6px}
@@ -664,7 +664,7 @@ canvas.cv{width:100%;height:100%}
   </div><!-- end s-add-scroll -->
 
   <!-- TECLADO — oculto por defecto, aparece al tocar el monto -->
-  <div id="main-numpad" style="position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--bg);border-top:1px solid var(--br);z-index:100;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);will-change:transform">
+  <div id="main-numpad" style="position:absolute;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--bg);border-top:1px solid var(--br);z-index:100;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);will-change:transform">
     <!-- Header del teclado: solo muestra el monto, sin botón para cerrar (el teclado es fijo) -->
     <div style="display:flex;align-items:center;justify-content:center;padding:10px 16px 6px">
       <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace" id="numpad-amt-preview">0</div>
@@ -3833,6 +3833,35 @@ function hideNumpad(){
   if(del && del.style.display !== 'none'){ del.style.transform='translateY(0)'; }
 }
 
+// Soporte de teclado físico para el monto (útil en computadora) — mapea las
+// teclas numéricas al mismo np() que usan los botones del teclado en
+// pantalla. No interfiere con inputs de texto normales (nota, cotización,
+// buscador, etc.) ni con otras pantallas.
+document.addEventListener('keydown', e=>{
+  if(!_numpadVisible||curScreen!=='s-add') return;
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select') return;
+  if(e.key>='0'&&e.key<='9'){ np(e.key); e.preventDefault(); }
+  else if(e.key===','||e.key==='.'){ np('dec'); e.preventDefault(); }
+  else if(e.key==='Backspace'){ np('del'); e.preventDefault(); }
+});
+
+// Enter = Guardar mientras estás completando un movimiento (Paso 2: monto,
+// detalle, fecha) — a diferencia del numpad, este SÍ funciona con el foco en
+// un campo de texto (descripción, cotización), como es habitual al apretar
+// Enter en un formulario.
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Enter'||curScreen!=='s-add') return;
+  const step2=document.getElementById('add-step2');
+  if(!step2||step2.classList.contains('add-step-hidden')) return;
+  const dateModal=document.getElementById('date-modal');
+  if(dateModal&&!dateModal.classList.contains('hidden')) return;
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='select') return;
+  e.preventDefault();
+  saveTx();
+});
+
 function updateNumpadPreview(){
   const el = document.getElementById('numpad-amt-preview');
   if(!el) return;
@@ -4068,7 +4097,7 @@ function showVerificationPending(user) {
 
   const overlay = document.createElement('div');
   overlay.id = 'verify-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center';
+  overlay.style.cssText = 'position:absolute;inset:0;background:var(--bg);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center';
   overlay.innerHTML = `
     <div style="font-size:56px;margin-bottom:24px">📧</div>
     <div style="font-size:22px;font-weight:700;color:var(--tx);margin-bottom:16px">Verificá tu email</div>
@@ -4090,7 +4119,7 @@ function showVerificationPending(user) {
       Usar sin cuenta
     </button>
   `;
-  document.body.appendChild(overlay);
+  (document.querySelector('.phone')||document.body).appendChild(overlay);
 }
 
 async function checkEmailVerification() {
@@ -4505,7 +4534,7 @@ function showEmailAuth() {
   const overlay = document.getElementById('auth-overlay');
   if(!overlay) { alert('Error: auth-overlay no encontrado'); return; }
   overlay.classList.remove('hidden');
-  overlay.style.cssText = 'display:flex!important;position:fixed!important;inset:0!important;z-index:999!important;flex-direction:column!important;background:var(--bg)!important;align-items:center!important;justify-content:center!important;padding:32px 28px!important;overflow-y:auto!important;';
+  overlay.style.cssText = 'display:flex!important;position:absolute!important;inset:0!important;z-index:999!important;flex-direction:column!important;background:var(--bg)!important;align-items:center!important;justify-content:center!important;padding:32px 28px!important;overflow-y:auto!important;';
   switchAuthTab('login');
 }
 
@@ -4881,7 +4910,7 @@ function _showPWABanner(){
   if(document.getElementById('pwa-install-banner')) return;
   const banner=document.createElement('div');
   banner.id='pwa-install-banner';
-  banner.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a22;border-top:1px solid #34D48A44;padding:14px 16px;z-index:9999;display:flex;align-items:center;gap:12px;animation:_pwaSlideUp .25s ease-out';
+  banner.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#1a1a22;border-top:1px solid #34D48A44;padding:14px 16px;z-index:9999;display:flex;align-items:center;gap:12px;animation:_pwaSlideUp .25s ease-out';
   banner.innerHTML=`
     <img src="cashwise_icon_192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0" alt="">
     <div style="flex:1;min-width:0">
@@ -4897,7 +4926,7 @@ function _showPWABanner(){
     s.textContent='@keyframes _pwaSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}';
     document.head.appendChild(s);
   }
-  document.body.appendChild(banner);
+  (document.querySelector('.phone')||document.body).appendChild(banner);
 }
 
 async function _installPWA(){
@@ -5053,7 +5082,7 @@ window.addEventListener('offline', ()=>{
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260921085222')
+    navigator.serviceWorker.register('./sw.js?v=20260921091113')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {

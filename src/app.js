@@ -2508,6 +2508,35 @@ function hideNumpad(){
   if(del && del.style.display !== 'none'){ del.style.transform='translateY(0)'; }
 }
 
+// Soporte de teclado físico para el monto (útil en computadora) — mapea las
+// teclas numéricas al mismo np() que usan los botones del teclado en
+// pantalla. No interfiere con inputs de texto normales (nota, cotización,
+// buscador, etc.) ni con otras pantallas.
+document.addEventListener('keydown', e=>{
+  if(!_numpadVisible||curScreen!=='s-add') return;
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select') return;
+  if(e.key>='0'&&e.key<='9'){ np(e.key); e.preventDefault(); }
+  else if(e.key===','||e.key==='.'){ np('dec'); e.preventDefault(); }
+  else if(e.key==='Backspace'){ np('del'); e.preventDefault(); }
+});
+
+// Enter = Guardar mientras estás completando un movimiento (Paso 2: monto,
+// detalle, fecha) — a diferencia del numpad, este SÍ funciona con el foco en
+// un campo de texto (descripción, cotización), como es habitual al apretar
+// Enter en un formulario.
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Enter'||curScreen!=='s-add') return;
+  const step2=document.getElementById('add-step2');
+  if(!step2||step2.classList.contains('add-step-hidden')) return;
+  const dateModal=document.getElementById('date-modal');
+  if(dateModal&&!dateModal.classList.contains('hidden')) return;
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='select') return;
+  e.preventDefault();
+  saveTx();
+});
+
 function updateNumpadPreview(){
   const el = document.getElementById('numpad-amt-preview');
   if(!el) return;
@@ -2743,7 +2772,7 @@ function showVerificationPending(user) {
 
   const overlay = document.createElement('div');
   overlay.id = 'verify-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center';
+  overlay.style.cssText = 'position:absolute;inset:0;background:var(--bg);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center';
   overlay.innerHTML = `
     <div style="font-size:56px;margin-bottom:24px">📧</div>
     <div style="font-size:22px;font-weight:700;color:var(--tx);margin-bottom:16px">Verificá tu email</div>
@@ -2765,7 +2794,7 @@ function showVerificationPending(user) {
       Usar sin cuenta
     </button>
   `;
-  document.body.appendChild(overlay);
+  (document.querySelector('.phone')||document.body).appendChild(overlay);
 }
 
 async function checkEmailVerification() {
@@ -3180,7 +3209,7 @@ function showEmailAuth() {
   const overlay = document.getElementById('auth-overlay');
   if(!overlay) { alert('Error: auth-overlay no encontrado'); return; }
   overlay.classList.remove('hidden');
-  overlay.style.cssText = 'display:flex!important;position:fixed!important;inset:0!important;z-index:999!important;flex-direction:column!important;background:var(--bg)!important;align-items:center!important;justify-content:center!important;padding:32px 28px!important;overflow-y:auto!important;';
+  overlay.style.cssText = 'display:flex!important;position:absolute!important;inset:0!important;z-index:999!important;flex-direction:column!important;background:var(--bg)!important;align-items:center!important;justify-content:center!important;padding:32px 28px!important;overflow-y:auto!important;';
   switchAuthTab('login');
 }
 
@@ -3556,7 +3585,7 @@ function _showPWABanner(){
   if(document.getElementById('pwa-install-banner')) return;
   const banner=document.createElement('div');
   banner.id='pwa-install-banner';
-  banner.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a22;border-top:1px solid #34D48A44;padding:14px 16px;z-index:9999;display:flex;align-items:center;gap:12px;animation:_pwaSlideUp .25s ease-out';
+  banner.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#1a1a22;border-top:1px solid #34D48A44;padding:14px 16px;z-index:9999;display:flex;align-items:center;gap:12px;animation:_pwaSlideUp .25s ease-out';
   banner.innerHTML=`
     <img src="cashwise_icon_192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0" alt="">
     <div style="flex:1;min-width:0">
@@ -3572,7 +3601,7 @@ function _showPWABanner(){
     s.textContent='@keyframes _pwaSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}';
     document.head.appendChild(s);
   }
-  document.body.appendChild(banner);
+  (document.querySelector('.phone')||document.body).appendChild(banner);
 }
 
 async function _installPWA(){
