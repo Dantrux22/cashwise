@@ -147,7 +147,6 @@ if(!S.lang) S.lang='es';
 if(!S.accent) S.accent='#34d48a';
 if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
 if(typeof S.guestMode==='undefined') S.guestMode=false;
-if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
 if(typeof S.darkMode==='undefined') S.darkMode=true;
 
@@ -1829,7 +1828,6 @@ function handleImportJSON(inp){
         if(!S.lang) S.lang='es';
         if(!S.accent) S.accent='#34d48a';
         if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
-        if(!Array.isArray(S.pendingInvites)) S.pendingInvites=[];
 
         // Step 3: persist + upload immediately (skip debounce to avoid race with re-auth)
         saveState();
@@ -3349,12 +3347,6 @@ function authErrorMsg(code){
   };
   return m[code]||'Error ('+code+')';
 }
-
-// ── Toggle emoji picker en grupo ──
-
-
-// openGroupSettings actualizado
-
 
 // ── Categorías en círculos (diseño unificado) ──
 function renderTxCatCircles(type){

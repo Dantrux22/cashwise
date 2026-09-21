@@ -39,7 +39,7 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
   /* Nav más alto */
   .nav { padding: 18px 20px !important; min-height: 64px; }
   /* Cards más grandes */
-  .set-card, .tx-item, .sp-group-card { border-radius: 18px !important; }
+  .set-card, .tx-item { border-radius: 18px !important; }
   /* Textos más grandes */
   .tx-name { font-size: 16px !important; }
   .tx-cat { font-size: 13px !important; }

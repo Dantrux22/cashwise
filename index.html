@@ -59,7 +59,7 @@ body.light .phone{box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.0
   /* Nav más alto */
   .nav { padding: 18px 20px !important; min-height: 64px; }
   /* Cards más grandes */
-  .set-card, .tx-item, .sp-group-card { border-radius: 18px !important; }
+  .set-card, .tx-item { border-radius: 18px !important; }
   /* Textos más grandes */
   .tx-name { font-size: 16px !important; }
   .tx-cat { font-size: 13px !important; }
@@ -1465,7 +1465,6 @@ if(!S.lang) S.lang='es';
 if(!S.accent) S.accent='#34d48a';
 if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
 if(typeof S.guestMode==='undefined') S.guestMode=false;
-if(!S.pendingInvites) S.pendingInvites=[];
 if(typeof S.budgetAlerts==='undefined') S.budgetAlerts=true;
 if(typeof S.darkMode==='undefined') S.darkMode=true;
 
@@ -3147,7 +3146,6 @@ function handleImportJSON(inp){
         if(!S.lang) S.lang='es';
         if(!S.accent) S.accent='#34d48a';
         if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
-        if(!Array.isArray(S.pendingInvites)) S.pendingInvites=[];
 
         // Step 3: persist + upload immediately (skip debounce to avoid race with re-auth)
         saveState();
@@ -4668,12 +4666,6 @@ function authErrorMsg(code){
   return m[code]||'Error ('+code+')';
 }
 
-// ── Toggle emoji picker en grupo ──
-
-
-// openGroupSettings actualizado
-
-
 // ── Categorías en círculos (diseño unificado) ──
 function renderTxCatCircles(type){
   // Frecuentes
@@ -4931,7 +4923,7 @@ window.addEventListener('offline', ()=>{
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260921060201')
+    navigator.serviceWorker.register('./sw.js?v=20260921061336')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
