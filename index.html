@@ -1379,7 +1379,7 @@ const DEFAULT_CATS = {
     {id:'i5',e:'🛍️',n:'Ventas',c:'#34d48a'},{id:'i6',e:'✨',n:'Otro',c:'#94a3b8'},
   ],
   invest:[
-    {id:'v0',e:'💵💶',n:'Compra de monedas',c:'#f5a623'},
+    {id:'v0',e:'💵💶',n:'Cambio de moneda',c:'#f5a623'},
     {id:'v1',e:'📊',n:'Acciones',c:'#f5a623'},{id:'v2',e:'₿',n:'Cripto',c:'#f5a623'},
     {id:'v3',e:'🏦',n:'Plazo fijo',c:'#f5a623'},{id:'v4',e:'🏢',n:'Inmuebles',c:'#f5a623'},
     {id:'v5',e:'💹',n:'FCI',c:'#f5a623'},{id:'v6',e:'✨',n:'Otro',c:'#94a3b8'},
@@ -1389,10 +1389,10 @@ const DEFAULT_CATS = {
 // Única categoría de inversión donde tiene sentido elegir moneda/cotización
 // (comprar/vender otra divisa). El resto (Acciones, Cripto, etc.) queda
 // siempre en tu moneda principal, sin etiqueta de moneda.
-const CURRENCY_PURCHASE_CAT_NAME='Compra de monedas';
+const CURRENCY_PURCHASE_CAT_NAME='Cambio de moneda';
 
-// Migración única: agrega "Compra de monedas" a instalaciones existentes que
-// ya tenían S.cats.invest guardado antes de que esta categoría existiera.
+// Migración única: agrega la categoría de cambio de moneda a instalaciones
+// existentes que ya tenían S.cats.invest guardado antes de que existiera.
 // Corre UNA sola vez (marca S._addedCurrencyPurchaseCat) — si el usuario la
 // borra después a propósito desde Categorías, no vuelve a resucitarla solo.
 function _ensureCurrencyPurchaseCat(){
@@ -1403,9 +1403,32 @@ function _ensureCurrencyPurchaseCat(){
   S._addedCurrencyPurchaseCat=true;
 }
 
-// Migración única aparte: actualiza el ícono de "Compra de monedas" en
-// instalaciones que ya la tenían con el ícono viejo (💱). Si después la
-// editás vos mismo desde Categorías, no se vuelve a pisar sola.
+// Migración única: renombra "Compra de monedas" (nombre viejo) a "Cambio de
+// moneda" — tanto en la categoría como en las transacciones históricas que
+// ya usaban ese nombre, para no perder su comportamiento especial (moneda,
+// cotización, fila +/- en el historial). Si no encuentra ni el nombre viejo
+// ni el nuevo (por ej. porque se borró la categoría), la vuelve a crear.
+function _renameCurrencyPurchaseCat(){
+  if(S._renamedCurrencyPurchaseCat) return;
+  const OLD_NAME='Compra de monedas';
+  if(Array.isArray(S.cats.invest)){
+    const oldCat=S.cats.invest.find(c=>c.n===OLD_NAME);
+    if(oldCat){
+      oldCat.n=CURRENCY_PURCHASE_CAT_NAME;
+      oldCat.e='💵💶';
+    } else if(!S.cats.invest.some(c=>c.n===CURRENCY_PURCHASE_CAT_NAME)){
+      S.cats.invest.unshift({id:'v0',e:'💵💶',n:CURRENCY_PURCHASE_CAT_NAME,c:'#f5a623'});
+    }
+  }
+  if(Array.isArray(S.txs)){
+    S.txs.forEach(tx=>{ if(tx.cat===OLD_NAME) tx.cat=CURRENCY_PURCHASE_CAT_NAME; });
+  }
+  S._renamedCurrencyPurchaseCat=true;
+}
+
+// Migración única aparte: actualiza el ícono en instalaciones que ya tenían
+// la categoría con el ícono viejo (💱). Si después la editás vos mismo desde
+// Categorías, no se vuelve a pisar sola.
 function _updateCurrencyPurchaseCatIcon(){
   if(S._updatedCurrencyPurchaseCatIcon) return;
   const cat=Array.isArray(S.cats.invest)&&S.cats.invest.find(c=>c.n===CURRENCY_PURCHASE_CAT_NAME);
@@ -1492,6 +1515,7 @@ if(!Array.isArray(S.cats.expense)) S.cats.expense=JSON.parse(JSON.stringify(DEFA
 if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
 if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
 _ensureCurrencyPurchaseCat();
+_renameCurrencyPurchaseCat();
 _updateCurrencyPurchaseCatIcon();
 if(!S.currency||!S.currency.sym) S.currency=CURRENCIES[0];
 if(typeof S.hidden==='undefined') S.hidden=false;
@@ -1918,7 +1942,7 @@ function openAdd(forceType){
   txCurrency=S.currency.code;
   txInvestType='buy';
   txDate=new Date(); updateDateLbl();
-  setType(forceType||'expense'); // calls renderTxCatCircles internally; en invest preselecciona "Compra de monedas"
+  setType(forceType||'expense'); // calls renderTxCatCircles internally
   updateAmt();
   _showAddStep1(); // Paso 1: elegir tipo + categoría
   goTo('s-add');
@@ -3307,6 +3331,7 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
         if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
         _ensureCurrencyPurchaseCat();
+        _renameCurrencyPurchaseCat();
         _updateCurrencyPurchaseCatIcon();
         if(!Array.isArray(S.budgets)) S.budgets=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
@@ -5094,7 +5119,7 @@ window.addEventListener('offline', ()=>{
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js?v=20260921094333')
+    navigator.serviceWorker.register('./sw.js?v=20260921095540')
       .then(function(reg) {
         // When a new SW version is found, activate it immediately
         reg.addEventListener('updatefound', function() {
