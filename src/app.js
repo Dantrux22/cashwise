@@ -323,9 +323,9 @@ function refreshHome(){
   // Secondary currency mini-row
   _renderSecondaryRow();
 
-  // Alertas de presupuesto y próximos vencimientos
+  // Alertas de presupuesto
   const homeAlertsEl=document.getElementById('home-alerts');
-  if(homeAlertsEl){ homeAlertsEl.innerHTML=''; renderBudgetAlerts(homeAlertsEl); renderUpcoming(homeAlertsEl); }
+  if(homeAlertsEl){ homeAlertsEl.innerHTML=''; renderBudgetAlerts(homeAlertsEl); }
 }
 
 function setFilter(p,el){
@@ -900,9 +900,17 @@ let editingRecId=null, recType='expense', recSelCat=null;
 function renderRecurring(){
   const list=document.getElementById('rec-list'); if(!list) return; list.innerHTML='';
   if(S.recurring.length===0){ renderEmptyState(list,'↺','Sin recurrentes.<br>Agregá tus gastos fijos.'); return; }
+  const now=new Date();
   S.recurring.forEach(r=>{
     const isIn=r.type==='income';
     const cat=findCat(r.type,r.cat);
+    // Cuenta regresiva hasta la próxima acreditación/vencimiento
+    const day=r.day||1;
+    let next=new Date(now.getFullYear(),now.getMonth(),day);
+    if(next<=now) next=new Date(now.getFullYear(),now.getMonth()+1,day);
+    const daysLeft=Math.ceil((next-now)/(1000*60*60*24));
+    const urgency=daysLeft<=3?'var(--rd)':daysLeft<=7?'#fbbf24':'var(--mu)';
+    const daysLbl=daysLeft===0?'Hoy':daysLeft===1?'Mañana':'En '+daysLeft+' días';
     const el=document.createElement('div'); el.className='tx-item';
     el.innerHTML=`
       <div class="tx-ico" style="background:${isIn?'var(--gd)':'var(--s2)'}">${cat?cat.e:isIn?'💰':'💸'}</div>
@@ -912,6 +920,7 @@ function renderRecurring(){
       </div>
       <div class="tx-r">
         <div class="tx-amt ${isIn?'g':'r'}">${isIn?'+':'-'}${sym()}${fmt(r.amount)}</div>
+        <div class="tx-dt" style="color:${urgency};font-weight:600">${daysLbl}</div>
       </div>`;
     el.onclick=()=>openRecModal(r.id);
     list.appendChild(el);
@@ -2574,43 +2583,6 @@ function renderBudgetAlerts(container){
       </div>
       <div style="font-size:11px;font-weight:600;color:${isOver?'var(--rd)':'#fbbf24'}">${Math.round(pct*100)}%</div>`;
     el.onclick=()=>goTo('s-budgets');
-    wrap.appendChild(el);
-  });
-  container.appendChild(wrap);
-}
-
-// PUNTO 4: Próximos vencimientos en el dashboard
-function renderUpcoming(container){
-  if(!S.recurring||!S.recurring.length) return;
-  const now=new Date();
-  const upcoming=S.recurring.map(r=>{
-    // Calcular próxima fecha
-    const day=r.day||1;
-    let next=new Date(now.getFullYear(),now.getMonth(),day);
-    if(next<=now) next=new Date(now.getFullYear(),now.getMonth()+1,day);
-    const daysLeft=Math.ceil((next-now)/(1000*60*60*24));
-    return {...r,next,daysLeft};
-  }).filter(r=>r.daysLeft<=10).sort((a,b)=>a.daysLeft-b.daysLeft);
-  if(!upcoming.length) return;
-  const wrap=document.createElement('div');
-  wrap.style.cssText='padding:0 20px;margin-bottom:12px';
-  const hdr=document.createElement('div');
-  hdr.className='sec-hdr'; hdr.style.marginBottom='8px';
-  hdr.innerHTML='<span class="sec-ttl">Próximos vencimientos</span><span class="sec-lnk" onclick="goTo(\'s-recurring\')">Ver todos</span>';
-  wrap.appendChild(hdr);
-  upcoming.slice(0,3).forEach(r=>{
-    const el=document.createElement('div');
-    el.className='dash-alert info';
-    el.style.marginBottom='7px';
-    const urgency=r.daysLeft<=3?'var(--rd)':r.daysLeft<=7?'#fbbf24':'var(--bl)';
-    el.innerHTML=`
-      <div style="font-size:16px">${r.emoji||'🔄'}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${r.note||r.cat||'Recurrente'}</div>
-        <div style="font-size:11px;color:var(--mu)">${r.daysLeft===0?'Hoy':r.daysLeft===1?'Mañana':'En '+r.daysLeft+' días'} · ${sym()}${fmt(r.amount)}</div>
-      </div>
-      <div style="font-size:11px;font-weight:700;color:${urgency}">${r.daysLeft===0?'HOY':r.daysLeft+'d'}</div>`;
-    el.onclick=()=>goTo('s-recurring');
     wrap.appendChild(el);
   });
   container.appendChild(wrap);
