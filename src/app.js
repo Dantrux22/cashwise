@@ -66,49 +66,29 @@ const DEFAULT_CATS = {
 // siempre en tu moneda principal, sin etiqueta de moneda.
 const CURRENCY_PURCHASE_CAT_NAME='Cambio de moneda';
 
-// Migración única: agrega la categoría de cambio de moneda a instalaciones
-// existentes que ya tenían S.cats.invest guardado antes de que existiera.
-// Corre UNA sola vez (marca S._addedCurrencyPurchaseCat) — si el usuario la
-// borra después a propósito desde Categorías, no vuelve a resucitarla solo.
-function _ensureCurrencyPurchaseCat(){
-  if(S._addedCurrencyPurchaseCat) return;
-  if(Array.isArray(S.cats.invest)&&!S.cats.invest.some(c=>c.n===CURRENCY_PURCHASE_CAT_NAME)){
-    S.cats.invest.unshift({id:'v0',e:'💵💶',n:CURRENCY_PURCHASE_CAT_NAME,c:'#f5a623'});
-  }
-  S._addedCurrencyPurchaseCat=true;
-}
-
-// Migración única: renombra "Compra de monedas" (nombre viejo) a "Cambio de
-// moneda" — tanto en la categoría como en las transacciones históricas que
-// ya usaban ese nombre, para no perder su comportamiento especial (moneda,
-// cotización, fila +/- en el historial). Si no encuentra ni el nombre viejo
-// ni el nuevo (por ej. porque se borró la categoría), la vuelve a crear.
-function _renameCurrencyPurchaseCat(){
-  if(S._renamedCurrencyPurchaseCat) return;
+// Garantiza que la categoría de cambio de moneda exista (como una más del
+// listado, tipo Acciones/Cripto), migra el nombre viejo "Compra de monedas"
+// —categoría y transacciones históricas que la usaban— al nombre actual, y
+// mantiene su ícono al día. Corre en cada carga Y después de cada sync con
+// Firebase (mergeCloudData reemplaza S.cats entero con lo que trae la nube,
+// así que si no se reaplica acá, un dispositivo viejo o una nube desactualizada
+// puede volver a "perder" la categoría después de sincronizar).
+function _fixCurrencyPurchaseCat(){
   const OLD_NAME='Compra de monedas';
   if(Array.isArray(S.cats.invest)){
     const oldCat=S.cats.invest.find(c=>c.n===OLD_NAME);
     if(oldCat){
       oldCat.n=CURRENCY_PURCHASE_CAT_NAME;
       oldCat.e='💵💶';
-    } else if(!S.cats.invest.some(c=>c.n===CURRENCY_PURCHASE_CAT_NAME)){
-      S.cats.invest.unshift({id:'v0',e:'💵💶',n:CURRENCY_PURCHASE_CAT_NAME,c:'#f5a623'});
+    } else {
+      const cat=S.cats.invest.find(c=>c.n===CURRENCY_PURCHASE_CAT_NAME);
+      if(cat) cat.e='💵💶';
+      else S.cats.invest.unshift({id:'v0',e:'💵💶',n:CURRENCY_PURCHASE_CAT_NAME,c:'#f5a623'});
     }
   }
   if(Array.isArray(S.txs)){
     S.txs.forEach(tx=>{ if(tx.cat===OLD_NAME) tx.cat=CURRENCY_PURCHASE_CAT_NAME; });
   }
-  S._renamedCurrencyPurchaseCat=true;
-}
-
-// Migración única aparte: actualiza el ícono en instalaciones que ya tenían
-// la categoría con el ícono viejo (💱). Si después la editás vos mismo desde
-// Categorías, no se vuelve a pisar sola.
-function _updateCurrencyPurchaseCatIcon(){
-  if(S._updatedCurrencyPurchaseCatIcon) return;
-  const cat=Array.isArray(S.cats.invest)&&S.cats.invest.find(c=>c.n===CURRENCY_PURCHASE_CAT_NAME);
-  if(cat) cat.e='💵💶';
-  S._updatedCurrencyPurchaseCatIcon=true;
 }
 
 const EMOJI_GROUPS = [
@@ -189,9 +169,7 @@ if(!S.cats||typeof S.cats!=='object') S.cats=JSON.parse(JSON.stringify(DEFAULT_C
 if(!Array.isArray(S.cats.expense)) S.cats.expense=JSON.parse(JSON.stringify(DEFAULT_CATS.expense));
 if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
 if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
-_ensureCurrencyPurchaseCat();
-_renameCurrencyPurchaseCat();
-_updateCurrencyPurchaseCatIcon();
+_fixCurrencyPurchaseCat();
 if(!S.currency||!S.currency.sym) S.currency=CURRENCIES[0];
 if(typeof S.hidden==='undefined') S.hidden=false;
 if(!Array.isArray(S.budgets)) S.budgets=[];
@@ -2005,9 +1983,7 @@ function handleImportJSON(inp){
         if(!Array.isArray(S.cats.expense)) S.cats.expense=JSON.parse(JSON.stringify(DEFAULT_CATS.expense));
         if(!Array.isArray(S.cats.income))  S.cats.income=JSON.parse(JSON.stringify(DEFAULT_CATS.income));
         if(!Array.isArray(S.cats.invest))  S.cats.invest=JSON.parse(JSON.stringify(DEFAULT_CATS.invest));
-        _ensureCurrencyPurchaseCat();
-        _renameCurrencyPurchaseCat();
-        _updateCurrencyPurchaseCatIcon();
+        _fixCurrencyPurchaseCat();
         if(!Array.isArray(S.budgets)) S.budgets=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
         // Re-hydrate currency object from CURRENCIES array so all fields (flag, name, sym) are present
@@ -3442,6 +3418,9 @@ function _mergeById(local, cloud){
 function mergeCloudData(data){
   if(Array.isArray(data.txs))       S.txs      = _mergeTxById(S.txs, data.txs);
   if(data.cats&&typeof data.cats==='object') S.cats = data.cats;
+  // La nube puede traer un S.cats más viejo (sin la categoría de cambio de
+  // moneda, o con el nombre anterior) — se reaplica el fix después de mergear.
+  _fixCurrencyPurchaseCat();
   if(Array.isArray(data.budgets))   S.budgets  = _mergeById(S.budgets, data.budgets);
   if(Array.isArray(data.recurring)) S.recurring= _mergeById(S.recurring, data.recurring);
   if(data.currency&&data.currency.code){
