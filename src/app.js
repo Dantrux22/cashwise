@@ -31,6 +31,12 @@ if(FIREBASE_ENABLED){
 // CONSTANTS
 // ═══════════════════════════════════════════
 const SK = 'finflow_v3';
+// Límites de campos antes de escribir a Firestore (defensa en profundidad —
+// evitan que un import mal formado o un dato corrupto infle el documento)
+const MAX_NOTE_LEN = 200;
+const MAX_CAT_NAME_LEN = 40;
+const MAX_REC_NAME_LEN = 60;
+const MAX_TX_AMOUNT = 1e15;
 const MNAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MSHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MASK = '•••';
@@ -206,7 +212,6 @@ function fmt(n){
   const a=Math.abs(n);
   return a.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2,useGrouping:true});
 }
-function fmtShort(n){ if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return fmt(n); }
 function fmtCompact(n){ if(Math.abs(n)>=100000) return (n/1000).toFixed(0).replace('.',getSep())+'k'; if(Math.abs(n)>=10000) return (n/1000).toFixed(1).replace('.',getSep())+'k'; return fmt(n); }
 function getSep(){ return ','; }
 function sym(){ return S.currency.sym; }
@@ -473,10 +478,6 @@ function drawChart(txs){
   drawCanvas(txs, curPeriod);
 }
 
-function drawTrendChart(){
-  drawCanvas(S.txs, 'todo');
-}
-
 // ── Helper: estado vacío ──
 function renderEmptyState(container, emoji, msg){
   container.innerHTML=`<div class="empty-state"><span class="big">${emoji}</span>${msg}</div>`;
@@ -668,7 +669,9 @@ function updateAmt(){
 function saveTx(){
   const amt=normAmt(amtStr);
   if(amt<=0){ showToast(t('tEnterAmt')); return; }
+  if(amt>MAX_TX_AMOUNT){ showToast(t('tInvalidAmt')); return; }
   const note=document.getElementById('note-inp').value.trim();
+  if(note.length>MAX_NOTE_LEN){ showToast(t('tNoteTooLong')); return; }
   const enToggle=document.getElementById('exclude-net-toggle');
   const excludeFromNet=txType==='invest'&&enToggle&&enToggle.classList.contains('on');
   const now=new Date().toISOString();
@@ -943,7 +946,9 @@ function saveRec(){
   const amount=parseFloat(document.getElementById('rec-amt-inp').value)||0;
   const day=parseInt(document.getElementById('rec-day-inp').value)||1;
   if(!name){ showToast(t('tEnterName')); return; }
+  if(name.length>MAX_REC_NAME_LEN){ showToast(t('tNameTooLong')); return; }
   if(amount<=0){ showToast(t('tEnterAmt')); return; }
+  if(amount>MAX_TX_AMOUNT){ showToast(t('tInvalidAmt')); return; }
   if(!recSelCat){ showToast(t('tSelectCat')); return; }
   if(editingRecId){
     const r=S.recurring.find(x=>x.id===editingRecId);
@@ -1030,6 +1035,7 @@ function renderColorPicker(){
 function saveCat(){
   const name=document.getElementById('cat-name-inp').value.trim();
   if(!name){ showToast(t('tWriteName')); return; }
+  if(name.length>MAX_CAT_NAME_LEN){ showToast(t('tNameTooLong')); return; }
   if(editingCatId){
     const cat=S.cats[editingCatType].find(c=>c.id===editingCatId);
     if(cat){ cat.e=newCatEmoji; cat.n=name; cat.c=newCatColor; }
@@ -1550,6 +1556,8 @@ const T = {
     data:'Gestionar datos', exportTab:'Exportar', importTab:'Importar',
     // Toasts
     tEnterAmt:'⚠️ Ingresá un monto', tInvalidAmt:'⚠️ Monto inválido',
+    tNoteTooLong:`⚠️ La descripción no puede superar los ${MAX_NOTE_LEN} caracteres`,
+    tNameTooLong:'⚠️ El nombre es demasiado largo',
     tUpdated:'✅ Actualizado', tSaved:'✅ Guardado', tDeleted:'🗑️ Eliminado',
     tSelectCat:'⚠️ Seleccioná una categoría',
     tEnterLimit:'⚠️ Ingresá un límite', tBudgetExists:'⚠️ Ya existe un presupuesto para esa categoría',
@@ -1646,6 +1654,8 @@ const T = {
     data:'Manage data', exportTab:'Export', importTab:'Import',
     // Toasts
     tEnterAmt:'⚠️ Enter an amount', tInvalidAmt:'⚠️ Invalid amount',
+    tNoteTooLong:`⚠️ Description can't be longer than ${MAX_NOTE_LEN} characters`,
+    tNameTooLong:'⚠️ Name is too long',
     tUpdated:'✅ Updated', tSaved:'✅ Saved', tDeleted:'🗑️ Deleted',
     tSelectCat:'⚠️ Select a category',
     tEnterLimit:'⚠️ Enter a limit', tBudgetExists:'⚠️ A budget already exists for that category',
@@ -1783,34 +1793,7 @@ function parseCSVLine(line){
   res.push(cur); return res;
 }
 
-function importData(){ document.getElementById('import-csv-inp').click(); }
-function handleImportCSV(inp){
-  const file=inp.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const lines=e.target.result.trim().split('\n').slice(1);
-    let count=0;
-    lines.forEach(line=>{
-      if(!line.trim()) return;
-      const cols=parseCSVLine(line);
-      if(cols.length>=6){
-        const [id,type,amount,cat,note,date]=cols;
-        if(!['income','expense','invest'].includes(type)) return;
-        if(!S.txs.find(t=>t.id===id)){
-          S.txs.push({id:id||uid(),type,amount:parseFloat(amount)||0,cat:cat||'',note:note||'',date:date||new Date().toISOString()});
-          count++;
-        }
-      }
-    });
-    saveState(); refreshHome();
-    showToast(count>0?`✅ ${count} movimientos importados`:'⚠️ Sin datos nuevos');
-  };
-  reader.readAsText(file); inp.value='';
-}
-
 function exportJSON(){
-  const firstInvest=S.txs.find(t=>t.type==='invest');
-  console.log('[Export] First invest tx (pre-serialize):', firstInvest?JSON.stringify({id:firstInvest.id,currency:firstInvest.currency,investType:firstInvest.investType,amount:firstInvest.amount}):'none');
   const payload={version:2,exportedAt:new Date().toISOString(),appName:'CashWise',data:S};
   download('cashwise-backup.json','data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(payload,null,2)));
   showToast('📦 Backup exportado');
@@ -1827,10 +1810,6 @@ function handleImportJSON(inp){
       showConfirm(t('cRestoreBackup'),t('cRestoreBackupMsg'),()=>{
         // Step 1: apply imported data (shallow — arrays/objects replaced by reference)
         Object.assign(S,data);
-
-        // Debug: log first invest tx immediately after assign — should have currency/investType
-        const _dbgInvest=S.txs.find(t=>t.type==='invest');
-        console.log('[Import] After Object.assign — first invest tx:', _dbgInvest?JSON.stringify({id:_dbgInvest.id,currency:_dbgInvest.currency,investType:_dbgInvest.investType,amount:_dbgInvest.amount}):'none');
 
         // Step 2: guards — only fix missing/invalid fields; never touch individual tx objects
         if(!Array.isArray(S.txs)) S.txs=[];
@@ -1852,10 +1831,6 @@ function handleImportJSON(inp){
         if(!S.accent) S.accent='#34d48a';
         if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
         if(!Array.isArray(S.pendingInvites)) S.pendingInvites=[];
-
-        // Debug: confirm tx fields survived guards
-        const _dbgInvest2=S.txs.find(t=>t.type==='invest');
-        console.log('[Import] After guards — first invest tx:', _dbgInvest2?JSON.stringify({id:_dbgInvest2.id,currency:_dbgInvest2.currency,investType:_dbgInvest2.investType}):'none');
 
         // Step 3: persist + upload immediately (skip debounce to avoid race with re-auth)
         saveState();
@@ -1879,10 +1854,11 @@ function download(filename,dataUrl){
 // ═══════════════════════════════════════════
 // LOAD SCRIPT HELPER
 // ═══════════════════════════════════════════
-function loadScript(src){
+function loadScript(src,integrity){
   return new Promise((res,rej)=>{
     if(document.querySelector('script[src="'+src+'"]')){ res(); return; }
     const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej;
+    if(integrity){ s.integrity=integrity; s.crossOrigin='anonymous'; }
     document.head.appendChild(s);
   });
 }
@@ -1955,8 +1931,8 @@ async function exportPDF(){
   if(!S.txs.length){ showToast(t('tNoExport')); return; }
   showToast('⏳ Generando PDF...');
   try{
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js','sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3');
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     // Header
@@ -2175,7 +2151,7 @@ function parseCSVImport(text){
 async function parseImportXLSX(file){
   showToast('⏳ Procesando Excel...');
   try{
-    await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+    await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js','sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT');
     const XLSX=window.XLSX;
     const buf=await file.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array'});
@@ -2190,9 +2166,13 @@ async function parseImportXLSX(file){
 async function parseImportPDF(file){
   showToast('⏳ Extrayendo texto del PDF...');
   try{
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e');
     const pdfjsLib=window.pdfjsLib||window['pdfjs-dist/build/pdf'];
     if(!pdfjsLib){ showToast('❌ No se pudo cargar PDF.js'); return; }
+    // NOTA: el worker de pdf.js se carga vía Worker(), no <script src>, así que el
+    // atributo integrity no aplica acá (los navegadores no lo soportan para Worker()).
+    // Hash real verificado igual, por si se migra a fetch+Blob URL más adelante:
+    // sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const buf=await file.arrayBuffer();
     const pdf=await pdfjsLib.getDocument({data:buf}).promise;
@@ -2715,9 +2695,9 @@ function renderBudgetAlerts(container){
 
 // PUNTO 4: Próximos vencimientos en el dashboard
 function renderUpcoming(container){
-  if(!S.recs||!S.recs.length) return;
+  if(!S.recurring||!S.recurring.length) return;
   const now=new Date();
-  const upcoming=S.recs.map(r=>{
+  const upcoming=S.recurring.map(r=>{
     // Calcular próxima fecha
     const day=r.day||1;
     let next=new Date(now.getFullYear(),now.getMonth(),day);
@@ -2794,9 +2774,6 @@ function parseMoneeExcel(arrayBuffer) {
     'July':6,'August':7,'September':8,'October':9,'November':10,'December':11
   };
 
-  // Debug temporal
-  alert('HEADERS: ' + JSON.stringify(rows[0]) + '\n\nFILA 1: ' + JSON.stringify(rows[1]));
-
   let imported = 0, skipped = 0, duplicates = 0;
   const newTxs = [];
 
@@ -2805,8 +2782,6 @@ function parseMoneeExcel(arrayBuffer) {
     if(!row || row.length < 6) continue;
 
     const [account, category, description, person, dateStr, amount, recurring, status] = row;
-
-    if(i === 1) console.log('[Monee] dateStr:', dateStr, '| tipo:', typeof dateStr, '| isDate:', dateStr instanceof Date, '| amount:', amount, '| status:', status);
 
     if(status && status !== 'Settled') { skipped++; continue; }
     if(!amount || amount === 0) { skipped++; continue; }
@@ -2984,33 +2959,6 @@ function checkMonthlyReminder() {
 
 function closeMonthlyModal() {
   document.getElementById('monthly-modal')?.classList.add('hidden');
-}
-
-function testMonthlyModal() {
-  const now = new Date();
-  const key = 'cw_monthly_' + now.getFullYear() + '_' + now.getMonth();
-  localStorage.removeItem(key);
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  const prevMonth = month === 0 ? 11 : month - 1;
-  const prevYear = month === 0 ? year - 1 : year;
-  const txsPrev = S.txs.filter(t => {
-    const d = new Date(t.date);
-    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-  });
-  const gastos = txsPrev.filter(t => t.type==='expense').reduce((a,t) => a+t.amount, 0);
-  const ingresos = txsPrev.filter(t => t.type==='income').reduce((a,t) => a+t.amount, 0);
-  const nombreMes = new Date(prevYear, prevMonth, 1)
-    .toLocaleString('es-AR', {month:'long', year:'numeric'});
-  const modal = document.getElementById('monthly-modal');
-  const mesEl = document.getElementById('monthly-modal-mes');
-  const gastoEl = document.getElementById('monthly-modal-gasto');
-  const ingresoEl = document.getElementById('monthly-modal-ingreso');
-  if (mesEl) mesEl.textContent = nombreMes;
-  if (gastoEl) gastoEl.textContent = sym() + fmt(gastos);
-  if (ingresoEl) ingresoEl.textContent = sym() + fmt(ingresos);
-  localStorage.setItem(key, '1');
-  modal.classList.remove('hidden');
 }
 
 function showWelcome(nombre) {
@@ -3328,15 +3276,11 @@ async function authForgotPassword(){
 
 // ── Usar sin cuenta ──
 function showEmailAuth() {
-  console.log('showEmailAuth llamada');
-  console.log('auth-overlay:', document.getElementById('auth-overlay'));
   const overlay = document.getElementById('auth-overlay');
   if(!overlay) { alert('Error: auth-overlay no encontrado'); return; }
   overlay.classList.remove('hidden');
   overlay.style.cssText = 'display:flex!important;position:fixed!important;inset:0!important;z-index:999!important;flex-direction:column!important;background:var(--bg)!important;align-items:center!important;justify-content:center!important;padding:32px 28px!important;overflow-y:auto!important;';
   switchAuthTab('login');
-  console.log('overlay clases después:', overlay.className);
-  console.log('overlay style:', overlay.style.cssText);
 }
 
 function skipAuth(){
@@ -3444,8 +3388,6 @@ async function uploadToCloud(uid){
         if(Array.isArray(currentCloud.txs) && currentCloud.txs.length){
           const merged = _mergeTxById(S.txs||[], currentCloud.txs);
           if(merged.length > (S.txs||[]).length){
-            const added = merged.length - (S.txs||[]).length;
-            console.log('[Upload] merge-before-write: +'+added+' txs de nube incorporados al local');
             S.txs = merged; // actualizar local con txs de otros dispositivos
           }
           txsToUpload = S.txs;
@@ -3456,7 +3398,6 @@ async function uploadToCloud(uid){
     }catch(mergeErr){ console.warn('[Upload] merge-before-write falló, subiendo sin merge:', mergeErr.message); }
 
     // PASO 2: escribir el estado mergeado
-    console.log('[Upload] subiendo', txsToUpload.length, 'txs');
     await _fbDb.collection('users').doc(uid).set({
       txs: txsToUpload,
       cats: S.cats,
@@ -3532,7 +3473,6 @@ function _mergeById(local, cloud){
 
 // ── Merge datos de la nube (bidireccional — nunca sobreescribe) ──
 function mergeCloudData(data){
-  const prevTxCount = S.txs.length;
   if(Array.isArray(data.txs))       S.txs      = _mergeTxById(S.txs, data.txs);
   if(data.cats&&typeof data.cats==='object') S.cats = data.cats;
   if(Array.isArray(data.budgets))   S.budgets  = _mergeById(S.budgets, data.budgets);
@@ -3552,8 +3492,6 @@ function mergeCloudData(data){
     // Quitar del array txs cualquier tx que figure como eliminada
     S.txs = S.txs.filter(t=>!merged.has(t.id));
   }
-  const added = S.txs.length - prevTxCount;
-  if(added>0) console.log('[Sync] mergeCloudData: +'+added+' movimientos desde nube');
 }
 
 // ── Auto-sync al guardar ──
@@ -3629,18 +3567,6 @@ function authErrorMsg(code){
   };
   return m[code]||'Error ('+code+')';
 }
-
-function authFacebook(){
-  showAuthError('Facebook login próximamente. Usá Google o email por ahora.');
-}
-
-function closeNFC(){ /* NFC removido */ }
-
-// ── Stubs de funciones legacy ──
-function simulateNFCPayment(){ showToast('📱 NFC no disponible en esta versión'); }
-function linkAccount(){ showEmailAuth(); }
-function unlinkAccount(){ authLogout(); }
-function logout(){ authLogout(); }
 
 // ── Toggle emoji picker en grupo ──
 

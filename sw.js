@@ -1,6 +1,6 @@
 // CashWise Service Worker
-// Cache version is injected by build.py at build time — never edit 20260920030244 manually.
-const CACHE_VERSION = '20260920030244';
+// Cache version is injected by build.py at build time — never edit 20260920083906 manually.
+const CACHE_VERSION = '20260920083906';
 const APP_CACHE    = 'cw-app-'    + CACHE_VERSION; // network-first (HTML/JS/CSS)
 const ASSET_CACHE  = 'cw-assets-' + CACHE_VERSION; // cache-first (icons, fonts)
 
@@ -12,7 +12,7 @@ function shouldSkipCache(url) {
     url.includes('securetoken.googleapis.com') ||
     url.includes('firebaseapp.com')            ||
     url.includes('gstatic.com/firebasejs')     ||
-    url.includes('cdn.jsdelivr.net')           ||  // xlsx lib — always fresh
+    url.includes('cdn.sheetjs.com')             ||  // xlsx lib — always fresh
     url.includes('firebase')                   ||
     url.includes('googleapis.com')
   );

@@ -12,7 +12,7 @@ function shouldSkipCache(url) {
     url.includes('securetoken.googleapis.com') ||
     url.includes('firebaseapp.com')            ||
     url.includes('gstatic.com/firebasejs')     ||
-    url.includes('cdn.jsdelivr.net')           ||  // xlsx lib — always fresh
+    url.includes('cdn.sheetjs.com')             ||  // xlsx lib — always fresh
     url.includes('firebase')                   ||
     url.includes('googleapis.com')
   );

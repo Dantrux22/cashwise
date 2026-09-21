@@ -88,16 +88,6 @@
 <!-- ══ AUTH SCREEN ══ -->
 
 
-<!-- ══ NFC OVERLAY ══ -->
-<div class="nfc-overlay hidden" id="nfc-overlay">
-  <div class="nfc-ring"><div class="nfc-icon">📱</div></div>
-  <div class="nfc-title" id="nfc-title">Pago detectado</div>
-  <div class="nfc-amt" id="nfc-amt">$0</div>
-  <div class="nfc-sub" id="nfc-sub">Acercá el teléfono al terminal para pagar</div>
-  <div style="display:flex;flex-direction:column;gap:10px;width:100%;padding:0 24px;margin-top:8px" id="nfc-actions"></div>
-  <button class="nfc-cancel" onclick="closeNFC()">Cancelar</button>
-</div>
-
 <!-- ══ ADD / EDIT TX ══ -->
 <div class="screen hidden" id="s-add">
 
@@ -709,7 +699,6 @@
 </div>
 
 <!-- File inputs -->
-<input type="file" id="import-csv-inp" accept=".csv" style="display:none" onchange="handleImportCSV(this)">
 <input type="file" id="import-json-inp" accept=".json" style="display:none" onchange="handleImportJSON(this)">
 <input type="file" id="data-file-inp" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="handleDataFileSelect(this)">
 
