@@ -175,6 +175,7 @@ if(typeof S.hidden==='undefined') S.hidden=false;
 if(!Array.isArray(S.budgets)) S.budgets=[];
 if(!Array.isArray(S.recurring)) S.recurring=[];
 if(!Array.isArray(S.deletedTxIds)) S.deletedTxIds=[];
+if(!Array.isArray(S.deletedRecIds)) S.deletedRecIds=[];
 if(!S.lang) S.lang='es';
 if(!S.accent) S.accent='#34d48a';
 if(!Array.isArray(S.investCurrencies)) S.investCurrencies=['USD','EUR'];
@@ -296,28 +297,78 @@ function spentInCat(catName, month, year){
 // ═══════════════════════════════════════════
 // RECURRING — apply on load
 // ═══════════════════════════════════════════
-function applyRecurring(){
+function applyRecurring(opts){
+  opts=opts||{};
   const now=new Date();
   const todayStr=now.toISOString().slice(0,10);
+  const pad2=n=>String(n).padStart(2,'0');
+  let changed=false;
   let applied=0;
+
+  // Dedupe: at most one tx per recurringId per month — keep the legacy
+  // (non 'rec_') id and tombstone the rest so they don't get recreated.
+  const idsToRemove=new Set();
+  const keptByKey=new Map();
+  S.txs.forEach(tx=>{
+    if(!tx.recurringId) return;
+    const td=new Date(tx.date);
+    const key=tx.recurringId+'_'+td.getFullYear()+pad2(td.getMonth()+1);
+    const existing=keptByKey.get(key);
+    if(!existing){ keptByKey.set(key,tx); return; }
+    const existingLegacy=!String(existing.id).startsWith('rec_');
+    const txLegacy=!String(tx.id).startsWith('rec_');
+    let keep,remove;
+    if(txLegacy&&!existingLegacy){ keep=tx; remove=existing; }
+    else { keep=existing; remove=tx; }
+    keptByKey.set(key,keep);
+    idsToRemove.add(remove.id);
+  });
+  if(idsToRemove.size){
+    idsToRemove.forEach(id=>{ if(!S.deletedTxIds.includes(id)) S.deletedTxIds.push(id); });
+    S.txs=S.txs.filter(t=>!idsToRemove.has(t.id));
+    changed=true;
+  }
+
+  const deletedRec=new Set(S.deletedRecIds||[]);
   S.recurring.forEach(r=>{
-    const expectedDay=r.day;
-    // Check if already registered this month
-    const alreadyDone=S.txs.some(t=>{
-      const td=new Date(t.date);
-      return t.recurringId===r.id && td.getMonth()===now.getMonth() && td.getFullYear()===now.getFullYear();
-    });
-    if(!alreadyDone && now.getDate()>=expectedDay){
-      S.txs.unshift({
-        id:uid(), type:r.type, amount:r.amount,
-        cat:r.cat, note:r.name+' (automático)',
-        date:new Date(now.getFullYear(),now.getMonth(),expectedDay).toISOString(),
-        recurringId:r.id,
-      });
-      applied++;
+    if(deletedRec.has(r.id)) return;
+    if(!r.startDate){
+      r.startDate=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10); // do not invent past history
+      changed=true;
+    }
+    const start=new Date(r.startDate+'T00:00:00');
+    const minStart=new Date(now.getFullYear(),now.getMonth()-11,1); // max 12 months back
+    let cursor=start<minStart?minStart:start;
+    let y=cursor.getFullYear(), m=cursor.getMonth();
+    const endY=now.getFullYear(), endM=now.getMonth();
+    while(y<endY || (y===endY && m<=endM)){
+      const lastDay=new Date(y,m+1,0).getDate();
+      const dueDay=Math.min(r.day,lastDay);
+      const dueDateStr=y+'-'+pad2(m+1)+'-'+pad2(dueDay);
+      const recTxId='rec_'+r.id+'_'+y+pad2(m+1);
+      if(dueDateStr<=todayStr && !S.deletedTxIds.includes(recTxId)){
+        const alreadyDone=S.txs.some(t=>{
+          if(t.recurringId!==r.id) return false;
+          const td=new Date(t.date);
+          return td.getFullYear()===y && td.getMonth()===m;
+        });
+        if(!alreadyDone){
+          S.txs.unshift({
+            id:recTxId, type:r.type, amount:r.amount,
+            cat:r.cat, note:r.name+' (automático)',
+            date:new Date(y,m,dueDay,12,0,0).toISOString(),
+            recurringId:r.id, modifiedAt:new Date().toISOString(),
+          });
+          applied++; changed=true;
+        }
+      }
+      m++; if(m>11){ m=0; y++; }
     }
   });
-  if(applied>0){ saveState(); showToast(`↺ ${applied} recurrente${applied>1?'s':''} registrado${applied>1?'s':''}`); }
+
+  if(changed) saveState();
+  if(applied>0 && !opts.silent) showToast(`↺ ${applied} recurrente${applied>1?'s':''} registrado${applied>1?'s':''}`);
+  return applied;
 }
 
 // ═══════════════════════════════════════════
@@ -1045,18 +1096,24 @@ function saveRec(){
   if(amount<=0){ showToast(t('tEnterAmt')); return; }
   if(amount>MAX_TX_AMOUNT){ showToast(t('tInvalidAmt')); return; }
   if(!recSelCat){ showToast(t('tSelectCat')); return; }
+  const nowIso=new Date().toISOString();
   if(editingRecId){
     const r=S.recurring.find(x=>x.id===editingRecId);
-    if(r){ r.name=name; r.amount=amount; r.day=day; r.type=recType; r.cat=recSelCat; }
+    if(r){ r.name=name; r.amount=amount; r.day=day; r.type=recType; r.cat=recSelCat; r.modifiedAt=nowIso; }
   } else {
-    S.recurring.push({id:uid(),name,amount,day,type:recType,cat:recSelCat});
+    const startDate=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10);
+    S.recurring.push({id:uid(),name,amount,day,type:recType,cat:recSelCat,startDate,modifiedAt:nowIso});
   }
-  saveState(); closeRecModal(); renderRecurring(); showToast(t('tRecurringSaved'));
+  saveState(); closeRecModal();
+  applyRecurring(); renderRecurring(); refreshHome();
+  showToast(t('tRecurringSaved'));
 }
 function deleteRec(){
   if(!editingRecId) return;
+  const recId=editingRecId;
   showConfirm(t('cDeleteRec'),t('cDeleteRecMsg'),()=>{
-    S.recurring=S.recurring.filter(r=>r.id!==editingRecId);
+    if(!S.deletedRecIds.includes(recId)) S.deletedRecIds.push(recId);
+    S.recurring=S.recurring.filter(r=>r.id!==recId);
     saveState(); closeRecModal(); renderRecurring(); showToast(t('tDeleted'));
   });
 }
@@ -1986,6 +2043,8 @@ function handleImportJSON(inp){
         _fixCurrencyPurchaseCat();
         if(!Array.isArray(S.budgets)) S.budgets=[];
         if(!Array.isArray(S.recurring)) S.recurring=[];
+        if(!Array.isArray(S.deletedTxIds)) S.deletedTxIds=[];
+        if(!Array.isArray(S.deletedRecIds)) S.deletedRecIds=[];
         // Re-hydrate currency object from CURRENCIES array so all fields (flag, name, sym) are present
         if(S.currency&&S.currency.code){
           S.currency=CURRENCIES.find(c=>c.code===S.currency.code)||S.currency;
@@ -2362,6 +2421,8 @@ function confirmImport(){
 
 function clearAll(){
   showConfirm(t('cDeleteAll'),t('cDeleteAllMsg'),()=>{
+    S.recurring.forEach(r=>{ if(!S.deletedRecIds.includes(r.id)) S.deletedRecIds.push(r.id); });
+    S.txs.forEach(tx=>{ if(!S.deletedTxIds.includes(tx.id)) S.deletedTxIds.push(tx.id); });
     S.txs=[]; S.budgets=[]; S.recurring=[];
     saveState(); refreshHome(); showToast(t('tDataDeleted'));
   });
@@ -2932,6 +2993,7 @@ async function syncFromCloud(){
     if(!cloudData||cloudData._isEmpty) return;
     mergeCloudData(cloudData);
     saveState(); updateCurrUI(); refreshHome(); renderInvest();
+    if(curScreen==='s-recurring') renderRecurring();
   }catch(e){ console.warn('[Sync] syncFromCloud error:',e.message); }
 }
 
@@ -2989,7 +3051,12 @@ window.addEventListener('load',()=>{
   checkMonthlyReminder();
   _initPullToRefresh();
   // Auto-sync when app comes back into focus
-  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') syncFromCloud(); });
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'){
+      if(applyRecurring()>0) refreshHome();
+      syncFromCloud();
+    }
+  });
   window.addEventListener('focus',()=>syncFromCloud());
 });
 
@@ -3337,8 +3404,19 @@ async function uploadToCloud(uid){
         }
         if(Array.isArray(currentCloud.budgets))   budgetsToUpload   = _mergeById(S.budgets,   currentCloud.budgets);
         if(Array.isArray(currentCloud.recurring)) recurringToUpload = _mergeById(S.recurring, currentCloud.recurring);
+        if(Array.isArray(currentCloud.deletedRecIds) && currentCloud.deletedRecIds.length){
+          const mergedRec = new Set([...(S.deletedRecIds||[]), ...currentCloud.deletedRecIds]);
+          S.deletedRecIds = Array.from(mergedRec);
+        }
       }
     }catch(mergeErr){ console.warn('[Upload] merge-before-write falló, subiendo sin merge:', mergeErr.message); }
+
+    // Tombstones: nunca resubir/restaurar recurrentes eliminados localmente
+    if(S.deletedRecIds && S.deletedRecIds.length){
+      const delRecSet = new Set(S.deletedRecIds);
+      recurringToUpload = (recurringToUpload||[]).filter(r=>!delRecSet.has(r.id));
+      S.recurring = (S.recurring||[]).filter(r=>!delRecSet.has(r.id));
+    }
 
     // PASO 2: escribir el estado mergeado
     await _fbDb.collection('users').doc(uid).set({
@@ -3352,6 +3430,7 @@ async function uploadToCloud(uid){
       lang: S.lang||'es',
       investCurrencies: S.investCurrencies||['USD','EUR'],
       deletedTxIds: S.deletedTxIds||[],
+      deletedRecIds: S.deletedRecIds||[],
       userName: S.userName||'',
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       _isEmpty: false,
@@ -3438,6 +3517,13 @@ function mergeCloudData(data){
     // Quitar del array txs cualquier tx que figure como eliminada
     S.txs = S.txs.filter(t=>!merged.has(t.id));
   }
+  // Unión de IDs de recurrentes eliminados para propagar bajas entre dispositivos
+  if(Array.isArray(data.deletedRecIds) && data.deletedRecIds.length){
+    const mergedRec = new Set([...(S.deletedRecIds||[]), ...data.deletedRecIds]);
+    S.deletedRecIds = Array.from(mergedRec);
+    S.recurring = S.recurring.filter(r=>!mergedRec.has(r.id));
+  }
+  applyRecurring({silent:true});
 }
 
 // ── Auto-sync al guardar ──
