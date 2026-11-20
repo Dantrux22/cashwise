@@ -135,3 +135,7 @@ const FIREBASE_ENABLED = true;
 - [ ] Push notifications con OneSignal
 - [ ] Widget de balance para iOS
 - [ ] Modo offline completo con Service Worker
+
+## Changelog
+
+- 2026-11-20 — Fix recurrentes: tombstones (`deletedRecIds`), backfill mensual con ids determinísticos, y corrección del race de sync que resucitaba recurrentes borrados.
