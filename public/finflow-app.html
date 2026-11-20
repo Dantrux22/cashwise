@@ -4841,7 +4841,13 @@ function mergeCloudData(data){
   if(Array.isArray(data.deletedRecIds) && data.deletedRecIds.length){
     const mergedRec = new Set([...(S.deletedRecIds||[]), ...data.deletedRecIds]);
     S.deletedRecIds = Array.from(mergedRec);
-    S.recurring = S.recurring.filter(r=>!mergedRec.has(r.id));
+  }
+  // Purgar SIEMPRE contra el tombstone local, aunque la nube todavía no sepa
+  // de esta baja (ej: se borró y el app se fue a segundo plano antes de subir) —
+  // de lo contrario _mergeById de arriba resucita el recurrente y nunca se vuelve a filtrar.
+  if(S.deletedRecIds && S.deletedRecIds.length){
+    const delRecSet = new Set(S.deletedRecIds);
+    S.recurring = S.recurring.filter(r=>!delRecSet.has(r.id));
   }
   applyRecurring({silent:true});
 }
