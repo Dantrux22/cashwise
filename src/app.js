@@ -3068,8 +3068,8 @@ function _initPullToRefresh(){
     pulling=false;
     if(triggered){
       checkForAppUpdate().then(updating=>{
-        if(updating) return; // ya se programó la recarga, no hace falta sincronizar
-        return syncFromCloud();
+        if(updating) return; // ya se programó la recarga, el toast de esa función alcanza
+        return syncFromCloud().then(()=>showToast('✅ Actualizado'));
       }).finally(()=>{ indicator.style.display='none'; });
     }
   });

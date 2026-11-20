@@ -1352,7 +1352,7 @@ if(FIREBASE_ENABLED){
 // ═══════════════════════════════════════════
 // Inyectado por build.py en cada build — se compara contra public/version.json
 // para detectar que hay una versión nueva publicada (ver checkForAppUpdate()).
-const BUILD_VERSION = '20261120121136';
+const BUILD_VERSION = '20261120121550';
 const SK = 'finflow_v3';
 // Límites de campos antes de escribir a Firestore (defensa en profundidad —
 // evitan que un import mal formado o un dato corrupto infle el documento)
@@ -4388,8 +4388,8 @@ function _initPullToRefresh(){
     pulling=false;
     if(triggered){
       checkForAppUpdate().then(updating=>{
-        if(updating) return; // ya se programó la recarga, no hace falta sincronizar
-        return syncFromCloud();
+        if(updating) return; // ya se programó la recarga, el toast de esa función alcanza
+        return syncFromCloud().then(()=>showToast('✅ Actualizado'));
       }).finally(()=>{ indicator.style.display='none'; });
     }
   });
