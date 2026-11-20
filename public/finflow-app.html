@@ -2364,8 +2364,12 @@ function renderRecurring(){
     const cat=findCat(r.type,r.cat);
     // Cuenta regresiva hasta la próxima acreditación/vencimiento
     const day=r.day||1;
-    let next=new Date(now.getFullYear(),now.getMonth(),day);
-    if(next<=now) next=new Date(now.getFullYear(),now.getMonth()+1,day);
+    const lastDayThis=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    let next=new Date(now.getFullYear(),now.getMonth(),Math.min(day,lastDayThis));
+    if(next<=now){
+      const lastDayNext=new Date(now.getFullYear(),now.getMonth()+2,0).getDate();
+      next=new Date(now.getFullYear(),now.getMonth()+1,Math.min(day,lastDayNext));
+    }
     const daysLeft=Math.ceil((next-now)/(1000*60*60*24));
     const urgency=daysLeft<=3?'var(--rd)':daysLeft<=7?'#fbbf24':'var(--mu)';
     const daysLbl=daysLeft===0?'Hoy':daysLeft===1?'Mañana':'En '+daysLeft+' días';
