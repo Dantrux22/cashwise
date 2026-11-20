@@ -881,9 +881,18 @@ function closeEdit(){ editingTxId=null; editingId=null; goBack(); }
 function deleteTx(){
   if(!editingTxId) return;
   showConfirm(t('cDeleteTx'),t('cDeleteTxMsg'),()=>{
-    const wasInvest=S.txs.find(t=>t.id===editingTxId)?.type==='invest';
+    const tx=S.txs.find(t=>t.id===editingTxId);
+    const wasInvest=tx?.type==='invest';
     // Registrar ID como eliminado para que el merge no lo restaure desde la nube
     if(!S.deletedTxIds.includes(editingTxId)) S.deletedTxIds.push(editingTxId);
+    // Si es un gasto recurrente automático, también tombstonear el id determinístico
+    // rec_<recurringId>_<año><mes>: applyRecurring() chequea ESE id (no el de la tx)
+    // para decidir si recrearlo, así que sin esto reaparece al reiniciar la app.
+    if(tx&&tx.recurringId){
+      const td=new Date(tx.date);
+      const recTxId='rec_'+tx.recurringId+'_'+td.getFullYear()+String(td.getMonth()+1).padStart(2,'0');
+      if(!S.deletedTxIds.includes(recTxId)) S.deletedTxIds.push(recTxId);
+    }
     S.txs=S.txs.filter(t=>t.id!==editingTxId);
     saveState(); closeEdit(); showToast(t('tDeleted'));
     setTimeout(()=>{ refreshHome(); if(wasInvest) renderInvest(); },50);
