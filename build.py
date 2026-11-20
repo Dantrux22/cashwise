@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-fin·flow — Build script
+CashWise — Build script
 Ensambla src/styles.css + src/body.html + src/app.js en public/finflow-app.html
 """
 import os, re, subprocess, sys, json
@@ -12,7 +12,7 @@ SRC  = ROOT / 'src'
 OUT  = ROOT / 'public'
 
 def build():
-    print("🔨 fin·flow build...")
+    print("🔨 CashWise build...")
 
     # Leer partes
     css  = (SRC / 'styles.css').read_text()

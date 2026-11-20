@@ -1,8 +1,8 @@
-# CLAUDE.md — fin·flow
+# CLAUDE.md — CashWise
 
 ## Instrucciones generales
 - Siempre responder en español
-- Este es el proyecto fin·flow (ver README.md para contexto completo)
+- Este es el proyecto CashWise (ver README.md para contexto completo)
 
 ## Reglas de trabajo
 - **NUNCA** editar `public/finflow-app.html` directamente — es el build output
