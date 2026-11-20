@@ -1352,7 +1352,7 @@ if(FIREBASE_ENABLED){
 // ═══════════════════════════════════════════
 // Inyectado por build.py en cada build — se compara contra public/version.json
 // para detectar que hay una versión nueva publicada (ver checkForAppUpdate()).
-const BUILD_VERSION = '20261120094141';
+const BUILD_VERSION = '20261120112411';
 const SK = 'finflow_v3';
 // Límites de campos antes de escribir a Firestore (defensa en profundidad —
 // evitan que un import mal formado o un dato corrupto infle el documento)
@@ -4750,16 +4750,27 @@ async function syncChoice(choice){
   if(_authUser) updateProfileUI(_authUser);
 }
 
-// ── Firestore: subir (con merge read-before-write para no borrar datos de otros dispositivos) ──
+// ── Firestore: subir ──
+// Usa una transacción atómica (lee + escribe en una sola operación) en vez de
+// leer y después escribir por separado. Con dos pasos separados, si otro
+// dispositivo (ej. uno con una copia local vieja que nunca se enteró de un
+// borrado) escribe justo en el medio, su versión vieja puede pisar el tombstone
+// recién subido y "resucitar" algo ya eliminado. runTransaction detecta ese
+// choque y reintenta con los datos más frescos antes de confirmar la escritura,
+// así que ningún dispositivo —por desactualizado que esté— puede revivir algo
+// que ya fue borrado en otro lado.
 async function uploadToCloud(uid){
   if(!FIREBASE_ENABLED||!_fbDb||!uid) return;
   try{
-    // PASO 1: leer nube actual para evitar sobreescribir movimientos de otros dispositivos
-    let txsToUpload = S.txs||[];
-    let budgetsToUpload = S.budgets||[];
-    let recurringToUpload = S.recurring||[];
-    try{
-      const currentCloud = await loadFromCloud(uid);
+    const docRef = _fbDb.collection('users').doc(uid);
+    await _fbDb.runTransaction(async (trans) => {
+      const snap = await trans.get(docRef);
+      const currentCloud = snap.exists ? snap.data() : null;
+
+      let txsToUpload = S.txs||[];
+      let budgetsToUpload = S.budgets||[];
+      let recurringToUpload = S.recurring||[];
+
       if(currentCloud && !currentCloud._isEmpty){
         if(Array.isArray(currentCloud.txs) && currentCloud.txs.length){
           const merged = _mergeTxById(S.txs||[], currentCloud.txs);
@@ -4774,33 +4785,42 @@ async function uploadToCloud(uid){
           const mergedRec = new Set([...(S.deletedRecIds||[]), ...currentCloud.deletedRecIds]);
           S.deletedRecIds = Array.from(mergedRec);
         }
+        if(Array.isArray(currentCloud.deletedTxIds) && currentCloud.deletedTxIds.length){
+          const mergedTx = new Set([...(S.deletedTxIds||[]), ...currentCloud.deletedTxIds]);
+          S.deletedTxIds = Array.from(mergedTx);
+        }
       }
-    }catch(mergeErr){ console.warn('[Upload] merge-before-write falló, subiendo sin merge:', mergeErr.message); }
 
-    // Tombstones: nunca resubir/restaurar recurrentes eliminados localmente
-    if(S.deletedRecIds && S.deletedRecIds.length){
-      const delRecSet = new Set(S.deletedRecIds);
-      recurringToUpload = (recurringToUpload||[]).filter(r=>!delRecSet.has(r.id));
-      S.recurring = (S.recurring||[]).filter(r=>!delRecSet.has(r.id));
-    }
+      // Tombstones: nunca resubir/restaurar recurrentes ni movimientos eliminados,
+      // usando el estado recién leído DENTRO de la transacción (no uno viejo en memoria).
+      if(S.deletedRecIds && S.deletedRecIds.length){
+        const delRecSet = new Set(S.deletedRecIds);
+        recurringToUpload = (recurringToUpload||[]).filter(r=>!delRecSet.has(r.id));
+        S.recurring = (S.recurring||[]).filter(r=>!delRecSet.has(r.id));
+      }
+      if(S.deletedTxIds && S.deletedTxIds.length){
+        const delTxSet = new Set(S.deletedTxIds);
+        txsToUpload = (txsToUpload||[]).filter(t=>!delTxSet.has(t.id));
+        S.txs = (S.txs||[]).filter(t=>!delTxSet.has(t.id));
+      }
 
-    // PASO 2: escribir el estado mergeado
-    await _fbDb.collection('users').doc(uid).set({
-      txs: txsToUpload,
-      cats: S.cats,
-      budgets: budgetsToUpload,
-      recurring: recurringToUpload,
-      currency: S.currency,
-      darkMode: S.darkMode!==false,
-      accent: S.accent||'#34d48a',
-      lang: S.lang||'es',
-      investCurrencies: S.investCurrencies||['USD','EUR'],
-      deletedTxIds: S.deletedTxIds||[],
-      deletedRecIds: S.deletedRecIds||[],
-      userName: S.userName||'',
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      _isEmpty: false,
-    },{merge:true});
+      trans.set(docRef, {
+        txs: txsToUpload,
+        cats: S.cats,
+        budgets: budgetsToUpload,
+        recurring: recurringToUpload,
+        currency: S.currency,
+        darkMode: S.darkMode!==false,
+        accent: S.accent||'#34d48a',
+        lang: S.lang||'es',
+        investCurrencies: S.investCurrencies||['USD','EUR'],
+        deletedTxIds: S.deletedTxIds||[],
+        deletedRecIds: S.deletedRecIds||[],
+        userName: S.userName||'',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        _isEmpty: false,
+      },{merge:true});
+    });
     S.lastSync=new Date().toISOString();
     _pendingUpload=false;
     try{ localStorage.setItem(SK, JSON.stringify(S)); }catch(_e){}
