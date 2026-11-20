@@ -898,6 +898,10 @@ function deleteTx(){
     }
     S.txs=S.txs.filter(t=>t.id!==editingTxId);
     saveState(); closeEdit(); showToast(t('tDeleted'));
+    // Subir el tombstone ya mismo: si se espera el debounce de 2.5s y el
+    // usuario cierra la app antes, el borrado nunca llega a la nube y el
+    // próximo sync lo trae de vuelta.
+    if(_authUser&&FIREBASE_ENABLED){ clearTimeout(_syncDebounce); uploadToCloud(_authUser.uid); }
     setTimeout(()=>{ refreshHome(); if(wasInvest) renderInvest(); },50);
   });
 }
@@ -1131,6 +1135,9 @@ function deleteRec(){
     if(!S.deletedRecIds.includes(recId)) S.deletedRecIds.push(recId);
     S.recurring=S.recurring.filter(r=>r.id!==recId);
     saveState(); closeRecModal(); renderRecurring(); showToast(t('tDeleted'));
+    // Mismo motivo que en deleteTx(): no esperar el debounce para que la baja
+    // llegue a la nube antes de que el usuario cierre la app.
+    if(_authUser&&FIREBASE_ENABLED){ clearTimeout(_syncDebounce); uploadToCloud(_authUser.uid); }
   });
 }
 
