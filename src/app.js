@@ -30,6 +30,9 @@ if(FIREBASE_ENABLED){
 // ═══════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════
+// Inyectado por build.py en cada build — se compara contra public/version.json
+// para detectar que hay una versión nueva publicada (ver checkForAppUpdate()).
+const BUILD_VERSION = '__BUILD_VERSION__';
 const SK = 'finflow_v3';
 // Límites de campos antes de escribir a Firestore (defensa en profundidad —
 // evitan que un import mal formado o un dato corrupto infle el documento)
@@ -3010,6 +3013,26 @@ async function syncFromCloud(){
   }catch(e){ console.warn('[Sync] syncFromCloud error:',e.message); }
 }
 
+// ── Chequeo de versión nueva de la app ───────────────────────────────────────
+// GitHub Pages sirve finflow-app.html con cache-control: max-age=600, así que
+// reabrir la app poco después de un deploy puede mostrar la versión vieja desde
+// el caché del navegador. version.json se pide con cache:'no-store' para evitar
+// eso, y si cambió, forzamos una recarga con un query param nuevo (bypassea el
+// caché HTTP, a diferencia de un location.reload() normal).
+async function checkForAppUpdate(){
+  try{
+    const res=await fetch('version.json?t='+Date.now(),{cache:'no-store'});
+    if(!res.ok) return false;
+    const data=await res.json();
+    if(data.v && data.v!==BUILD_VERSION){
+      showToast('🔄 Hay una versión nueva, actualizando…');
+      setTimeout(()=>{ location.href=location.pathname+'?v='+Date.now(); },900);
+      return true;
+    }
+  }catch(e){ /* sin conexión u offline: seguimos con la versión actual */ }
+  return false;
+}
+
 // ── Pull-to-refresh ──────────────────────────────────────────────────────────
 function _initPullToRefresh(){
   const scroll=document.getElementById('home-scroll');
@@ -3037,7 +3060,10 @@ function _initPullToRefresh(){
     if(!pulling) return;
     pulling=false;
     if(triggered){
-      syncFromCloud().finally(()=>{ indicator.style.display='none'; });
+      checkForAppUpdate().then(updating=>{
+        if(updating) return; // ya se programó la recarga, no hace falta sincronizar
+        return syncFromCloud();
+      }).finally(()=>{ indicator.style.display='none'; });
     }
   });
 }

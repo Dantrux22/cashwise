@@ -3,7 +3,8 @@
 fin·flow — Build script
 Ensambla src/styles.css + src/body.html + src/app.js en public/finflow-app.html
 """
-import os, re, subprocess, sys
+import os, re, subprocess, sys, json
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -17,6 +18,12 @@ def build():
     css  = (SRC / 'styles.css').read_text()
     body = (SRC / 'body.html').read_text()
     js   = (SRC / 'app.js').read_text()
+
+    # Versión de build: se embebe en app.js y en public/version.json para que
+    # checkForAppUpdate() pueda detectar un deploy nuevo y forzar la recarga
+    # (GitHub Pages cachea finflow-app.html por 10 minutos — ver comentario ahí).
+    build_version = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
+    js = js.replace('__BUILD_VERSION__', build_version)
 
     # Validar JS con node --check
     import tempfile
@@ -74,9 +81,13 @@ def build():
     out_file = OUT / 'finflow-app.html'
     out_file.write_text(html)
 
+    version_file = OUT / 'version.json'
+    version_file.write_text(json.dumps({'v': build_version}))
+
     size_kb = len(html) // 1024
     lines = html.count('\n')
     print(f"  ✅ {out_file} — {lines} líneas, {size_kb}KB")
+    print(f"  ✅ {version_file} — v{build_version}")
     print("✅ Build completado")
     return str(out_file)
 
